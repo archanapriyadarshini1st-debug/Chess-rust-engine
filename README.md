@@ -12,13 +12,14 @@ chess-programming canon documented in `RESEARCH.md` and `ROADMAP.md`.
 
 | What you get in v0.1 | Status |
 | --- | --- |
-| Bitboards, LERF, copy-make | done |
+| Bitboards, LERF, copy-make, fancy magics | done |
 | Correct legal move gen (CPW perft suite) | done |
-| UCI (`uci`, `position`, `go`, Hash, bench, perft) | done |
-| Fail-soft PVS, ID, aspiration, TT, killers, history | done |
+| UCI (`uci`, `position`, `go`/`stop` thread, Hash, bench, perft) | done |
+| Fail-soft PVS, ID, aspiration, TT, killers, history, countermove | done |
 | NMP, LMR, RFP, LMP, IIR, check extensions, SEE | done |
 | Quiescence + delta / SEE pruning | done |
-| Tapered PeSTO + bishop pair, pawns, rooks, mobility | done |
+| Tapered PeSTO + king safety, outposts, pawns, rooks, mobility | done |
+| SF19 UCI_Elo ladder + teacher GHA (never 100 ms) | done |
 | OpenBench-shaped `Makefile` + `bench` | done |
 | NNUE (the Elo wall) | **next** — see `ROADMAP.md` |
 
@@ -104,8 +105,12 @@ python scripts/stockfish_match.py --stockfish ./stockfish \
   --mode teacher --games 8 --movetime-ms 2000
 ```
 
-GitHub Actions → **SF19** → `workflow_dispatch` (`ladder` / `teacher` / `smoke`).
+GitHub Actions → **SF19** (`sf19.yml`) and **SF19 match** (`sf19-match.yml`, fastchess).
+`workflow_dispatch` `ladder` / `teacher` / `max`. Push smoke is 2 games at 5+0.05 vs UCI_Elo 2000, not 100 ms.
+
 Coordination with the other agent: `AGENT_CHANNEL.md` and issue #1.
+
+**How we claim ~2000:** SF19 `UCI_LimitStrength` + `UCI_Elo 2000`, 1 thread, equal hash, ≥10+0.1 (or 5+0.05 smoke). Full-strength SF19 is the teacher, not the scoreboard. UCI_Elo is not CCRL.
 
 ## Tests
 
