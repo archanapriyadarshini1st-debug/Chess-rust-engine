@@ -67,7 +67,9 @@ jobs:
         run: |
           RUSTFLAGS="-C target-cpu=native" cargo build --release
           cp target/release/chess-rust-engine ./engine
-          ./engine bench 10 | tail -2
+          # bench 10 used to hang forever on the double check-extension; keep a
+          # hard cap so a search regression cannot eat the whole 350 min budget.
+          timeout 90 ./engine bench 10 | tail -2
 
       - name: Perft gate (never play games with a broken movegen)
         run: cargo test --release --test perft
