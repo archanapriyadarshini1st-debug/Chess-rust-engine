@@ -36,8 +36,33 @@ pub struct ThreadData {
     pub score: i32,
     pub check_nodes: u64,
     pub silent: bool,
+    /// capture history [moving piece 12][to 64][victim 6]
+    pub cap_hist: Vec<i16>,
+    /// continuation history [prev piece 13][prev to 64][piece 12][to 64]
+    pub cont_hist: Vec<i16>,
+    pub stack_pc: [u8; MAX_PLY],
+    pub stack_to: [u8; MAX_PLY],
+    pub root_depth: i32,
     pub counter: [[Move; 64]; 64],
     pub ply_move: [Move; MAX_PLY],
+}
+
+const HIST_MAX: i32 = 16384;
+
+#[inline]
+fn cont_idx(pp: usize, pt: usize, pc: usize, to: usize) -> usize {
+    ((pp * 64 + pt) * 12 + pc) * 64 + to
+}
+#[inline]
+fn cap_idx(pc: usize, to: usize, victim: usize) -> usize {
+    (pc * 64 + to) * 6 + victim
+}
+
+#[inline]
+fn gravity(e: &mut i16, bonus: i32) {
+    let b = bonus.clamp(-HIST_MAX, HIST_MAX);
+    let c = *e as i32;
+    *e = (c + b - c * b.abs() / HIST_MAX) as i16;
 }
 
 impl ThreadData {
@@ -57,6 +82,11 @@ impl ThreadData {
             score: 0,
             check_nodes: 0,
             silent: false,
+            cap_hist: vec![0; 12 * 64 * 6],
+            cont_hist: vec![0; 13 * 64 * 12 * 64],
+            stack_pc: [12; MAX_PLY],
+            stack_to: [0; MAX_PLY],
+            root_depth: 0,
             counter: [[Move::NONE; 64]; 64],
             ply_move: [Move::NONE; MAX_PLY],
         }
@@ -64,14 +94,37 @@ impl ThreadData {
 
     #[inline]
     fn should_stop(&self) -> bool {
-        if self.time.stopped() || self.nodes >= self.time.max_nodes {
+        if self.time.stopped() {
             return true;
         }
-        if self.nodes & 2047 == 0 {
-            return self.time.hard_expired();
+        if self.nodes >= self.time.max_nodes {
+            self.time.request_stop();
+            return true;
+        }
+        if self.nodes & 2047 == 0 && self.time.hard_expired() {
+            self.time.request_stop();
+            return true;
         }
         false
     }
+}
+
+#[inline]
+fn quiet_hist(td: &ThreadData, pos: &Position, mv: Move, ply: usize) -> i32 {
+    let us = pos.side.index();
+    let from = mv.from().index();
+    let to = mv.to().index();
+    let mut h = td.history[us][from][to] as i32;
+    let pc = pos.piece_on(mv.from()).index();
+    if pc < 12 {
+        if ply >= 1 {
+            h += td.cont_hist[cont_idx(td.stack_pc[ply - 1] as usize, td.stack_to[ply - 1] as usize, pc, to)] as i32;
+        }
+        if ply >= 2 {
+            h += td.cont_hist[cont_idx(td.stack_pc[ply - 2] as usize, td.stack_to[ply - 2] as usize, pc, to)] as i32;
+        }
+    }
+    h
 }
 
 fn score_move(td: &ThreadData, pos: &Position, mv: Move, tt_move: Move, ply: usize) -> i32 {
@@ -91,7 +144,9 @@ fn score_move(td: &ThreadData, pos: &Position, mv: Move, tt_move: Move, ply: usi
         };
         let attacker = pos.piece_on(mv.from()).ty();
         let see_bonus = if see_ge(pos, mv, 0) { 1_000_000 } else { -500_000 };
-        return 2_000_000 + see_bonus + MVV_LVA[attacker.index()][victim.index()];
+        let pc = pos.piece_on(mv.from()).index();
+        let ch = if pc < 12 { td.cap_hist[cap_idx(pc, mv.to().index(), victim.index())] as i32 / 8 } else { 0 };
+        return 2_000_000 + see_bonus + MVV_LVA[attacker.index()][victim.index()] + ch;
     }
     if mv == td.killers[ply][0] {
         return 900_000;
@@ -105,7 +160,7 @@ fn score_move(td: &ThreadData, pos: &Position, mv: Move, tt_move: Move, ply: usi
             return 850_000;
         }
     }
-    td.history[pos.side.index()][mv.from().index()][mv.to().index()] as i32
+    quiet_hist(td, pos, mv, ply)
 }
 
 fn sort_moves(
@@ -163,11 +218,34 @@ fn is_draw(td: &ThreadData, pos: &Position, ply: i32) -> bool {
     ply > 0 && is_repetition(td, pos)
 }
 
-fn update_history(td: &mut ThreadData, us: Color, mv: Move, bonus: i32) {
-    let e = &mut td.history[us.index()][mv.from().index()][mv.to().index()];
-    let b = bonus.clamp(-400, 400);
-    let clamped = *e as i32;
-    *e = (clamped + b - clamped * b.abs() / 16384) as i16;
+fn update_history(td: &mut ThreadData, pos: &Position, mv: Move, ply: usize, bonus: i32) {
+    gravity(&mut td.history[pos.side.index()][mv.from().index()][mv.to().index()], bonus);
+    let pc = pos.piece_on(mv.from()).index();
+    let to = mv.to().index();
+    if pc < 12 {
+        if ply >= 1 {
+            let i = cont_idx(td.stack_pc[ply - 1] as usize, td.stack_to[ply - 1] as usize, pc, to);
+            gravity(&mut td.cont_hist[i], bonus);
+        }
+        if ply >= 2 {
+            let i = cont_idx(td.stack_pc[ply - 2] as usize, td.stack_to[ply - 2] as usize, pc, to);
+            gravity(&mut td.cont_hist[i], bonus);
+        }
+    }
+}
+
+fn update_cap_history(td: &mut ThreadData, pos: &Position, mv: Move, bonus: i32) {
+    let pc = pos.piece_on(mv.from()).index();
+    if pc >= 12 {
+        return;
+    }
+    let victim = if mv.is_ep() {
+        PieceType::Pawn
+    } else {
+        let p = pos.piece_on(mv.to());
+        if p.is_none() { PieceType::Pawn } else { p.ty() }
+    };
+    gravity(&mut td.cap_hist[cap_idx(pc, mv.to().index(), victim.index())], bonus);
 }
 
 fn update_killers(td: &mut ThreadData, ply: usize, mv: Move) {
@@ -192,6 +270,20 @@ fn qsearch(pos: &Position, td: &mut ThreadData, mut alpha: i32, beta: i32, ply: 
     }
 
     let in_check = pos.in_check();
+    let orig_alpha = alpha;
+    let q_pv = beta - alpha > 1;
+    if let Some((_mv, s, d, b)) = td.tt.probe(pos.hash) {
+        let _ = d;
+        if !q_pv {
+            let ts = from_tt(s, ply);
+            if b == BOUND_EXACT
+                || (b == BOUND_LOWER && ts >= beta)
+                || (b == BOUND_UPPER && ts <= alpha)
+            {
+                return ts;
+            }
+        }
+    }
     let stand = if in_check {
         -INF
     } else {
@@ -239,7 +331,7 @@ fn qsearch(pos: &Position, td: &mut ThreadData, mut alpha: i32, beta: i32, ply: 
         td.hash_hist.push(pos.hash);
         let score = -qsearch(&np, td, -beta, -alpha, ply + 1);
         td.hash_hist.pop();
-        if td.time.stopped() || td.time.hard_expired() {
+        if td.time.stopped() {
             return 0;
         }
         if score > best {
@@ -252,6 +344,14 @@ fn qsearch(pos: &Position, td: &mut ThreadData, mut alpha: i32, beta: i32, ply: 
             }
         }
     }
+    let qb = if best >= beta {
+        BOUND_LOWER
+    } else if best > orig_alpha {
+        BOUND_EXACT
+    } else {
+        BOUND_UPPER
+    };
+    td.tt.store(pos.hash, Move::NONE, to_tt(best, ply), 0, qb);
     best
 }
 
@@ -276,9 +376,6 @@ fn search(
     td.seldepth = td.seldepth.max(ply);
 
     let in_check = pos.in_check();
-    if in_check {
-        depth += 1;
-    }
 
     if depth <= 0 {
         return qsearch(pos, td, alpha, beta, ply);
@@ -353,10 +450,12 @@ fn search(
         np.side = np.side.flip();
         np.hash ^= crate::zobrist::ZOBRIST.side;
         td.hash_hist.push(pos.hash);
+        td.stack_pc[ply as usize] = 12;
+        td.stack_to[ply as usize] = 0;
         td.ply_move[ply as usize] = Move::NONE;
         let score = -search(&np, td, -beta, -beta + 1, depth - 1 - r, ply + 1, false, !cut_node);
         td.hash_hist.pop();
-        if td.time.stopped() || td.time.hard_expired() {
+        if td.time.stopped() {
             return 0;
         }
         if score >= beta {
@@ -381,6 +480,8 @@ fn search(
     let mut legal = 0;
     let mut quiets: [Move; 64] = [Move::NONE; 64];
     let mut quiet_n = 0;
+    let mut caps: [Move; 32] = [Move::NONE; 32];
+    let mut cap_n = 0;
     let mut bound = BOUND_UPPER;
 
     for i in 0..n {
@@ -395,6 +496,12 @@ fn search(
             && depth <= 7
             && legal >= 4 + depth * depth / if improving { 1 } else { 2 }
         {
+            continue;
+        }
+
+        // History pruning of quiets that have consistently failed
+        let mv_hist = if is_quiet { quiet_hist(td, pos, mv, ply as usize) } else { 0 };
+        if !is_pv && !in_check && is_quiet && legal > 0 && depth <= 4 && mv_hist < -2500 * depth {
             continue;
         }
 
@@ -425,12 +532,17 @@ fn search(
         legal += 1;
         let gives_check = np.in_check();
 
-        // In-check nodes already get +1 at search entry. Do not also extend
-        // the checking move — that doubled extensions and exploded the tree
-        // (bench depth 10 never finished).
-        let new_depth = depth - 1;
+        let mut new_depth = depth - 1;
+        // Single check extension (the old code also extended at the child's
+        // `in_check` node, so depth never shrank along check sequences and the
+        // search ran to MAX_PLY in perpetual-check-ish positions). Bounded by ply.
+        if gives_check && depth > 1 && ply < 2 * td.root_depth + 4 {
+            new_depth += 1;
+        }
 
         td.hash_hist.push(pos.hash);
+        td.stack_pc[ply as usize] = pos.piece_on(mv.from()).index() as u8;
+        td.stack_to[ply as usize] = mv.to().index() as u8;
         td.ply_move[ply as usize] = mv;
 
         let mut score;
@@ -453,7 +565,8 @@ fn search(
                 if gives_check {
                     r = r.saturating_sub(1);
                 }
-                r = r.min(new_depth - 1).max(0);
+                r -= mv_hist / 6000;
+                r = r.clamp(0, new_depth - 1);
             }
             score = -search(
                 &np,
@@ -474,7 +587,7 @@ fn search(
         }
 
         td.hash_hist.pop();
-        if td.time.stopped() || td.time.hard_expired() {
+        if td.time.stopped() {
             return 0;
         }
 
@@ -493,10 +606,10 @@ fn search(
                 td.pv_len[ply as usize] = len + 1;
                 if score >= beta {
                     bound = BOUND_LOWER;
+                    let bonus = (170 * depth - 90).clamp(0, 1800);
                     if is_quiet {
                         update_killers(td, ply as usize, mv);
-                        let bonus = 300 * depth - 150;
-                        update_history(td, pos.side, mv, bonus);
+                        update_history(td, pos, mv, ply as usize, bonus);
                         if ply > 0 {
                             let prev = td.ply_move[ply as usize - 1];
                             if !prev.is_none() {
@@ -504,8 +617,13 @@ fn search(
                             }
                         }
                         for k in 0..quiet_n {
-                            update_history(td, pos.side, quiets[k], -bonus);
+                            update_history(td, pos, quiets[k], ply as usize, -bonus);
                         }
+                    } else if mv.is_capture() {
+                        update_cap_history(td, pos, mv, bonus);
+                    }
+                    for k in 0..cap_n {
+                        update_cap_history(td, pos, caps[k], -bonus);
                     }
                     break;
                 }
@@ -514,6 +632,9 @@ fn search(
         if is_quiet && quiet_n < 64 {
             quiets[quiet_n] = mv;
             quiet_n += 1;
+        } else if mv.is_capture() && cap_n < 32 {
+            caps[cap_n] = mv;
+            cap_n += 1;
         }
     }
 
@@ -584,6 +705,7 @@ pub fn iterative_deepening(pos: &Position, td: &mut ThreadData, use_book: bool) 
 
     for depth in 1..=td.time.max_depth {
         td.seldepth = 0;
+        td.root_depth = depth;
         let mut alpha = -INF;
         let mut beta = INF;
         let mut window = 25;
@@ -698,7 +820,6 @@ pub fn bench(depth: i32) -> (u64, u64) {
         "r1bqkbnr/1ppp1ppp/p1n5/4p3/B3P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 1 4",
         "2r3k1/1q1nbppp/r3p3/3pP3/pPpP4/P1Q2N2/2RN1PPP/2R4K b - b3 0 23",
     ];
-    let _ = crate::attacks::tables();
     let tt = Arc::new(TranspositionTable::new(16));
     let mut total_nodes = 0u64;
     let start = std::time::Instant::now();
