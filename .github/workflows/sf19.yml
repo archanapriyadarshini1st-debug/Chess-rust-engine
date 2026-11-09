@@ -1,0 +1,97 @@
+# Stockfish 19 matches. Never 100–120 ms — that taught nextgen-chess-engine
+# 0–100–0 and junk labels. Default ladder is 10+0.1 vs UCI_Elo 2000.
+# Teacher mode is SF19 MAX at 2s/move.
+
+name: SF19
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: ladder (measure Elo) or teacher (SF19 MAX labels)
+        type: choice
+        options: [ladder, teacher, smoke]
+        default: ladder
+      games:
+        description: number of games
+        default: "20"
+      elo:
+        description: UCI_Elo for ladder mode
+        default: "2000"
+      tc:
+        description: base+inc seconds (ladder). Ignored if teacher (uses 2000ms/move).
+        default: "10+0.1"
+  push:
+    paths:
+      - "src/**"
+      - "scripts/**"
+      - ".github/workflows/sf19.yml"
+      - "Cargo.toml"
+
+jobs:
+  match:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build engine
+        run: cargo build --release
+      - name: Python
+        run: python3 -m pip install -r scripts/requirements.txt
+      - name: Download Stockfish 19 (universal linux x86-64)
+        run: |
+          curl -L --fail -o sf.tar.gz \
+            https://github.com/official-stockfish/Stockfish/releases/download/sf_19/stockfish-linux-x86-64-universal.tar.gz
+          tar -xzf sf.tar.gz
+          BIN=$(find . -type f -name 'stockfish*' ! -name '*.tar.gz' | head -n 1)
+          chmod +x "$BIN"
+          echo "SF_BIN=$BIN" >> "$GITHUB_ENV"
+          "$BIN" <<< "quit" | head -n 5 || true
+      - name: Run match
+        run: |
+          MODE="${{ github.event.inputs.mode || 'smoke' }}"
+          GAMES="${{ github.event.inputs.games || '2' }}"
+          ELO="${{ github.event.inputs.elo || '2000' }}"
+          TC="${{ github.event.inputs.tc || '10+0.1' }}"
+          mkdir -p results datasets
+          if [ "$MODE" = "teacher" ]; then
+            python3 scripts/stockfish_match.py \
+              --ours ./target/release/chess-rust-engine \
+              --stockfish "$SF_BIN" \
+              --mode teacher \
+              --games "$GAMES" \
+              --movetime-ms 2000 \
+              --hash-mb 64 \
+              --pgn results/teacher-sf19-max.pgn \
+              --book datasets/teacher_book.txt
+          elif [ "$MODE" = "ladder" ]; then
+            python3 scripts/stockfish_match.py \
+              --ours ./target/release/chess-rust-engine \
+              --stockfish "$SF_BIN" \
+              --mode ladder \
+              --elo "$ELO" \
+              --games "$GAMES" \
+              --tc "$TC" \
+              --hash-mb 64 \
+              --pgn "results/ladder-elo-${ELO}.pgn"
+          else
+            # push smoke: 2 games, 5+0.05 vs UCI_Elo 2000 (still not 100ms)
+            python3 scripts/stockfish_match.py \
+              --ours ./target/release/chess-rust-engine \
+              --stockfish "$SF_BIN" \
+              --mode ladder \
+              --elo 2000 \
+              --games 2 \
+              --tc 5+0.05 \
+              --hash-mb 32 \
+              --pgn results/smoke-elo-2000.pgn
+          fi
+      - name: Upload PGN and teacher book
+        uses: actions/upload-artifact@v4
+        with:
+          name: sf19-results
+          path: |
+            results/
+            datasets/teacher_book.txt
+          if-no-files-found: warn

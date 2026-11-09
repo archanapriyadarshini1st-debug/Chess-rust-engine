@@ -11,6 +11,7 @@ use crate::types::Color;
 use std::io::{self, BufRead, Write};
 use std::sync::Arc;
 use std::thread;
+use std::thread::JoinHandle;
 
 pub const ENGINE_NAME: &str = "Chess-rust-engine";
 pub const ENGINE_AUTHOR: &str = "Chess-rust-engine authors";
@@ -56,6 +57,14 @@ pub fn run() {
     let mut stdout = io::stdout();
     // Pre-init attack tables so `isready` is instant.
     let _ = crate::attacks::tables();
+    let mut search_job: Option<(Arc<TimeManager>, JoinHandle<()>)> = None;
+
+    fn wait_search(job: &mut Option<(Arc<TimeManager>, JoinHandle<()>)>) {
+        if let Some((tm, handle)) = job.take() {
+            tm.request_stop();
+            let _ = handle.join();
+        }
+    }
 
     for line in stdin.lock().lines() {
         let Ok(line) = line else { break };
@@ -80,6 +89,7 @@ pub fn run() {
                 println!("readyok");
             }
             "ucinewgame" => {
+                wait_search(&mut search_job);
                 engine.tt.clear();
                 engine.pos = Position::startpos();
                 engine.reset_hist();
@@ -113,6 +123,7 @@ pub fn run() {
                 }
             }
             "position" => {
+                wait_search(&mut search_job);
                 let rest: Vec<&str> = line.split_whitespace().skip(1).collect();
                 if rest.is_empty() {
                     continue;
@@ -136,6 +147,7 @@ pub fn run() {
                 }
             }
             "go" => {
+                wait_search(&mut search_job);
                 let rest: Vec<&str> = line.split_whitespace().skip(1).collect();
                 let mut limits = Limits::default();
                 let mut i = 0;
@@ -199,6 +211,10 @@ pub fn run() {
                     let _ = stdout.flush();
                     continue;
                 }
+                let use_book = limits.wtime.is_some()
+                    || limits.btime.is_some()
+                    || limits.movetime.is_some()
+                    || limits.infinite;
                 let tm = Arc::new(TimeManager::new(
                     limits,
                     engine.pos.side == Color::White,
@@ -207,14 +223,23 @@ pub fn run() {
                 let mut td = ThreadData::new(engine.tt.clone(), tm.clone());
                 td.hash_hist = engine.moves_played.clone();
                 let pos = engine.pos;
-                // Search on this thread so `stop` via a second reader isn't required
-                // for Cute Chess (it kills / next position). A dedicated stop thread
-                // is a later upgrade; stdin is blocked during search.
-                let res = iterative_deepening(&pos, &mut td);
-                println!("bestmove {}", res.best);
+                let tm_for_job = tm.clone();
+                let handle = thread::spawn(move || {
+                    let res = iterative_deepening(&pos, &mut td, use_book);
+                    println!("bestmove {}", res.best);
+                    let _ = io::stdout().flush();
+                });
+                search_job = Some((tm_for_job, handle));
             }
-            "stop" => { /* search currently blocks stdin; see ROADMAP */ }
-            "quit" => break,
+            "stop" => {
+                if let Some((tm, _)) = &search_job {
+                    tm.request_stop();
+                }
+            }
+            "quit" => {
+                wait_search(&mut search_job);
+                break;
+            }
             "d" => print!("{}", engine.pos.display()),
             "eval" => {
                 let e = evaluate(&engine.pos);
@@ -245,6 +270,7 @@ pub fn run() {
         }
         let _ = stdout.flush();
     }
+    wait_search(&mut search_job);
 }
 
 /// `stop` while searching requires a non-blocking stdin. Spawn a helper that

@@ -524,10 +524,28 @@ pub struct SearchResult {
     pub pv: Vec<Move>,
 }
 
-pub fn iterative_deepening(pos: &Position, td: &mut ThreadData) -> SearchResult {
+pub fn iterative_deepening(pos: &Position, td: &mut ThreadData, use_book: bool) -> SearchResult {
     td.tt.new_search();
     td.nodes = 0;
     td.best = Move::NONE;
+    if use_book {
+        if let Some(mv) = crate::book::probe(pos) {
+            let mut legal = [Move::NONE; MAX_MOVES];
+            let n = legal_moves(pos, &mut legal);
+            if (0..n).any(|i| legal[i] == mv) {
+                if !td.silent {
+                    println!("info string book {}", mv);
+                }
+                return SearchResult {
+                    best: mv,
+                    score: 0,
+                    depth: 0,
+                    nodes: 0,
+                    pv: vec![mv],
+                };
+            }
+        }
+    }
     let mut last_score = 0;
     let mut last_pv: Vec<Move> = Vec::new();
     let mut last_depth = 0;
@@ -677,7 +695,7 @@ pub fn bench(depth: i32) -> (u64, u64) {
         // TimeManager with only depth set becomes infinite-time; we cap via max_depth.
         let mut td = ThreadData::new(tt.clone(), tm);
         td.silent = true;
-        let _ = iterative_deepening(&pos, &mut td);
+        let _ = iterative_deepening(&pos, &mut td, false);
         total_nodes += td.nodes;
         tt.clear();
     }

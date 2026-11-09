@@ -1,0 +1,4 @@
+# Stockfish 19 MAX teacher book.
+# Format: <fen> | <uci>
+# Written by scripts/stockfish_match.py --mode teacher (2s/move or slower).
+# Do not fill this from 100–120 ms games.

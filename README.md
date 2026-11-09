@@ -90,6 +90,23 @@ src/
   perft.rs      CPW suite
 ```
 
+## Stockfish 19 (teacher + Elo ladder)
+
+Do **not** train on 100–120 ms games. The other codebase (`nextgen-chess-engine`) already proved that: SF19 MAX, 120 ms, 0–100–0, junk labels.
+
+```bash
+# measure ~2000: SF19 limited to UCI_Elo 2000, 10+0.1
+python scripts/stockfish_match.py --stockfish ./stockfish \
+  --mode ladder --elo 2000 --games 20 --tc 10+0.1
+
+# teacher: SF19 MAX, 2 seconds per move, writes datasets/teacher_book.txt
+python scripts/stockfish_match.py --stockfish ./stockfish \
+  --mode teacher --games 8 --movetime-ms 2000
+```
+
+GitHub Actions → **SF19** → `workflow_dispatch` (`ladder` / `teacher` / `smoke`).
+Coordination with the other agent: `AGENT_CHANNEL.md` and issue #1.
+
 ## Tests
 
 ```bash
