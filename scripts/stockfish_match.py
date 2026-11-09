@@ -141,7 +141,12 @@ def play_game(
             except chess.engine.EngineError:
                 pass
 
-    game.headers["Result"] = board.result(claim_draw=True)
+    result = board.result(claim_draw=True)
+    if result == "*":
+        # 200-ply cap: treat as adjudicated draw (endgames we failed to mate).
+        result = "1/2-1/2"
+        game.headers["Termination"] = "adjudication"
+    game.headers["Result"] = result
     return game
 
 
@@ -166,7 +171,7 @@ def main() -> int:
     p.add_argument("--tc", default="10+0.1", help="base+inc seconds, ignored if --movetime-ms")
     p.add_argument("--movetime-ms", type=int, default=0)
     p.add_argument("--hash-mb", type=int, default=64)
-    p.add_argument("--max-ply", type=int, default=200)
+    p.add_argument("--max-ply", type=int, default=320)
     p.add_argument("--pgn", default="results/match.pgn")
     p.add_argument("--book", default="datasets/teacher_book.txt")
     args = p.parse_args()

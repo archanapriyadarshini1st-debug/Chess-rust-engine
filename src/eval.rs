@@ -321,7 +321,27 @@ pub fn evaluate(pos: &Position) -> i32 {
     let us = pos.side.index();
     let them = pos.side.flip().index();
     let mg_score = mg[us] - mg[them];
-    let eg_score = eg[us] - eg[them];
+    let mut eg_score = eg[us] - eg[them];
+
+    // Drive the enemy king to the edge in K+major vs K endings so we actually
+    // convert instead of hitting the 200-ply cap.
+    let piece_count = occ.count_ones();
+    if piece_count <= 4 {
+        let our_k = pos.king_sq(pos.side);
+        let their_k = pos.king_sq(pos.side.flip());
+        let tf = their_k.file() as i32;
+        let tr = their_k.rank() as i32;
+        let edge = tf.min(7 - tf).min(tr).min(7 - tr);
+        let cd = (our_k.file() as i32 - tf).abs().max((our_k.rank() as i32 - tr).abs());
+        let majors = pos.bb(pos.side, PieceType::Queen) | pos.bb(pos.side, PieceType::Rook);
+        let their_majors = pos.bb(pos.side.flip(), PieceType::Queen) | pos.bb(pos.side.flip(), PieceType::Rook);
+        if majors != 0 && their_majors == 0 {
+            eg_score += (3 - edge) * 18 + (14 - cd) * 6;
+        } else if their_majors != 0 && majors == 0 {
+            eg_score -= (3 - edge) * 18 + (14 - cd) * 6;
+        }
+    }
+
     let mg_phase = phase.min(24);
     let eg_phase = 24 - mg_phase;
     (mg_score * mg_phase + eg_score * eg_phase) / 24 + TEMPO
