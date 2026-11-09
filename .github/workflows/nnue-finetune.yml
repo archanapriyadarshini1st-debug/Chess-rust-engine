@@ -1,0 +1,198 @@
+name: NNUE finetune (stage 2)
+
+# Stage 2 of the net pipeline (Agent B). Trains OUR net (768->128)x2->1 SCReLU, 8 buckets on
+# the >=500 ms/position Stockfish 19 MAX teacher data that Agent A publishes to the
+# `teacher-data` branch, optionally resuming from a stage-1 net (cheap, noisy pre-train).
+#
+#  * validation positions are chosen by position hash (hash % 50 == 0) -> never trained on,
+#    stable across stages and data sources
+#  * duplicates are removed before the split
+#  * the best-validation checkpoint is exported (a resumed net that cannot improve is rolled back)
+#  * the net is committed to a branch `nnue/ft-<run_id>` and played against HCE (same binary,
+#    UseNNUE=false) at >= 5+0.05, using Agent A's real opening book, plus SF19 UCI_Elo rungs
+#
+# It does NOT merge anything. The net only reaches `main` through the SPRT gate (sprt.yml)
+# and a human-readable result in AGENT_CHANNEL.md.
+
+on:
+  workflow_dispatch:
+    inputs:
+      data_repo:
+        description: "Repo that holds the teacher-data branch"
+        default: "archanapriyadarshini1st-debug/Chess-rust-engine"
+      data_branch:
+        description: "Branch with data/*.bin (28-byte records)"
+        default: "teacher-data"
+      base_ref:
+        description: "Optional ref (e.g. nnue/run-123) whose nets/default.nnue is the stage-1 net to resume from; empty = from scratch"
+        default: ""
+      train_minutes:
+        description: "Wall-clock training minutes"
+        default: "120"
+      lr:
+        description: "Peak LR (2e-3 from scratch, 3e-4 when resuming)"
+        default: "3e-4"
+      lam:
+        description: "Weight of SF score vs game result in the target"
+        default: "0.75"
+      games:
+        description: "Games vs HCE (colours reversed, book openings)"
+        default: "100"
+      tc:
+        description: "Time control (floor 5+0.05; nothing near 100 ms/move)"
+        default: "10+0.1"
+
+permissions:
+  contents: write
+
+env:
+  FASTCHESS_URL: https://github.com/Disservin/fastchess/releases/download/v1.8.3-alpha/fastchess-linux-x86-64.tar
+  SF19_URL: https://github.com/official-stockfish/Stockfish/releases/download/sf_19/stockfish-linux-x86-64-universal.tar.gz
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    outputs:
+      branch: ${{ steps.commit.outputs.branch }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Guard rails
+        run: |
+          python3 - <<'PY'
+          import re
+          tc = "${{ inputs.tc }}"
+          base = float(re.split(r"[+/]", tc)[0])
+          assert base >= 5, f"tc base {base}s is below the 5s floor"
+          PY
+      - name: Teacher data (500 ms+ Stockfish 19 MAX labels)
+        run: |
+          git clone --depth 1 --branch "${{ inputs.data_branch }}" "https://github.com/${{ inputs.data_repo }}.git" /tmp/td
+          mkdir -p data && cp /tmp/td/data/*.bin data/
+          ls -la data | head -20
+          du -sh data
+          test "$(ls data/*.bin | wc -l)" -ge 1
+      - name: Stage-1 net (optional)
+        if: ${{ inputs.base_ref != '' }}
+        run: |
+          git fetch origin "${{ inputs.base_ref }}"
+          git show FETCH_HEAD:nets/default.nnue > base.nnue
+          ls -la base.nnue
+      - name: Install trainer deps
+        run: |
+          pip install numpy chess
+          pip install torch --extra-index-url https://download.pytorch.org/whl/cpu
+      - name: Train
+        run: |
+          RES=""; LR="${{ inputs.lr }}"
+          if [ -f base.nnue ]; then RES="--resume base.nnue"; fi
+          python3 tools/nnue/train.py --data 'data/*.bin' --out net.bin $RES \
+            --minutes ${{ inputs.train_minutes }} --lr "$LR" --lam ${{ inputs.lam }} 2>&1 \
+            | tee train.log | grep -E "files|resumed|start|final|Error|Traceback" | tail -40
+          grep -E "== " train.log | tail -15
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nnue-ft-net
+          path: |
+            net.bin
+            net.bin.parity.txt
+            train.log
+          retention-days: 30
+      - name: Commit net to a branch
+        id: commit
+        run: |
+          B="nnue/ft-${{ github.run_id }}"
+          git config user.name "agent-b"; git config user.email "agent-b@users.noreply.github.com"
+          git checkout -b "$B"
+          mkdir -p nets && cp net.bin nets/default.nnue
+          cp train.log nets/default.nnue.train.log
+          git add -f nets/default.nnue nets/default.nnue.train.log
+          git commit -m "nnue: stage-2 net on >=500ms SF19 MAX teacher data (run ${{ github.run_id }})"
+          git push origin "$B"
+          echo "branch=$B" >> "$GITHUB_OUTPUT"
+
+  match:
+    needs: train
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { label: hce, elo: "", hce: "1", kind: main }
+          - { label: elo2600, elo: "2600", hce: "", kind: rung }
+          - { label: elo2800, elo: "2800", hce: "", kind: rung }
+          - { label: max, elo: "", hce: "", kind: max }
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.train.outputs.branch }}
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build engine (net embedded) + correctness gates
+        run: |
+          cargo test --release 2>&1 | grep -E "test result|FAILED"
+          cargo build --release
+          cp target/release/chess-rust-engine ./engine
+          timeout 120 ./engine bench 10 | tail -1
+          printf 'position startpos\neval\nquit\n' | ./engine | grep eval
+      - name: Fetch SF19 + fastchess
+        run: |
+          mkdir -p /tmp/sf /tmp/fc
+          curl -fsSL --retry 3 "$SF19_URL" | tar xz -C /tmp/sf
+          SF=$(find /tmp/sf -type f -name 'stockfish-linux-x86-64-universal' | head -1)
+          chmod +x "$SF"; ln -sf "$SF" /tmp/sf19
+          curl -fsSL --retry 3 "$FASTCHESS_URL" -o /tmp/fc.tar && tar xf /tmp/fc.tar -C /tmp/fc
+          FC=$(find /tmp/fc -type f -name fastchess | head -1); chmod +x "$FC"; ln -sf "$FC" /tmp/fastchess
+          pip install chess
+      - name: Play
+        run: |
+          mkdir -p out
+          case "${{ matrix.kind }}" in
+            main) GAMES=${{ inputs.games }};;
+            rung) GAMES=40;;
+            max)  GAMES=20;;
+          esac
+          rounds=$(( (GAMES + 1) / 2 ))
+          if [ -n "${{ matrix.hce }}" ]; then
+            OPP="-engine cmd=./engine name=HCE option.Hash=64 option.Threads=1 option.UseNNUE=false"
+            CONC=3
+          elif [ -n "${{ matrix.elo }}" ]; then
+            OPP="-engine cmd=/tmp/sf19 name=SF19 option.Hash=64 option.Threads=1 option.UCI_LimitStrength=true option.UCI_Elo=${{ matrix.elo }}"
+            CONC=2
+          else
+            OPP="-engine cmd=/tmp/sf19 name=SF19 option.Hash=64 option.Threads=1"
+            CONC=2
+          fi
+          /tmp/fastchess \
+            -engine cmd=./engine name=NNUE option.Hash=64 option.Threads=1 option.UseNNUE=true \
+            $OPP \
+            -each tc="${{ inputs.tc }}" -rounds "$rounds" -games 2 -repeat -concurrency $CONC \
+            -openings file=tools/openings_book.epd format=epd order=random \
+            -draw movenumber=40 movecount=8 score=20 -resign movecount=3 score=600 -maxmoves 400 \
+            -pgnout file=out/${{ matrix.label }}.pgn -recover -ratinginterval 20 \
+            2>&1 | grep -vE '^(Warning|Info|Position|Moves);' | tee out/${{ matrix.label }}.log | tail -n 30
+      - name: Summarise
+        run: |
+          {
+            echo "## NNUE vs ${{ matrix.label }} (tc ${{ inputs.tc }}) net ${{ needs.train.outputs.branch }}"
+            echo '```'
+            if [ -n "${{ matrix.elo }}" ]; then
+              python3 tools/summarize.py out/${{ matrix.label }}.pgn --engine NNUE --opp-elo ${{ matrix.elo }}
+            else
+              python3 tools/summarize.py out/${{ matrix.label }}.pgn --engine NNUE
+            fi
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY" out/summary.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: match-${{ matrix.label }}
+          path: out/
+          retention-days: 30
