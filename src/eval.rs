@@ -122,6 +122,15 @@ fn pst_index(color: Color, sq: Square) -> usize {
 
 /// Evaluation from the side to move, in centipawns.
 pub fn evaluate(pos: &Position) -> i32 {
+    if let Some(v) = crate::nnue::evaluate(pos) {
+        return v;
+    }
+    evaluate_hce(pos)
+}
+
+/// Hand-crafted eval (PeSTO + structure). Used when no NNUE net is loaded
+/// and as the teacher for the first net.
+pub fn evaluate_hce(pos: &Position) -> i32 {
     let mut mg = [0i32; 2];
     let mut eg = [0i32; 2];
     let mut phase = 0i32;
