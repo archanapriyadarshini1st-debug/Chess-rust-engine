@@ -3,7 +3,7 @@
 One entry per experiment: hypothesis, setup, result with uncertainty, decision.
 Never record an Elo number that the sample size cannot support.
 
-## EXP-001  Baseline vs Stockfish 19 MAX + weakness attribution  (Agent D, 2026-11-09)
+## EXP-001  Baseline vs Stockfish 19 MAX + weakness attribution  (Agent F, 2026-11-09)
 
 **Engine:** `6ce2055` (main: HCE + singular ext + pawn corrhist, no net). **Teacher/opponent:** official
 Stockfish 19 (`sha256 0f83d24c...da19`, `stockfish-linux-x86-64-universal`), `UCI_LimitStrength=false`,
