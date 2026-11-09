@@ -1,0 +1,182 @@
+name: SPRT gate (patch vs base)
+
+# The merge gate for engine changes. Stockfish ladders measure *how strong we
+# are*; they cannot tell you whether a +10 Elo patch is real (20 games has a
+# +-100 Elo error bar - an engine playing ITSELF read +26 +-72 over 80 games).
+# This plays TEST vs BASE head to head with fastchess SPRT and stops as soon as
+# the evidence is decisive.
+#
+#   Dispatch:  test=<branch/sha>  base=main  tc=10+0.1
+#   Result:    job summary + exit status (PASS / FAIL / INCONCLUSIVE).
+#
+# Bounds default to logistic Elo [0, 10] - the "is this a clear gain" gate.
+# Use elo0=-5 elo1=0 for a simplification / non-regression check.
+# Time control floor is 5+0.05; nothing at 100 ms/move. Never lower it.
+
+on:
+  workflow_dispatch:
+    inputs:
+      test:
+        description: "Branch / tag / SHA under test"
+        required: true
+      base:
+        description: "Branch / tag / SHA to beat"
+        default: "main"
+      tc:
+        description: "Time control, fastchess syntax (floor 5+0.05)"
+        default: "10+0.1"
+      elo0:
+        description: "H0 Elo"
+        default: "0"
+      elo1:
+        description: "H1 Elo"
+        default: "10"
+      model:
+        description: "SPRT model"
+        type: choice
+        default: logistic
+        options: [logistic, normalized, bayesian]
+      max_rounds:
+        description: "Round cap (each round = 2 games, colours swapped)"
+        default: "4000"
+      concurrency:
+        description: "Parallel games (runner has 4 vCPU; 3 keeps timing honest)"
+        default: "3"
+      test_opts:
+        description: "Extra UCI options for TEST, e.g. 'option.UseNNUE=true'"
+        default: ""
+      base_opts:
+        description: "Extra UCI options for BASE, e.g. 'option.UseNNUE=false'"
+        default: ""
+      test_net:
+        description: "Optional repo path of an .nnue file to load into TEST via CRE_NNUE_FILE"
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sprt-${{ inputs.test }}-${{ inputs.base }}
+  cancel-in-progress: true
+
+env:
+  FASTCHESS_URL: https://github.com/Disservin/fastchess/releases/download/v1.8.3-alpha/fastchess-linux-x86-64.tar
+
+jobs:
+  sprt:
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.test }}
+          path: test
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.base }}
+          path: base
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Validate time control (no sub-floor games)
+        env:
+          TC: ${{ inputs.tc }}
+        run: |
+          python3 - <<'PY'
+          import os, sys
+          tc = os.environ["TC"]
+          base, _, inc = tc.partition("+")
+          try:
+              b = float(base.split("/")[-1]); i = float(inc or 0)
+          except ValueError:
+              sys.exit(f"bad tc {tc!r}")
+          if b < 5 or (b + 40 * i) < 7:
+              sys.exit(f"refusing tc {tc}: floor is 5+0.05")
+          print("tc ok:", tc)
+          PY
+
+      - name: Build TEST and BASE (identical flags)
+        run: |
+          for d in test base; do
+            (cd $d && RUSTFLAGS="-C target-cpu=native" cargo build --release \
+              && cp target/release/chess-rust-engine ../engine_$d)
+          done
+          ls -l engine_test engine_base
+          echo "TEST bench:"; timeout 120 ./engine_test bench 10 | tail -1
+          echo "BASE bench:"; timeout 120 ./engine_base bench 10 | tail -1
+
+      - name: Perft gate on TEST (never SPRT a broken movegen)
+        run: cd test && cargo test --release --test perft
+
+      - name: fastchess
+        run: |
+          mkdir -p /tmp/fc && curl -fsSL --retry 3 "$FASTCHESS_URL" -o /tmp/fc.tar
+          tar xf /tmp/fc.tar -C /tmp/fc
+          FC=$(find /tmp/fc -type f -name fastchess | head -1)
+          chmod +x "$FC"; ln -sf "$FC" /tmp/fastchess; /tmp/fastchess --version
+
+      - name: Stage optional net for TEST
+        if: ${{ inputs.test_net != '' }}
+        run: |
+          test -f "test/${{ inputs.test_net }}"
+          cp "test/${{ inputs.test_net }}" /tmp/test.nnue
+          echo "CRE_NNUE_FILE=/tmp/test.nnue" >> "$GITHUB_ENV"
+
+      - name: SPRT
+        env:
+          TC: ${{ inputs.tc }}
+          ELO0: ${{ inputs.elo0 }}
+          ELO1: ${{ inputs.elo1 }}
+          MODEL: ${{ inputs.model }}
+          ROUNDS: ${{ inputs.max_rounds }}
+          CONC: ${{ inputs.concurrency }}
+          TEST_OPTS: ${{ inputs.test_opts }}
+          BASE_OPTS: ${{ inputs.base_opts }}
+        run: |
+          mkdir -p out
+          # real mainline openings (6/8/10 plies); openings.epd is random-legal junk
+          OPENINGS=test/tools/openings_book.epd
+          [ -f "$OPENINGS" ] || OPENINGS=base/tools/openings_book.epd
+          [ -f "$OPENINGS" ] || OPENINGS=test/tools/openings.epd
+          # CRE_NNUE_FILE (set above when test_net is given) must only reach TEST,
+          # so BASE is launched through a wrapper that unsets it.
+          printf '#!/bin/sh\nunset CRE_NNUE_FILE\nexec "%s" "$@"\n' "$PWD/engine_base" > base_run.sh
+          chmod +x base_run.sh
+          set +e
+          # shellcheck disable=SC2086
+          /tmp/fastchess \
+            -engine cmd=./engine_test name=test option.Hash=16 option.Threads=1 $TEST_OPTS \
+            -engine cmd=./base_run.sh name=base option.Hash=16 option.Threads=1 $BASE_OPTS \
+            -each tc="$TC" \
+            -rounds "$ROUNDS" -games 2 -repeat -concurrency "$CONC" \
+            -openings file="$OPENINGS" format=epd order=random \
+            -sprt elo0="$ELO0" elo1="$ELO1" alpha=0.05 beta=0.05 model="$MODEL" \
+            -draw movenumber=40 movecount=8 score=10 \
+            -resign movecount=4 score=800 twosided=true \
+            -maxmoves 300 \
+            -ratinginterval 50 -recover -pgnout file=out/sprt.pgn \
+            2>&1 | grep -vE '^(Warning|Info|Position|Moves);' | tee out/sprt.log | grep -E 'Elo:|LLR|Games:|SPRT|accepted' | tail -n 200
+          exit 0
+
+      - name: Verdict
+        run: |
+          set +e
+          S=test/tools/sprt_report.py; [ -f "$S" ] || S=base/tools/sprt_report.py
+          python3 "$S" out/sprt.log --md out/verdict.md --min-games 60
+          code=$?
+          {
+            echo "## SPRT: test=\`${{ inputs.test }}\` vs base=\`${{ inputs.base }}\` @ ${{ inputs.tc }}"
+            echo "bounds [${{ inputs.elo0 }}, ${{ inputs.elo1 }}] ${{ inputs.model }}"
+            echo
+            cat out/verdict.md
+          } >> "$GITHUB_STEP_SUMMARY"
+          # Only a clean H1 acceptance goes green; FAIL and INCONCLUSIVE are red.
+          exit $code
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sprt-${{ github.run_id }}
+          path: out/
+          retention-days: 14

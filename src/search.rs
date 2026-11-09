@@ -45,9 +45,18 @@ pub struct ThreadData {
     pub root_depth: i32,
     pub counter: [[Move; 64]; 64],
     pub ply_move: [Move; MAX_PLY],
+    /// pawn-corrhist [stm][pawn_key % CORR_N]
+    pub corr: Vec<i16>,
 }
 
 const HIST_MAX: i32 = 16384;
+const CORR_N: usize = 16384;
+
+#[inline]
+fn pawn_corr_idx(pos: &Position) -> usize {
+    let p = pos.bb(pos.side, PieceType::Pawn) ^ pos.bb(pos.side.flip(), PieceType::Pawn).rotate_left(17);
+    pos.side.index() * CORR_N + ((p as usize) ^ ((p >> 32) as usize)) % CORR_N
+}
 
 #[inline]
 fn cont_idx(pp: usize, pt: usize, pc: usize, to: usize) -> usize {
@@ -89,6 +98,7 @@ impl ThreadData {
             root_depth: 0,
             counter: [[Move::NONE; 64]; 64],
             ply_move: [Move::NONE; MAX_PLY],
+            corr: vec![0; 2 * CORR_N],
         }
     }
 
@@ -364,6 +374,7 @@ fn search(
     ply: i32,
     is_pv: bool,
     cut_node: bool,
+    excluded: Move,
 ) -> i32 {
     td.pv_len[ply as usize] = 0;
     td.nodes += 1;
@@ -376,7 +387,8 @@ fn search(
     td.seldepth = td.seldepth.max(ply);
 
     let in_check = pos.in_check();
-    if in_check {
+    // Do not stack check-ext on a singular-excluded re-entry (same ply).
+    if in_check && excluded.is_none() {
         depth += 1;
     }
 
@@ -399,13 +411,14 @@ fn search(
     let mut tt_score = 0;
     let mut tt_bound = 0;
     let mut tt_hit = false;
+    let mut tt_depth = 0i32;
     if let Some((mv, s, d, b)) = td.tt.probe(pos.hash) {
         tt_hit = true;
         tt_move = mv;
         tt_score = from_tt(s, ply);
         tt_bound = b;
-        let _tt_depth = d;
-        if !is_pv && d >= depth {
+        tt_depth = d;
+        if excluded.is_none() && !is_pv && d >= depth {
             if b == BOUND_EXACT
                 || (b == BOUND_LOWER && tt_score >= beta)
                 || (b == BOUND_UPPER && tt_score <= alpha)
@@ -415,10 +428,16 @@ fn search(
         }
     }
 
-    let static_eval = if in_check {
+    let raw_eval = if in_check {
         -INF
     } else {
         evaluate(pos)
+    };
+    let corr_i = pawn_corr_idx(pos);
+    let static_eval = if in_check {
+        raw_eval
+    } else {
+        raw_eval + (td.corr[corr_i] as i32) / 32
     };
     td.eval_stack[ply as usize] = static_eval;
     let improving = ply >= 2
@@ -426,7 +445,8 @@ fn search(
         && static_eval > td.eval_stack[(ply as usize).saturating_sub(2)];
 
     // Reverse futility pruning
-    if !is_pv
+    if excluded.is_none()
+        && !is_pv
         && !in_check
         && depth <= 8
         && static_eval - 70 * depth + (if improving { 40 } else { 0 }) >= beta
@@ -436,7 +456,8 @@ fn search(
     }
 
     // Null move pruning
-    if !is_pv
+    if excluded.is_none()
+        && !is_pv
         && !in_check
         && depth >= 3
         && static_eval >= beta
@@ -456,7 +477,7 @@ fn search(
         td.stack_pc[ply as usize] = 12;
         td.stack_to[ply as usize] = 0;
         td.ply_move[ply as usize] = Move::NONE;
-        let score = -search(&np, td, -beta, -beta + 1, depth - 1 - r, ply + 1, false, !cut_node);
+        let score = -search(&np, td, -beta, -beta + 1, depth - 1 - r, ply + 1, false, !cut_node, Move::NONE);
         td.hash_hist.pop();
         if td.time.stopped() {
             return 0;
@@ -467,8 +488,34 @@ fn search(
     }
 
     // Internal iterative reduction
-    if depth >= 4 && tt_move.is_none() {
+    if excluded.is_none() && depth >= 4 && tt_move.is_none() {
         depth -= 1;
+    }
+
+    // Singular extension: TT move uniquely good → search it one ply deeper.
+    // Never stack with in-check extension (bench d10 used to hang).
+    let mut se_ext = 0i32;
+    if excluded.is_none()
+        && !in_check
+        && ply > 0
+        && depth >= 8
+        && !tt_move.is_none()
+        && tt_hit
+        && tt_depth >= depth - 3
+        && tt_bound != BOUND_UPPER
+        && tt_score.abs() < MATE_IN_MAX_LOCAL
+    {
+        let rbeta = (tt_score - (40 + depth)).max(-MATE_IN_MAX_LOCAL);
+        let sdepth = ((depth - 1) / 2).max(1);
+        let s = search(pos, td, rbeta - 1, rbeta, sdepth, ply, false, cut_node, tt_move);
+        if td.time.stopped() {
+            return 0;
+        }
+        if s < rbeta {
+            se_ext = 1;
+        } else if !is_pv && s >= beta {
+            return s;
+        }
     }
 
     let mut moves = [Move::NONE; MAX_MOVES];
@@ -489,6 +536,9 @@ fn search(
 
     for i in 0..n {
         let mv = moves[i];
+        if mv == excluded {
+            continue;
+        }
         let is_quiet = !mv.is_capture() && !mv.is_promo();
 
         // Late move pruning
@@ -537,8 +587,9 @@ fn search(
 
         // In-check nodes already get +1 at search entry. Do not also extend
         // the checking move — that doubled extensions and exploded the tree
-        // (bench depth 10 never finished).
-        let new_depth = depth - 1;
+        // (bench depth 10 never finished). Singular ext is at most +1 and
+        // never applied in check.
+        let new_depth = depth - 1 + if mv == tt_move { se_ext } else { 0 };
 
         td.hash_hist.push(pos.hash);
         td.stack_pc[ply as usize] = pos.piece_on(mv.from()).index() as u8;
@@ -547,7 +598,7 @@ fn search(
 
         let mut score;
         if legal == 1 {
-            score = -search(&np, td, -beta, -alpha, new_depth, ply + 1, is_pv, false);
+            score = -search(&np, td, -beta, -alpha, new_depth, ply + 1, is_pv, false, Move::NONE);
         } else {
             // LMR
             let mut r = 0;
@@ -577,12 +628,13 @@ fn search(
                 ply + 1,
                 false,
                 true,
+                Move::NONE,
             );
             if r > 0 && score > alpha {
-                score = -search(&np, td, -alpha - 1, -alpha, new_depth, ply + 1, false, !cut_node);
+                score = -search(&np, td, -alpha - 1, -alpha, new_depth, ply + 1, false, !cut_node, Move::NONE);
             }
             if is_pv && score > alpha && score < beta {
-                score = -search(&np, td, -beta, -alpha, new_depth, ply + 1, true, false);
+                score = -search(&np, td, -beta, -alpha, new_depth, ply + 1, true, false, Move::NONE);
             }
         }
 
@@ -642,7 +694,13 @@ fn search(
         return if in_check { mated_in(ply) } else { DRAW };
     }
 
-    td.tt.store(pos.hash, best_move, to_tt(best, ply), depth, bound);
+    if excluded.is_none() {
+        td.tt.store(pos.hash, best_move, to_tt(best, ply), depth, bound);
+        if !in_check && ply > 0 && !is_mate_score(best) {
+            let diff = (best - raw_eval).clamp(-400, 400);
+            gravity(&mut td.corr[corr_i], diff * depth / 8);
+        }
+    }
     best
 }
 
@@ -715,7 +773,7 @@ pub fn iterative_deepening(pos: &Position, td: &mut ThreadData, use_book: bool) 
         }
         let mut score;
         loop {
-            score = search(pos, td, alpha, beta, depth, 0, true, false);
+            score = search(pos, td, alpha, beta, depth, 0, true, false, Move::NONE);
             if td.time.stopped() || td.time.hard_expired() {
                 break;
             }

@@ -1,0 +1,124 @@
+name: NNUE teacher (SF19 MAX >=500ms/move)
+
+# Stockfish 19 at FULL strength (UCI_LimitStrength off) plays itself with a real
+# wall-clock budget per move. HARD FLOOR 500 ms (the datagen script exits 2 below it).
+# 20k-node / ~26 ms / 100-120 ms games are forbidden: they teach the net junk.
+#
+# Output: packed 28-byte records (occ u64 | 16 nibble bytes | stm u8 | score i16 | wdl u8),
+# the exact format of Agent B's tools/nnue/train.py. Merged + deduped data is
+#   * uploaded as artifact `teacher-merged`
+#   * committed to branch `teacher-data` as data/teacher-<run_id>.bin  (public raw URL)
+
+on:
+  workflow_dispatch:
+    inputs:
+      shards:
+        description: "Parallel shards (4 procs each)"
+        default: "8"
+      minutes:
+        description: "Minutes of datagen per shard"
+        default: "150"
+      movetime_ms:
+        description: "SF19 ms per move (floor 500)"
+        default: "500"
+      seed:
+        description: "Seed (change for fresh data)"
+        default: "1"
+
+permissions:
+  contents: write
+
+env:
+  SF19_URL: https://github.com/official-stockfish/Stockfish/releases/download/sf_19/stockfish-linux-x86-64-universal.tar.gz
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      shards: ${{ steps.p.outputs.shards }}
+    steps:
+      - id: p
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          n = int("${{ inputs.shards }}")
+          mt = int("${{ inputs.movetime_ms }}")
+          assert mt >= 500, "movetime floor is 500 ms"
+          print("shards=" + json.dumps(list(range(1, n + 1))))
+          PY
+
+  datagen:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 200
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON(needs.plan.outputs.shards) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install chess numpy
+      - name: Stockfish 19 (official release, full strength)
+        run: |
+          mkdir -p /tmp/sf && curl -fsSL --retry 3 "$SF19_URL" | tar xz -C /tmp/sf
+          SF=$(find /tmp/sf -type f -name 'stockfish-linux-x86-64-universal' | head -1)
+          chmod +x "$SF"; ln -sf "$SF" /tmp/sf19
+          printf 'uci\nquit\n' | /tmp/sf19 | grep 'id name'
+      - name: Generate teacher data (movetime)
+        run: |
+          python3 tools/nnue/datagen_movetime.py --stockfish /tmp/sf19 \
+            --minutes ${{ inputs.minutes }} --movetime-ms ${{ inputs.movetime_ms }} \
+            --procs 4 --seed $(( ${{ inputs.seed }} * 1000 + ${{ matrix.shard }} )) \
+            --out data/shard-${{ matrix.shard }}.bin
+      - uses: actions/upload-artifact@v4
+        with:
+          name: shard-${{ matrix.shard }}
+          path: data/shard-${{ matrix.shard }}.bin
+          retention-days: 7
+          compression-level: 9
+
+  merge:
+    needs: datagen
+    if: ${{ always() && needs.datagen.result != 'cancelled' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: shard-*
+          path: shards
+          merge-multiple: true
+      - name: Merge + dedupe
+        run: |
+          mkdir -p data
+          python3 tools/nnue/merge_dedupe.py data/teacher-${{ github.run_id }}.bin 'shards/*.bin' | tee merge.log
+          ls -la data
+      - uses: actions/upload-artifact@v4
+        with:
+          name: teacher-merged
+          path: |
+            data/teacher-${{ github.run_id }}.bin
+            merge.log
+          retention-days: 30
+      - name: Publish to branch teacher-data
+        run: |
+          set -e
+          mkdir -p /tmp/out
+          cp data/teacher-${{ github.run_id }}.bin /tmp/out/
+          cp merge.log /tmp/out/merge-${{ github.run_id }}.log
+          git config user.name "agent-a"; git config user.email "agent-a@users.noreply.github.com"
+          if git fetch origin teacher-data 2>/dev/null; then
+            git checkout -f -B teacher-data origin/teacher-data
+          else
+            git checkout -f --orphan teacher-data
+            git rm -rf . -q || true
+          fi
+          mkdir -p data
+          cp /tmp/out/* data/
+          printf '# Teacher data (SF19 MAX, >=500ms/move), 28-byte records.\nProduced by .github/workflows/nnue-teacher.yml on main. Feed to tools/nnue/train.py --data "data/*.bin".\n' > README.md
+          git add -A
+          git commit -m "teacher data run ${{ github.run_id }}: $(tail -1 /tmp/out/merge-${{ github.run_id }}.log)"
+          git push origin teacher-data

@@ -27,6 +27,8 @@ Poll those issues. Do not force-push `main`. PRs for engine strength.
 - **100 vs UCI_Elo 2000:** GHA **93-3-4 (94.5%)** run 42565589961; local 90-2-8.
 - **40 vs 2200:** 35-1-4 (88.8%). **40 vs 2400:** 30-1-9 (76.2%). **20 vs SF19 MAX:** 0-0-20.
 - Agent B PR #3 merged. Channel: Chess-rust-engine#1.
+- Owner raised target to **~3000 / SF19 MAX teacher**. Path is **NNUE**, not more PeSTO.
+- Split (CRE#1 `6735882158`): **A** = CRN1 inference `(768→64)×2→1` + numpy trainer (no `board.rs` make/unmake). **B** = SF19 MAX datagen GHA ≥0.5 s + singular/correction hist. Overlapping claims resolved in that comment; net does **not** merge until it beats HCE.
 
 ## Live split (updated 2026-11-09)
 
