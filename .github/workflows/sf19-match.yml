@@ -1,0 +1,148 @@
+name: SF19 match (real time control)
+
+# Plays this engine against official Stockfish 19 with fastchess.
+#   mode=max    : SF19 at FULL strength, no limiter. This is the training /
+#                 stress opponent. Expect to lose most games early on; what we
+#                 care about is *how* we lose (labelled by label_losses.py).
+#   mode=ladder : SF19 under UCI_LimitStrength at several UCI_Elo levels, which
+#                 gives an actual Elo estimate instead of 0-N against ~3600.
+#
+# Both sides: 1 thread, 64 MB hash, same time control, balanced openings, each
+# opening played with colours swapped. Default TC is 60+0.6 - do NOT drop this
+# to ~100 ms/move; shallow games teach shallow moves and mislead the tuning.
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "max = SF19 full strength, ladder = SF19 at limited UCI_Elo"
+        type: choice
+        default: max
+        options: [max, ladder]
+      games:
+        description: "Games per opponent (even number; each opening is played twice)"
+        default: "100"
+      tc:
+        description: "Time control (fastchess syntax: base+inc seconds)"
+        default: "60+0.6"
+      ladder_elos:
+        description: "Comma list of SF19 UCI_Elo levels (ladder mode only, 1320-3190)"
+        default: "2000,2400,2800"
+      label_movetime:
+        description: "Seconds SF19 spends per position when labelling our losses"
+        default: "0.5"
+      ref:
+        description: "Branch/tag/SHA of the engine to test"
+        default: ""
+  push:
+    branches: ["agent2/smoke-*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sf19-match-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  FASTCHESS_URL: https://github.com/Disservin/fastchess/releases/download/v1.8.3-alpha/fastchess-linux-x86-64.tar
+  SF19_URL: https://github.com/official-stockfish/Stockfish/releases/download/sf_19/stockfish-linux-x86-64-universal.tar.gz
+
+jobs:
+  match:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build engine (release, native)
+        run: |
+          RUSTFLAGS="-C target-cpu=native" cargo build --release
+          cp target/release/chess-rust-engine ./engine
+          ./engine bench 10 | tail -2
+
+      - name: Perft gate (never play games with a broken movegen)
+        run: cargo test --release --test perft
+
+      - name: Fetch Stockfish 19 and fastchess
+        run: |
+          mkdir -p /tmp/sf /tmp/fc
+          curl -fsSL --retry 3 "$SF19_URL" | tar xz -C /tmp/sf
+          SF=$(find /tmp/sf -type f -name 'stockfish-linux-x86-64-universal' | head -1)
+          chmod +x "$SF"; ln -sf "$SF" /tmp/sf19
+          curl -fsSL --retry 3 "$FASTCHESS_URL" -o /tmp/fc.tar
+          tar xf /tmp/fc.tar -C /tmp/fc
+          FC=$(find /tmp/fc -type f -name fastchess | head -1)
+          chmod +x "$FC"; ln -sf "$FC" /tmp/fastchess
+          printf 'uci\nquit\n' | /tmp/sf19 | grep -E 'id name|UCI_Elo'
+          /tmp/fastchess --version || true
+          pip install chess
+
+      - name: Play
+        env:
+          MODE: ${{ inputs.mode || 'max' }}
+          GAMES: ${{ inputs.games || '20' }}
+          TC: ${{ inputs.tc || '10+0.1' }}
+          ELOS: ${{ inputs.ladder_elos || '2000' }}
+        run: |
+          mkdir -p out
+          rounds=$(( (GAMES + 1) / 2 ))
+          run_one () {  # $1=label $2..=extra SF options
+            label=$1; shift
+            /tmp/fastchess \
+              -engine cmd=./engine name=Rust option.Hash=64 option.Threads=1 \
+              -engine cmd=/tmp/sf19 name=SF19 option.Hash=64 option.Threads=1 "$@" \
+              -each tc="$TC" -rounds "$rounds" -games 2 -repeat -concurrency 2 \
+              -openings file=tools/openings.epd format=epd order=random \
+              -pgnout file="out/$label.pgn" -recover -ratinginterval 20 \
+              2>&1 | grep -vE '^(Warning|Info|Position|Moves);' | tee "out/$label.log" | tail -n 40
+          }
+          if [ "$MODE" = "max" ]; then
+            run_one sf19_max
+          else
+            IFS=',' read -ra L <<< "$ELOS"
+            for e in "${L[@]}"; do
+              run_one "sf19_elo_$e" option.UCI_LimitStrength=true option.UCI_Elo="$e"
+            done
+          fi
+
+      - name: Summarise
+        run: |
+          {
+            echo "## SF19 match - ${{ inputs.mode || 'max' }} - tc ${{ inputs.tc || '10+0.1' }}"
+            echo "commit: \`$(git rev-parse --short HEAD)\`"
+            echo '```'
+            for p in out/*.pgn; do
+              b=$(basename "$p" .pgn); echo "== $b"
+              case "$b" in
+                sf19_elo_*) python3 tools/summarize.py "$p" --engine Rust --opp-elo "${b#sf19_elo_}" --json "out/$b.json" ;;
+                *)          python3 tools/summarize.py "$p" --engine Rust --json "out/$b.json" ;;
+              esac
+            done
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Label our mistakes in lost games (SF19, real analysis time)
+        env:
+          MOVETIME: ${{ inputs.label_movetime || '0.3' }}
+        run: |
+          for p in out/*.pgn; do
+            b=$(basename "$p" .pgn)
+            python3 tools/label_losses.py "$p" --stockfish /tmp/sf19 --engine Rust \
+              --movetime "$MOVETIME" --out "out/$b.missed.jsonl" || true
+          done
+          wc -l out/*.jsonl || true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sf19-match-${{ github.run_id }}
+          path: out/
+          retention-days: 90

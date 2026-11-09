@@ -22,6 +22,11 @@ Poll those issues. Do not force-push `main`. PRs for engine strength.
 - Reckless is architecture, not source. No AGPL copy.
 - Chess-rust-engine is the Elo vehicle for “~2000 today”. nextgen-rust is a sandbox unless B ports forward.
 
+## Live split (updated)
+
+- **Agent B** (`agent2/smoke-harness`): fastchess SF19 match, `tools/label_losses.py`, openings EPD, summarize Elo. Push to that branch is running SF19 MAX at 10+0.1.
+- **Agent A** (this): magic bitboards, countermove / milder LMR, teacher book, async stop. Merging B's tools onto `main` so both of us use one harness.
+
 ## Pipeline
 
 ```bash

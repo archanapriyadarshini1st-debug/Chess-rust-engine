@@ -1,8 +1,5 @@
-//! Attack tables: leapers precomputed, sliders via ray + first-blocker.
-//!
-//! Slider generation uses the classic "precomputed ray XOR ray-beyond-blocker"
-//! technique from the Chess Programming Wiki. Magics / PEXT are a later NPS
-//! upgrade (see ROADMAP.md) but this is correct and already fast.
+//! Attack tables: leapers precomputed, sliders via fancy magic bitboards.
+//! Magics are found once at startup; rays are only used to build the tables.
 
 use crate::bitboard::Bitboard;
 use crate::types::{Color, Square};
@@ -17,10 +14,19 @@ const NW: usize = 5;
 const SE: usize = 6;
 const SW: usize = 7;
 
+#[derive(Clone, Copy)]
+struct Magic {
+    mask: u64,
+    magic: u64,
+    shift: u32,
+    offset: u32,
+}
+
 pub struct AttackTables {
     pub pawn: [[u64; 64]; 2],
     pub knight: [u64; 64],
     pub king: [u64; 64],
+    #[allow(dead_code)]
     rays: [[u64; 64]; 8],
     pub bishop_rays: [u64; 64],
     pub rook_rays: [u64; 64],
@@ -28,6 +34,9 @@ pub struct AttackTables {
     pub forward_file: [[u64; 64]; 2],
     /// Passed-pawn span: front file + adjacent files, in front of the pawn.
     pub passed: [[u64; 64]; 2],
+    bishop_magic: [Magic; 64],
+    rook_magic: [Magic; 64],
+    slider: Vec<u64>,
 }
 
 static TABLES: OnceLock<AttackTables> = OnceLock::new();
@@ -152,6 +161,22 @@ impl AttackTables {
             passed[1][i] = span;
         }
 
+        let mut slider = Vec::new();
+        let mut bishop_magic = [Magic {
+            mask: 0,
+            magic: 0,
+            shift: 0,
+            offset: 0,
+        }; 64];
+        let mut rook_magic = bishop_magic;
+        fill_magics(
+            &rays,
+            false,
+            &mut bishop_magic,
+            &mut slider,
+        );
+        fill_magics(&rays, true, &mut rook_magic, &mut slider);
+
         AttackTables {
             pawn,
             knight,
@@ -161,6 +186,9 @@ impl AttackTables {
             rook_rays,
             forward_file,
             passed,
+            bishop_magic,
+            rook_magic,
+            slider,
         }
     }
 }
@@ -185,24 +213,178 @@ fn negative_ray(ray: u64, beyond: &[u64; 64], occ: u64) -> u64 {
     }
 }
 
+fn slow_bishop(rays: &[[u64; 64]; 8], sq: usize, occ: u64) -> u64 {
+    positive_ray(rays[NE][sq], &rays[NE], occ)
+        | positive_ray(rays[NW][sq], &rays[NW], occ)
+        | negative_ray(rays[SE][sq], &rays[SE], occ)
+        | negative_ray(rays[SW][sq], &rays[SW], occ)
+}
+
+fn slow_rook(rays: &[[u64; 64]; 8], sq: usize, occ: u64) -> u64 {
+    positive_ray(rays[NORTH][sq], &rays[NORTH], occ)
+        | positive_ray(rays[EAST][sq], &rays[EAST], occ)
+        | negative_ray(rays[SOUTH][sq], &rays[SOUTH], occ)
+        | negative_ray(rays[WEST][sq], &rays[WEST], occ)
+}
+
+fn rook_relevant(sq: usize) -> u64 {
+    let r = sq / 8;
+    let f = sq % 8;
+    let mut m = 0u64;
+    for rf in (f + 1)..7 {
+        m |= 1u64 << (r * 8 + rf);
+    }
+    for rf in 1..f {
+        m |= 1u64 << (r * 8 + rf);
+    }
+    for rr in (r + 1)..7 {
+        m |= 1u64 << (rr * 8 + f);
+    }
+    for rr in 1..r {
+        m |= 1u64 << (rr * 8 + f);
+    }
+    m
+}
+
+fn bishop_relevant(sq: usize) -> u64 {
+    let r = sq / 8;
+    let f = sq % 8;
+    let mut m = 0u64;
+    let mut rr = r + 1;
+    let mut ff = f + 1;
+    while rr < 7 && ff < 7 {
+        m |= 1u64 << (rr * 8 + ff);
+        rr += 1;
+        ff += 1;
+    }
+    rr = r + 1;
+    ff = f.wrapping_sub(1);
+    while rr < 7 && ff >= 1 && ff < 8 {
+        m |= 1u64 << (rr * 8 + ff);
+        rr += 1;
+        ff -= 1;
+    }
+    rr = r.wrapping_sub(1);
+    ff = f + 1;
+    while rr >= 1 && rr < 8 && ff < 7 {
+        m |= 1u64 << (rr * 8 + ff);
+        rr -= 1;
+        ff += 1;
+    }
+    rr = r.wrapping_sub(1);
+    ff = f.wrapping_sub(1);
+    while rr >= 1 && rr < 8 && ff >= 1 && ff < 8 {
+        m |= 1u64 << (rr * 8 + ff);
+        rr -= 1;
+        ff -= 1;
+    }
+    m
+}
+
+fn occupancy_from_index(index: usize, mask: u64) -> u64 {
+    let mut occ = 0u64;
+    let mut bits = mask;
+    let mut i = 0;
+    while bits != 0 {
+        let sq = bits.trailing_zeros();
+        bits &= bits - 1;
+        if index & (1 << i) != 0 {
+            occ |= 1u64 << sq;
+        }
+        i += 1;
+    }
+    occ
+}
+
+fn fill_magics(rays: &[[u64; 64]; 8], rook: bool, out: &mut [Magic; 64], table: &mut Vec<u64>) {
+    let mut rng: u64 = if rook {
+        0xC0FF_EE12_3456_789A
+    } else {
+        0xDEAD_BEEF_CAFE_BABE
+    };
+    let next = |rng: &mut u64| -> u64 {
+        *rng ^= *rng << 13;
+        *rng ^= *rng >> 7;
+        *rng ^= *rng << 17;
+        *rng
+    };
+    for sq in 0..64 {
+        let mask = if rook {
+            rook_relevant(sq)
+        } else {
+            bishop_relevant(sq)
+        };
+        let bits = mask.count_ones();
+        let size = 1usize << bits;
+        let mut occupancies = vec![0u64; size];
+        let mut attacks = vec![0u64; size];
+        for i in 0..size {
+            occupancies[i] = occupancy_from_index(i, mask);
+            attacks[i] = if rook {
+                slow_rook(rays, sq, occupancies[i])
+            } else {
+                slow_bishop(rays, sq, occupancies[i])
+            };
+        }
+        let shift = 64 - bits;
+        let offset = table.len() as u32;
+        let mut used = vec![0u64; size];
+        let mut magic = 0u64;
+        'find: for _ in 0..100_000_000u32 {
+            let a = next(&mut rng) & next(&mut rng) & next(&mut rng);
+            if ((a.wrapping_mul(mask)) >> 56).count_ones() < 6 {
+                continue;
+            }
+            used.fill(0);
+            let mut ok = true;
+            for i in 0..size {
+                let idx = ((occupancies[i].wrapping_mul(a)) >> shift) as usize;
+                if used[idx] == 0 {
+                    used[idx] = attacks[i];
+                } else if used[idx] != attacks[i] {
+                    ok = false;
+                    break;
+                }
+            }
+            if ok {
+                magic = a;
+                break 'find;
+            }
+        }
+        if magic == 0 {
+            panic!("magic not found sq={} rook={}", sq, rook);
+        }
+        table.resize(table.len() + size, 0);
+        for i in 0..size {
+            let idx = ((occupancies[i].wrapping_mul(magic)) >> shift) as usize;
+            table[offset as usize + idx] = attacks[i];
+        }
+        out[sq] = Magic {
+            mask,
+            magic,
+            shift,
+            offset,
+        };
+    }
+}
+
+#[inline]
+fn magic_attacks(sq: Square, occ: u64, magics: &[Magic; 64], table: &[u64]) -> u64 {
+    let m = magics[sq.index()];
+    let idx = ((occ & m.mask).wrapping_mul(m.magic) >> m.shift) as usize;
+    table[m.offset as usize + idx]
+}
+
 #[inline]
 pub fn bishop_attacks(sq: Square, occ: u64) -> u64 {
     let t = tables();
-    let i = sq.index();
-    positive_ray(t.rays[NE][i], &t.rays[NE], occ)
-        | positive_ray(t.rays[NW][i], &t.rays[NW], occ)
-        | negative_ray(t.rays[SE][i], &t.rays[SE], occ)
-        | negative_ray(t.rays[SW][i], &t.rays[SW], occ)
+    magic_attacks(sq, occ, &t.bishop_magic, &t.slider)
 }
 
 #[inline]
 pub fn rook_attacks(sq: Square, occ: u64) -> u64 {
     let t = tables();
-    let i = sq.index();
-    positive_ray(t.rays[NORTH][i], &t.rays[NORTH], occ)
-        | positive_ray(t.rays[EAST][i], &t.rays[EAST], occ)
-        | negative_ray(t.rays[SOUTH][i], &t.rays[SOUTH], occ)
-        | negative_ray(t.rays[WEST][i], &t.rays[WEST], occ)
+    magic_attacks(sq, occ, &t.rook_magic, &t.slider)
 }
 
 #[inline]

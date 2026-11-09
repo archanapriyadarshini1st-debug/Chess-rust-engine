@@ -36,6 +36,8 @@ pub struct ThreadData {
     pub score: i32,
     pub check_nodes: u64,
     pub silent: bool,
+    pub counter: [[Move; 64]; 64],
+    pub ply_move: [Move; MAX_PLY],
 }
 
 impl ThreadData {
@@ -55,6 +57,8 @@ impl ThreadData {
             score: 0,
             check_nodes: 0,
             silent: false,
+            counter: [[Move::NONE; 64]; 64],
+            ply_move: [Move::NONE; MAX_PLY],
         }
     }
 
@@ -94,6 +98,12 @@ fn score_move(td: &ThreadData, pos: &Position, mv: Move, tt_move: Move, ply: usi
     }
     if mv == td.killers[ply][1] {
         return 800_000;
+    }
+    if ply > 0 {
+        let prev = td.ply_move[ply - 1];
+        if !prev.is_none() && td.counter[prev.from().index()][prev.to().index()] == mv {
+            return 850_000;
+        }
     }
     td.history[pos.side.index()][mv.from().index()][mv.to().index()] as i32
 }
@@ -343,6 +353,7 @@ fn search(
         np.side = np.side.flip();
         np.hash ^= crate::zobrist::ZOBRIST.side;
         td.hash_hist.push(pos.hash);
+        td.ply_move[ply as usize] = Move::NONE;
         let score = -search(&np, td, -beta, -beta + 1, depth - 1 - r, ply + 1, false, !cut_node);
         td.hash_hist.pop();
         if td.time.stopped() || td.time.hard_expired() {
@@ -382,7 +393,7 @@ fn search(
             && is_quiet
             && legal > 0
             && depth <= 7
-            && legal >= 3 + depth * depth / if improving { 1 } else { 2 }
+            && legal >= 4 + depth * depth / if improving { 1 } else { 2 }
         {
             continue;
         }
@@ -420,6 +431,7 @@ fn search(
         }
 
         td.hash_hist.push(pos.hash);
+        td.ply_move[ply as usize] = mv;
 
         let mut score;
         if legal == 1 {
@@ -427,7 +439,7 @@ fn search(
         } else {
             // LMR
             let mut r = 0;
-            if is_quiet && depth >= 3 && legal >= 3 {
+            if is_quiet && depth >= 3 && legal >= 4 {
                 r = lmr_reduction(depth, legal);
                 if !is_pv {
                     r += 1;
@@ -441,7 +453,7 @@ fn search(
                 if gives_check {
                     r = r.saturating_sub(1);
                 }
-                r = r.clamp(0, new_depth - 1);
+                r = r.min(new_depth - 1).max(0);
             }
             score = -search(
                 &np,
@@ -485,6 +497,12 @@ fn search(
                         update_killers(td, ply as usize, mv);
                         let bonus = 300 * depth - 150;
                         update_history(td, pos.side, mv, bonus);
+                        if ply > 0 {
+                            let prev = td.ply_move[ply as usize - 1];
+                            if !prev.is_none() {
+                                td.counter[prev.from().index()][prev.to().index()] = mv;
+                            }
+                        }
                         for k in 0..quiet_n {
                             update_history(td, pos.side, quiets[k], -bonus);
                         }
@@ -511,7 +529,7 @@ fn lmr_reduction(depth: i32, move_no: i32) -> i32 {
     // ln(depth)*ln(move_no) style table, integer approx
     let d = depth.max(1) as f32;
     let m = move_no.max(1) as f32;
-    ((d.ln() * m.ln()) * 0.6) as i32
+    ((d.ln() * m.ln()) * 0.45) as i32
 }
 
 const MATE_IN_MAX_LOCAL: i32 = crate::types::MATE_IN_MAX;
