@@ -104,6 +104,9 @@ jobs:
               -engine cmd=/tmp/sf19 name=SF19 option.Hash=64 option.Threads=1 "$@" \
               -each tc="$TC" -rounds "$rounds" -games 2 -repeat -concurrency 2 \
               -openings file=tools/openings.epd format=epd order=random \
+              -draw movenumber=40 movecount=8 score=20 \
+              -resign movecount=3 score=600 \
+              -maxmoves 400 \
               -pgnout file="out/$label.pgn" -recover -ratinginterval 20 \
               2>&1 | grep -vE '^(Warning|Info|Position|Moves);' | tee "out/$label.log" | tail -n 40
           }

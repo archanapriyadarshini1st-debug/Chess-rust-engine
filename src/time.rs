@@ -65,11 +65,16 @@ impl TimeManager {
             };
             if let Some(remain) = time {
                 let mtg = limits.movestogo.unwrap_or(20).max(1) as u64;
-                let alloc = remain / mtg.max(20) + inc * 4 / 5;
+                // Spend a bit more of the clock than remain/20 — 10+0.1 games
+                // were finishing with time left while SF19 still had a vote.
+                let alloc = remain / mtg.max(15) + inc * 9 / 10;
                 let alloc = alloc.min(remain / 2).saturating_sub(overhead_ms);
                 let alloc = alloc.max(5);
                 soft = Duration::from_millis(alloc);
-                hard = Duration::from_millis((alloc * 3).min(remain.saturating_sub(overhead_ms)).max(10));
+                let hard_ms = (alloc.saturating_mul(4))
+                    .min(remain.saturating_sub(overhead_ms + 80))
+                    .max(10);
+                hard = Duration::from_millis(hard_ms);
             } else if limits.depth.is_none() && limits.nodes.is_none() && !limits.infinite {
                 infinite = true;
             }

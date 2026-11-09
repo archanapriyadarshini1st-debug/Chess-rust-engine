@@ -186,6 +186,11 @@ pub fn evaluate(pos: &Position) -> i32 {
                 } as usize;
                 mg[color_i] += PASSED_MG[rel_rank];
                 eg[color_i] += PASSED_EG[rel_rank];
+                // Connected / protected passer
+                if pawns & ADJACENT_FILES[file] != 0 {
+                    mg[color_i] += PASSED_MG[rel_rank] / 2;
+                    eg[color_i] += PASSED_EG[rel_rank] / 2;
+                }
             }
         }
 
@@ -264,6 +269,28 @@ pub fn evaluate(pos: &Position) -> i32 {
             }
         }
         mg[color_i] += (shield - 2) * 10;
+
+        // Pawn storm against the enemy king (opening/middlegame)
+        let ek = pos.king_sq(color.flip());
+        for df in [-1i32, 0, 1] {
+            let f = ek.file() as i32 + df;
+            if !(0..8).contains(&f) {
+                continue;
+            }
+            let mut fp = pawns & FILES[f as usize];
+            while fp != 0 {
+                let sq = Square(fp.trailing_zeros() as u8);
+                fp &= fp - 1;
+                let rel = if color == Color::White {
+                    sq.rank()
+                } else {
+                    7 - sq.rank()
+                } as i32;
+                if rel >= 4 {
+                    mg[color_i] += 5 * (rel - 3);
+                }
+            }
+        }
 
         // Knight outposts: supported by a pawn, not attackable by an enemy pawn,
         // on the 5th/6th (relative).
