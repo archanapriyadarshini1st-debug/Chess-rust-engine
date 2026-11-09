@@ -65,8 +65,9 @@ pub fn run(n: usize, depth: i32, out_path: &str) {
         games += 1;
         let fen = &openings[rng.u32(openings.len() as u32) as usize];
         let mut pos = Position::from_fen(fen).unwrap_or_else(Position::startpos);
-        // scramble a few random legal moves for diversity
-        let scramble = 2 + rng.u32(10) as i32;
+        // short scramble from the book — long random walks produce junk kings
+        // on f6 at move 7, which even SF19 labels into a net that loses to HCE.
+        let scramble = rng.u32(5) as i32;
         for _ in 0..scramble {
             let mut moves = [Move::NONE; MAX_MOVES];
             let k = legal_moves(&pos, &mut moves);
@@ -117,8 +118,8 @@ pub fn run(n: usize, depth: i32, out_path: &str) {
             if !in_check && !noisy && res.score.abs() < 1500 && k > 1 {
                 samples.push((pos.to_fen(), res.score, pos.side));
             }
-            // 12% random to leave book / avoid loops
-            let mv = if rng.u32(100) < 12 {
+            // 4% random to leave book / avoid loops (was 12%; too much noise)
+            let mv = if rng.u32(100) < 4 {
                 moves[rng.u32(k as u32) as usize]
             } else {
                 res.best
