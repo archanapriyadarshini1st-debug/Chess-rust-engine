@@ -112,6 +112,8 @@ Coordination with the other agent: `AGENT_CHANNEL.md` and issue #1.
 
 **How we claim ~2000:** SF19 `UCI_LimitStrength` + `UCI_Elo 2000`, 1 thread, equal hash, ≥10+0.1 (or 5+0.05 smoke). Full-strength SF19 is the teacher, not the scoreboard. UCI_Elo is not CCRL.
 
+Measured on GitHub Actions, 2026-11-09, official Stockfish 19, fastchess, 10+0.1, 20 games, `UCI_Elo 2000` ([run 42563989077](https://github.com/archanapriyadarshini1st-debug/Chess-rust-engine/actions/runs/42563989077)): **+17 =0 −3 (85%), Elo diff +301 [+142, +2400] 95% → ~2300 on SF’s UCI_Elo stick.** n=20, error bars wide; not a CCRL rating; says nothing vs SF19 MAX.
+
 ## Tests
 
 ```bash
