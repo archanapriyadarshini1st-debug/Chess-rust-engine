@@ -1,0 +1,31 @@
+[package]
+name = "chess-rust-engine"
+version = "0.1.0"
+edition = "2021"
+authors = ["Chess-rust-engine authors"]
+license = "GPL-3.0-or-later"
+description = "A UCI chess engine in Rust, structured after Reckless / Viridithas / Stockfish for a path to elite strength"
+readme = "README.md"
+repository = "https://github.com/archanapriyadarshini1st-debug/Chess-rust-engine"
+keywords = ["chess", "uci", "engine"]
+categories = ["game-engines"]
+
+[[bin]]
+name = "chess-rust-engine"
+path = "src/main.rs"
+
+[lib]
+name = "chess_rust_engine"
+path = "src/lib.rs"
+
+[profile.release]
+lto = true
+codegen-units = 1
+opt-level = 3
+panic = "abort"
+strip = "symbols"
+
+[profile.bench]
+lto = true
+codegen-units = 1
+opt-level = 3
