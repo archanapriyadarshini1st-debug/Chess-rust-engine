@@ -10,6 +10,17 @@ fn main() {
             let depth: i32 = args.next().and_then(|s| s.parse().ok()).unwrap_or(8);
             let _ = bench(depth);
         }
+        Some("datagen") => {
+            let n: usize = args.next().and_then(|s| s.parse().ok()).unwrap_or(20_000);
+            let depth: i32 = args.next().and_then(|s| s.parse().ok()).unwrap_or(6);
+            let out = args
+                .next()
+                .unwrap_or_else(|| "datasets/selfplay.jsonl".into());
+            chess_rust_engine::datagen::run(n, depth, &out);
+        }
+        Some("hce-dump") => {
+            chess_rust_engine::datagen::dump_hce();
+        }
         Some("perft") => {
             let depth: u32 = args.next().and_then(|s| s.parse().ok()).unwrap_or(5);
             let fen = args.next();

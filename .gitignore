@@ -8,3 +8,6 @@ chess-rust-engine
 *.nnue
 *.network
 .arena/
+datasets/*.jsonl
+nets/*.bin
+!nets/.gitkeep
