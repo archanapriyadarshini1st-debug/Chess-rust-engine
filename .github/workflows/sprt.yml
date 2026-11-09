@@ -135,8 +135,10 @@ jobs:
           BASE_OPTS: ${{ inputs.base_opts }}
         run: |
           mkdir -p out
-          OPENINGS=test/tools/openings.epd
-          [ -f "$OPENINGS" ] || OPENINGS=base/tools/openings.epd
+          # real mainline openings (6/8/10 plies); openings.epd is random-legal junk
+          OPENINGS=test/tools/openings_book.epd
+          [ -f "$OPENINGS" ] || OPENINGS=base/tools/openings_book.epd
+          [ -f "$OPENINGS" ] || OPENINGS=test/tools/openings.epd
           # CRE_NNUE_FILE (set above when test_net is given) must only reach TEST,
           # so BASE is launched through a wrapper that unsets it.
           printf '#!/bin/sh\nunset CRE_NNUE_FILE\nexec "%s" "$@"\n' "$PWD/engine_base" > base_run.sh
