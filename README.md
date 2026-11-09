@@ -21,7 +21,7 @@ chess-programming canon documented in `RESEARCH.md` and `ROADMAP.md`.
 | Tapered PeSTO + king safety, outposts, pawns, rooks, mobility | done |
 | SF19 UCI_Elo ladder + teacher GHA (never 100 ms) | done |
 | OpenBench-shaped `Makefile` + `bench` | done |
-| NNUE (the Elo wall) | **next** — see `ROADMAP.md` |
+| NNUE (the Elo wall) | **in tree** `(768→64)×2→1` SCReLU i16 (CRN1). Loads `nets/v1.bin` if present, else HCE. Net is **not** merged until it beats HCE. |
 
 Honest strength: a correct modern-search HCE engine like this typically lands
 in the **~1800–2400 CCRL** band once time management and ordering are tuned.
