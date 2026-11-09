@@ -425,10 +425,10 @@ fn search(
         legal += 1;
         let gives_check = np.in_check();
 
-        let mut new_depth = depth - 1;
-        if gives_check && depth > 1 {
-            new_depth += 1;
-        }
+        // In-check nodes already get +1 at search entry. Do not also extend
+        // the checking move — that doubled extensions and exploded the tree
+        // (bench depth 10 never finished).
+        let new_depth = depth - 1;
 
         td.hash_hist.push(pos.hash);
         td.ply_move[ply as usize] = mv;
@@ -698,6 +698,7 @@ pub fn bench(depth: i32) -> (u64, u64) {
         "r1bqkbnr/1ppp1ppp/p1n5/4p3/B3P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 1 4",
         "2r3k1/1q1nbppp/r3p3/3pP3/pPpP4/P1Q2N2/2RN1PPP/2R4K b - b3 0 23",
     ];
+    let _ = crate::attacks::tables();
     let tt = Arc::new(TranspositionTable::new(16));
     let mut total_nodes = 0u64;
     let start = std::time::Instant::now();

@@ -6,7 +6,10 @@
 //! is documented in ROADMAP.md. This function is the correct base to Texel-tune
 //! and then to generate NNUE training data from.
 
-use crate::attacks::{bishop_attacks, knight_attacks, queen_attacks, rook_attacks, tables};
+use crate::attacks::{
+    bishop_attacks, king_attacks, knight_attacks, pawn_attacks, pawn_attacks_bb, queen_attacks,
+    rook_attacks, tables,
+};
 use crate::bitboard::{ADJACENT_FILES, FILES};
 use crate::board::Position;
 use crate::types::{Color, PieceType, Square};
@@ -101,6 +104,9 @@ const ROOK_SEMI_EG: i32 = 4;
 const ROOK_SEVENTH_MG: i32 = 12;
 const ROOK_SEVENTH_EG: i32 = 22;
 const TEMPO: i32 = 10;
+const OUTPOST_MG: i32 = 18;
+const OUTPOST_EG: i32 = 10;
+const KING_ATT_W: [i32; 6] = [0, 2, 2, 3, 5, 0];
 
 const PASSED_MG: [i32; 8] = [0, 2, 6, 12, 24, 48, 80, 0];
 const PASSED_EG: [i32; 8] = [0, 8, 14, 28, 52, 90, 140, 0];
@@ -258,6 +264,58 @@ pub fn evaluate(pos: &Position) -> i32 {
             }
         }
         mg[color_i] += (shield - 2) * 10;
+
+        // Knight outposts: supported by a pawn, not attackable by an enemy pawn,
+        // on the 5th/6th (relative).
+        let mut kn_out = pos.bb(color, PieceType::Knight);
+        while kn_out != 0 {
+            let sq = Square(kn_out.trailing_zeros() as u8);
+            kn_out &= kn_out - 1;
+            let rel = if color == Color::White {
+                sq.rank()
+            } else {
+                7 - sq.rank()
+            };
+            if rel >= 4 {
+                let supported = pawn_attacks(color.flip(), sq) & pawns != 0;
+                let attackable = pawn_attacks(color, sq) & enemy_pawns != 0;
+                if supported && !attackable {
+                    mg[color_i] += OUTPOST_MG;
+                    eg[color_i] += OUTPOST_EG;
+                }
+            }
+        }
+
+        // King safety: weighted enemy attacks on the king zone.
+        let zone = king_attacks(king) | king.bb();
+        let enemy = color.flip();
+        let mut units = 0i32;
+        let mut n_att = 0i32;
+        for pt in [PieceType::Knight, PieceType::Bishop, PieceType::Rook, PieceType::Queen] {
+            let mut bb = pos.bb(enemy, pt);
+            while bb != 0 {
+                let sq = Square(bb.trailing_zeros() as u8);
+                bb &= bb - 1;
+                let att = match pt {
+                    PieceType::Knight => knight_attacks(sq),
+                    PieceType::Bishop => bishop_attacks(sq, occ),
+                    PieceType::Rook => rook_attacks(sq, occ),
+                    PieceType::Queen => queen_attacks(sq, occ),
+                    _ => 0,
+                };
+                if att & zone != 0 {
+                    units += KING_ATT_W[pt.index()];
+                    n_att += 1;
+                }
+            }
+        }
+        if pawn_attacks_bb(enemy, pos.bb(enemy, PieceType::Pawn)) & zone != 0 {
+            units += 1;
+            n_att += 1;
+        }
+        if n_att >= 2 {
+            mg[color_i] -= (units * units) / 2;
+        }
     }
 
     let us = pos.side.index();

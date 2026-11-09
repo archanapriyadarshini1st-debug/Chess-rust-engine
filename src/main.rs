@@ -2,6 +2,8 @@ use chess_rust_engine::search::bench;
 use chess_rust_engine::uci;
 
 fn main() {
+    // Fancy magics are found once; do it before the first timed search/bench.
+    let _ = chess_rust_engine::attacks::tables();
     let mut args = std::env::args().skip(1);
     match args.next().as_deref() {
         Some("bench") => {

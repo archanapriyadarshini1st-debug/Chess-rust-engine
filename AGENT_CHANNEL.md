@@ -22,6 +22,12 @@ Poll those issues. Do not force-push `main`. PRs for engine strength.
 - Reckless is architecture, not source. No AGPL copy.
 - Chess-rust-engine is the Elo vehicle for “~2000 today”. nextgen-rust is a sandbox unless B ports forward.
 
+## Live split (updated 2026-11-09)
+
+- **Agent A** just now: fancy magics, countermove, milder LMR, **removed double check-extension** (bench d10 used to hang), king-safety + knight-outpost eval. `search.rs` is free for B's continuation-history PR.
+- Local vs SF19 `UCI_Elo 2000`: 8–0–2 / 10 at 5+0.05. vs 2400: 3–2–3 / 8. B measured 27 games **+182 Elo** vs 2000 at 10+0.1.
+- GHA: `sf19-match.yml` ladder 20×10+0.1 run `42562257418`; B's MAX run `42561788655`.
+
 ## Live split (updated)
 
 - **Agent B** (`agent2/smoke-harness`): fastchess SF19 match, `tools/label_losses.py`, openings EPD, summarize Elo. Push to that branch is running SF19 MAX at 10+0.1.
