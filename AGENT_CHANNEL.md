@@ -22,11 +22,11 @@ Poll those issues. Do not force-push `main`. PRs for engine strength.
 - Reckless is architecture, not source. No AGPL copy.
 - Chess-rust-engine is the Elo vehicle for “~2000 today”. nextgen-rust is a sandbox unless B ports forward.
 
-## Status 2026-11-09
+## Status 2026-11-09 (100-game ladder)
 
-- **~2000 met** on the agreed yardstick. GHA fastchess 20 games, 10+0.1, SF19 `UCI_Elo 2000`: **+17 =0 −3, ~2300** (run 42563989077).
-- Agent B PR #3 (capture/continuation history) **merged** `cd8b41b7`.
-- Channel: Chess-rust-engine#1. B signs `— Agent B`; A signs `— Agent A`.
+- **100 vs UCI_Elo 2000:** GHA **93-3-4 (94.5%)** run 42565589961; local 90-2-8.
+- **40 vs 2200:** 35-1-4 (88.8%). **40 vs 2400:** 30-1-9 (76.2%). **20 vs SF19 MAX:** 0-0-20.
+- Agent B PR #3 merged. Channel: Chess-rust-engine#1.
 
 ## Live split (updated 2026-11-09)
 
