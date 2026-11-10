@@ -1,0 +1,249 @@
+name: Ship gate (5x replicated test + side-effect checks)
+
+# "Test it five times before shipping." [Agent S3]
+#
+# Candidate vs base, played as FIVE independent replicates:
+#   * each replicate gets its own disjoint 1/5 slice of tools/openings_book.epd
+#   * fixed game count per replicate (no SPRT early stopping, so no optional-stopping bias)
+#   * each replicate runs on its own runner, so one noisy machine cannot decide the verdict
+# plus: perft, 5x bench determinism, interleaved NPS ratio, time-forfeit / illegal-move scan.
+#
+# Verdict (SHIP / REJECT / INVESTIGATE / INCONCLUSIVE) comes from tools/ship_gate.py and its
+# fixed decision rule. Green job == SHIP. Anything else is red. A SHIP is still a human decision:
+# CI green is never a reason to merge on its own.
+#
+#   mode=improve       the patch claims +Elo
+#   mode=noninferior   the patch claims "no strength change" (refactor / speed-up / cleanup)
+#
+# Honest sample sizes (see `tools/ship_gate.py calibrate`): with the default 119 rounds
+# (238 games x 5 = 1190), a true +10 Elo patch is shipped ~25% of the time, +20 ~72%, +30 ~96%,
+# and a true 0 Elo patch ~2%. For small gains raise `rounds` (the slice is repeated) or use sprt.yml.
+
+on:
+  workflow_dispatch:
+    inputs:
+      test:
+        description: "Candidate branch / tag / SHA"
+        required: true
+      base:
+        description: "Last-known-good branch / tag / SHA"
+        default: "main"
+      mode:
+        description: "improve | noninferior"
+        type: choice
+        default: improve
+        options: [improve, noninferior]
+      tc:
+        description: "Time control (floor 5+0.05)"
+        default: "10+0.1"
+      rounds:
+        description: "Rounds per replicate (2 games each). 119 = every slice opening once"
+        default: "119"
+      margin:
+        description: "noninferior mode: allowed Elo loss (95% lower bound must stay above -margin)"
+        default: "8"
+      expect_node_identical:
+        description: "true if the patch claims identical search (bench nodes must match base)"
+        type: choice
+        default: "false"
+        options: ["false", "true"]
+      concurrency:
+        description: "Parallel games per replicate (runner has 4 vCPU)"
+        default: "3"
+      test_opts:
+        description: "Extra fastchess options for the candidate engine"
+        default: ""
+      base_opts:
+        description: "Extra fastchess options for the base engine"
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ship-gate-${{ inputs.test }}-${{ inputs.base }}
+  cancel-in-progress: true
+
+env:
+  FASTCHESS_URL: https://github.com/Disservin/fastchess/releases/download/v1.8.3-alpha/fastchess-linux-x86-64.tar
+  # Portable baseline so the binaries built once on one runner run on every replicate runner.
+  GATE_RUSTFLAGS: "-C target-cpu=x86-64-v2"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: "${{ inputs.test }}", path: test }
+      - uses: actions/checkout@v4
+        with: { ref: "${{ inputs.base }}", path: base }
+      - uses: actions/checkout@v4
+        with: { ref: "${{ github.sha }}", path: harness }
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Validate inputs
+        env:
+          TC: ${{ inputs.tc }}
+          ROUNDS: ${{ inputs.rounds }}
+        run: |
+          python3 - <<'PY'
+          import os, sys
+          tc = os.environ["TC"]; base, _, inc = tc.partition("+")
+          b = float(base.split("/")[-1]); i = float(inc or 0)
+          if b < 5 or (b + 40 * i) < 7:
+              sys.exit(f"refusing tc {tc}: floor is 5+0.05")
+          if int(os.environ["ROUNDS"]) < 60:
+              sys.exit("rounds < 60 per replicate is too few to mean anything")
+          PY
+          python3 harness/tools/ship_gate.py selftest
+
+      - name: Build candidate and base (identical flags)
+        run: |
+          for d in test base; do
+            (cd $d && RUSTFLAGS="$GATE_RUSTFLAGS" cargo build --release \
+              && cp target/release/chess-rust-engine ../engine_$d)
+          done
+          ls -l engine_test engine_base
+
+      - name: Perft gate (candidate)
+        id: perft
+        run: |
+          set +e
+          (cd test && RUSTFLAGS="$GATE_RUSTFLAGS" cargo test --release --test perft)
+          if [ $? -eq 0 ]; then echo "ok=true" >> "$GITHUB_OUTPUT"; else echo "ok=false" >> "$GITHUB_OUTPUT"; fi
+          exit 0
+
+      - name: Probe (5x bench determinism, interleaved NPS, hashes)
+        run: |
+          python3 harness/tools/ship_gate.py probe --test ./engine_test --base ./engine_base \
+            --runs 5 --depth 11 --perft-ok ${{ steps.perft.outputs.ok }} \
+            --rustflags "$GATE_RUSTFLAGS" --out side.json
+          cat side.json
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gate-bins
+          path: |
+            engine_test
+            engine_base
+            side.json
+          retention-days: 14
+
+  replicate:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      matrix:
+        idx: [0, 1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: "${{ github.sha }}", path: harness }
+      - uses: actions/download-artifact@v4
+        with: { name: gate-bins, path: bins }
+      - name: fastchess
+        run: |
+          chmod +x bins/engine_test bins/engine_base
+          mkdir -p /tmp/fc && curl -fsSL --retry 3 "$FASTCHESS_URL" -o /tmp/fc.tar
+          tar xf /tmp/fc.tar -C /tmp/fc
+          FC=$(find /tmp/fc -type f -name fastchess | head -1); chmod +x "$FC"; ln -sf "$FC" /tmp/fastchess
+          /tmp/fastchess --version
+
+      - name: Disjoint opening slice for this replicate
+        env:
+          IDX: ${{ matrix.idx }}
+          ROUNDS: ${{ inputs.rounds }}
+        run: |
+          python3 - <<'PY'
+          import os, random, math
+          idx, rounds = int(os.environ["IDX"]), int(os.environ["ROUNDS"])
+          lines = [l for l in open("harness/tools/openings_book.epd").read().splitlines() if l.strip()]
+          mine = lines[idx::5]                                  # disjoint across idx 0..4
+          rng = random.Random(1000 + idx)
+          out = []
+          for _ in range(math.ceil(rounds / len(mine))):        # repeat (re-shuffled) if rounds > slice
+              chunk = mine[:]; rng.shuffle(chunk); out += chunk
+          open("slice.epd", "w").write("\n".join(out[:rounds]) + "\n")
+          print(f"replicate {idx}: slice of {len(mine)} openings, {rounds} rounds")
+          PY
+
+      - name: Match (fixed rounds, colours swapped, no SPRT)
+        env:
+          TC: ${{ inputs.tc }}
+          ROUNDS: ${{ inputs.rounds }}
+          CONC: ${{ inputs.concurrency }}
+          TEST_OPTS: ${{ inputs.test_opts }}
+          BASE_OPTS: ${{ inputs.base_opts }}
+          IDX: ${{ matrix.idx }}
+        run: |
+          mkdir -p out
+          set +e
+          # shellcheck disable=SC2086
+          /tmp/fastchess \
+            -engine cmd=./bins/engine_test name=test option.Hash=16 option.Threads=1 $TEST_OPTS \
+            -engine cmd=./bins/engine_base name=base option.Hash=16 option.Threads=1 $BASE_OPTS \
+            -each tc="$TC" \
+            -rounds "$ROUNDS" -games 2 -repeat -concurrency "$CONC" \
+            -openings file=slice.epd format=epd order=sequential \
+            -srand $((1000 + IDX)) \
+            -draw movenumber=40 movecount=8 score=10 \
+            -resign movecount=4 score=800 twosided=true \
+            -maxmoves 300 \
+            -ratinginterval 50 -recover -pgnout file=out/rep${IDX}.pgn \
+            2>&1 | grep -vE '^(Warning|Info|Position|Moves);' | tee out/rep${IDX}.log | tail -n 25
+          exit 0
+
+      - name: Parse replicate
+        run: python3 harness/tools/ship_gate.py parse out/rep${{ matrix.idx }}.pgn --replicate ${{ matrix.idx }} --out out/rep${{ matrix.idx }}.json
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rep-${{ matrix.idx }}
+          path: out/
+          retention-days: 14
+
+  verdict:
+    needs: [build, replicate]
+    if: ${{ always() && needs.build.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: "${{ github.sha }}", path: harness }
+      - uses: actions/download-artifact@v4
+        with: { name: gate-bins, path: bins }
+      - uses: actions/download-artifact@v4
+        with: { pattern: "rep-*", merge-multiple: true, path: reps }
+        continue-on-error: true
+      - name: Verdict
+        env:
+          MODE: ${{ inputs.mode }}
+          MARGIN: ${{ inputs.margin }}
+          NODE_ID: ${{ inputs.expect_node_identical }}
+          TEST: ${{ inputs.test }}
+          BASE: ${{ inputs.base }}
+          TC: ${{ inputs.tc }}
+        run: |
+          mkdir -p reps
+          set +e
+          EXTRA=""
+          if [ "$NODE_ID" = "true" ]; then EXTRA="--expect-node-identical"; fi
+          python3 harness/tools/ship_gate.py verdict --side bins/side.json --dir reps \
+            --mode "$MODE" --margin "$MARGIN" $EXTRA \
+            --test "$TEST" --base "$BASE" --tc "$TC" \
+            --json-out verdict.json --md-out verdict.md
+          code=$?
+          cat verdict.md >> "$GITHUB_STEP_SUMMARY"
+          exit $code
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ship-verdict-${{ github.run_id }}
+          path: |
+            verdict.json
+            verdict.md
+            bins/side.json
+          retention-days: 90
