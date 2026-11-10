@@ -4,10 +4,17 @@ name: Correctness oracle
 # can only say "the engine's rules/move generation still agree with the reference".
 on:
   pull_request:
-    paths: ["src/**", "Cargo.toml", "Cargo.lock", "tools/correctness_oracle.py", ".github/workflows/correctness-oracle.yml"]
+    paths:
+      - "src/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "tools/correctness_oracle.py"
+      - ".github/workflows/correctness-oracle.yml"
   workflow_dispatch:
     inputs:
-      games: { description: "games per seed", default: "40" }
+      games:
+        description: "games per seed"
+        default: "40"
 jobs:
   oracle:
     runs-on: ubuntu-latest
@@ -21,11 +28,16 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - run: pip install chess
       - run: cargo build --release
-      - name: Oracle (seed ${{ matrix.seed }})
+      - name: Oracle
+        env:
+          GAMES: ${{ github.event.inputs.games || '40' }}
+          SEED: ${{ matrix.seed }}
         run: |
           python3 tools/correctness_oracle.py target/release/chess-rust-engine \
-            --games "${{ github.event.inputs.games || '40' }}" --plies 170 \
-            --seed ${{ matrix.seed }} --book tools/openings_book.epd | tee oracle-${{ matrix.seed }}.log
+            --games "$GAMES" --plies 170 --seed "$SEED" \
+            --book tools/openings_book.epd | tee "oracle-$SEED.log"
       - uses: actions/upload-artifact@v4
         if: always()
-        with: { name: oracle-seed-${{ matrix.seed }}, path: "oracle-*.log" }
+        with:
+          name: oracle-seed-${{ matrix.seed }}
+          path: oracle-*.log
