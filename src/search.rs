@@ -109,6 +109,30 @@ impl ThreadData {
         }
     }
 
+    /// Re-arm a ThreadData for a new `go` while KEEPING what the engine has
+    /// learned during this game: butterfly history, capture history,
+    /// continuation history, counter moves and correction history. Per-search
+    /// scratch (killers, PV, eval/move stacks, node counter) is reset.
+    /// A fresh `ThreadData::new` per `go` threw all of that away before every
+    /// move; Stockfish/Reckless only clear on `ucinewgame`.
+    pub fn prepare(&mut self, tt: Arc<TranspositionTable>, time: Arc<TimeManager>) {
+        self.tt = tt;
+        self.time = time;
+        self.nodes = 0;
+        self.seldepth = 0;
+        self.killers = [[Move::NONE; 2]; MAX_PLY];
+        self.pv_len = [0; MAX_PLY];
+        self.eval_stack = [0; MAX_PLY];
+        self.best = Move::NONE;
+        self.score = 0;
+        self.check_nodes = 0;
+        self.stack_pc = [12; MAX_PLY];
+        self.stack_to = [0; MAX_PLY];
+        self.root_depth = 0;
+        self.ply_move = [Move::NONE; MAX_PLY];
+        self.hash_hist.clear();
+    }
+
     #[inline]
     fn should_stop(&self) -> bool {
         if self.time.stopped() {
