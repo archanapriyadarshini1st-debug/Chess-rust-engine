@@ -36,6 +36,19 @@ original `evaluate_hce_with` as `evaluate_hce_with_reference` and compares it on
   slower. Most nodes visit many moves; the shift cost cancels the saved sorting.
   Not included.
 
+## Also tried and NOT shipped
+
+* **PGO** (`-Cprofile-generate` on bench 11 + 4 depth-14 searches, then `-Cprofile-use`):
+  node-identical, but A/B runs were within noise (5.94 / 5.48 s vs 5.60 / 5.54 s, depth 20).
+  The code is already branch-light and LTO + codegen-units=1; not worth CI complexity.
+
+## Workload note (honest numbers)
+
+The depth-20 single-position test above is TT-heavy and shows +17.5 %. The 12-position
+`bench 11` (16 MB TT, cleared per position) shows a smaller gain for this PR alone:
+interleaved medians main 1.86 -> 1.99 Mnps (**+7.2 %**). Real games sit between the two.
+Stacked with PR for EXP-Y2 (captures-only quiescence generator): 2.15 Mnps (**+15.6 %**).
+
 ## What this is NOT
 
 A strength claim vs Stockfish. +17 % NPS is on the order of +10-15 Elo at this level.
