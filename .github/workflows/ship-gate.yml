@@ -1,0 +1,114 @@
+name: Ship gate (5 independent runs vs last-known-good)
+
+# Run this BEFORE sprt.yml. It is the cheap "did we break / slow / weaken anything?" check.
+# SMOKE-PASS is not a merge approval and not an Elo claim: it only says "no collapse found,
+# spend SPRT games now". Born from PR #5, which was bench-identical and CI-green but lost 0-4-204.
+#
+#   Dispatch: cand=<branch/sha>  base=<last-known-good sha>  expect=behavior-change|node-identical
+#   Result:   job summary + ship_gate.json artifact (binary shas, book sha, seeds, per-run W-D-L).
+#   Exit:     0 SMOKE-PASS, 1 BLOCK, 3 HOLD, 4 ERROR.
+
+on:
+  workflow_dispatch:
+    inputs:
+      cand:
+        description: "Candidate branch / tag / SHA"
+        required: true
+      base:
+        description: "Last-known-good SHA (NOT blindly main: main may be the thing that regressed)"
+        required: true
+      expect:
+        description: "node-identical (perf/refactor PRs: bench nodes must match) or behavior-change"
+        type: choice
+        default: behavior-change
+        options: [behavior-change, node-identical]
+      runs:
+        description: "Independent repeats"
+        default: "5"
+      games:
+        description: "Games per run (even)"
+        default: "40"
+      tc:
+        description: "Time control (floor 5+0.05)"
+        default: "10+0.1"
+      concurrency:
+        description: "Parallel games (runner has 4 vCPU)"
+        default: "3"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ship-gate-${{ inputs.cand }}-${{ inputs.base }}
+  cancel-in-progress: true
+
+env:
+  FASTCHESS_URL: https://github.com/Disservin/fastchess/releases/download/v1.8.3-alpha/fastchess-linux-x86-64.tar
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.cand }}
+          path: cand
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.base }}
+          path: base
+      # Harness (script + book) comes from the workflow's own ref, never from the code under test.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: harness
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Build candidate and LKG with identical flags
+        run: |
+          for d in cand base; do
+            (cd $d && RUSTFLAGS="-C target-cpu=native" cargo build --release \
+              && cp target/release/chess-rust-engine ../engine_$d)
+          done
+          ls -l engine_cand engine_base
+
+      - name: Correctness on candidate (perft + unit tests)
+        run: cd cand && cargo test --release
+
+      - name: fastchess
+        run: |
+          mkdir -p /tmp/fc && curl -fsSL --retry 3 "$FASTCHESS_URL" -o /tmp/fc.tar
+          tar xf /tmp/fc.tar -C /tmp/fc
+          FC=$(find /tmp/fc -type f -name fastchess | head -1)
+          chmod +x "$FC"; ln -sf "$FC" /tmp/fastchess; /tmp/fastchess --version
+
+      - name: Gate-logic selftest
+        run: python3 harness/tools/ship_gate.py --selftest
+
+      - name: Ship gate
+        run: |
+          set +e
+          FASTCHESS=/tmp/fastchess python3 harness/tools/ship_gate.py \
+            --cand ./engine_cand --base ./engine_base \
+            --runs "${{ inputs.runs }}" --games "${{ inputs.games }}" --tc "${{ inputs.tc }}" \
+            --conc "${{ inputs.concurrency }}" --expect "${{ inputs.expect }}" \
+            --book harness/tools/openings_book.epd --out ship_out 2>&1 | tee ship_out.log
+          code=${PIPESTATUS[0]}
+          {
+            echo "## Ship gate: cand=\`${{ inputs.cand }}\` vs LKG=\`${{ inputs.base }}\` (expect ${{ inputs.expect }})"
+            echo
+            cat ship_out/ship_gate.md 2>/dev/null || echo "gate produced no report (exit $code)"
+            echo
+            echo '```'; grep -E '^\[' ship_out.log; echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit $code
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ship-gate-${{ github.run_id }}
+          path: |
+            ship_out/
+            ship_out.log
+          retention-days: 30
