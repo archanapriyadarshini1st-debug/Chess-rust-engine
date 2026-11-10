@@ -34,11 +34,11 @@ uninformative (lower bound <= raw eval / upper bound >= raw eval) and updates wh
 `bench 10` = 571546. Must beat `agentQ/corrhist-off` in an SPRT before it is considered.
 
 ## Lessons recorded
-1. A bundled patch (SE + corrhist in one commit) hid a −800-Elo component behind a "SE is a classic gain" story.
+1. A bundled patch (SE + corrhist in one commit) hid a catastrophic component (0 losses in 205 games; Elo is unbounded above, only a several-hundred-Elo lower bound is supported, no point estimate is claimed) behind a "SE is a classic gain" story.
    One change per commit, SPRT per change (as the gate rules already say).
 2. `bench` equal across a refactor is not strength equal, and `bench` *changed* is not strength *changed* — only games decide. But a node-count bisect is a free way to find *which commit* to play games about.
 3. The earlier retro-gate of PR #5 (run `42596468549`) ended in `Verdict failure`, i.e. no H1 at the sample size — it was
    never shown to be a large loss because the sprt window was [0,10]. A **non-regression** gate with a wide sample would
-   not have missed this: −800 Elo is visible in ~20 games. Suggest every retro-gate also runs the reverse direction.
+   not have missed this: a collapse of this size is visible in ~20 games. Suggest every retro-gate also runs the reverse direction.
 4. 20-game limiter ladders are still the wrong ruler for ±30 Elo, but they were right to flag this: they saw a 5–12% score
    where 76% had been recorded. That discrepancy should have triggered a bisect immediately.
