@@ -65,9 +65,9 @@ impl TimeManager {
             };
             if let Some(remain) = time {
                 let mtg = limits.movestogo.unwrap_or(20).max(1) as u64;
-                // Spend a bit more of the clock than remain/20 — 10+0.1 games
-                // were finishing with time left while SF19 still had a vote.
-                let alloc = remain / mtg.max(15) + inc * 9 / 10;
+                // Spend more of the clock. remain/20 left time on the table vs
+                // UCI_Elo-limited SF; remain/15 still did. /12 at 10+0.1.
+                let alloc = remain / mtg.max(12) + inc * 95 / 100;
                 let alloc = alloc.min(remain / 2).saturating_sub(overhead_ms);
                 let alloc = alloc.max(5);
                 soft = Duration::from_millis(alloc);
