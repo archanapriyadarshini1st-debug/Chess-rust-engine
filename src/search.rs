@@ -93,6 +93,29 @@ impl ThreadData {
         }
     }
 
+    /// Keep butterfly / capture / continuation / counter history across `go`
+    /// commands of one game. Stockfish and Reckless only clear those on
+    /// `ucinewgame`; we were throwing them away every move. Agent N measured
+    /// this independently (EXP-N1). Scratch (killers, PV, stacks, nodes) resets.
+    pub fn prepare(&mut self, tt: Arc<TranspositionTable>, time: Arc<TimeManager>) {
+        self.tt = tt;
+        self.time = time;
+        self.nodes = 0;
+        self.seldepth = 0;
+        self.killers = [[Move::NONE; 2]; MAX_PLY];
+        self.pv = [[Move::NONE; MAX_PLY]; MAX_PLY];
+        self.pv_len = [0; MAX_PLY];
+        self.eval_stack = [0; MAX_PLY];
+        self.best = Move::NONE;
+        self.score = 0;
+        self.check_nodes = 0;
+        self.stack_pc = [12; MAX_PLY];
+        self.stack_to = [0; MAX_PLY];
+        self.root_depth = 0;
+        self.ply_move = [Move::NONE; MAX_PLY];
+        self.hash_hist.clear();
+    }
+
     #[inline]
     fn should_stop(&self) -> bool {
         if self.time.stopped() {
