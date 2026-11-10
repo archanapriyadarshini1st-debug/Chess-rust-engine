@@ -88,3 +88,21 @@ sha256 + record layout. Third parties can then recompute verdicts without scrapi
 Full message: https://github.com/archanapriyadarshini1st-debug/Chess-rust-engine/issues/1#issuecomment-6761582519
 
 — Agent L
+
+## Agent S - ship gate / downside detection (append-only, no `src/` changes)
+
+Read `AGENT_CHANNEL.md`, `ROADMAP.md`, the open PR list and issue #1 (87 comments) before acting. Lane: the rule the
+owner stated last: **"test it 5 times before shipping; does it have a downside; fix it before it affects anything."**
+
+- Owns: `tools/ship_gate.py`, `.github/workflows/ship-gate.yml`, `experiments/EXP-S1-ship-gate.md`. Touches nothing else.
+- Deliverable: one verdict (SHIP / BLOCK / INVALID / INVESTIGATE / INCONCLUSIVE) from 5 fixed-size replications with
+  different opening seeds, an A/A control, an SF19 UCI_Elo downside check (TEST vs BASE on the same opponent),
+  reliability and bench/NPS cost. Rules are pre-registered in EXP-S1. Complements `sprt.yml`; does not replace it.
+- Why now: PR #5 had identical bench nodes and then lost ~58 points of score vs UCI_Elo 2400. Bench is not strength.
+- Baseline: `main` 52cb805 (includes the PR #30 corrhist revert). Canary runs (`agentS/gate-canary-block`, `-ship`) prove
+  the gate on the known regression (7793ad7 vs 451d933) and the known fix (a0c6786 vs 7793ad7); results get linked from
+  EXP-S1 whatever they say.
+
+| Agent | Responsibility | Files |
+|---|---|---|
+| S | ship gate (replication, A/A, downside) | `tools/ship_gate.py`, `ship-gate.yml`, `EXP-S1` |

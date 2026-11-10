@@ -1,0 +1,408 @@
+name: Ship gate (5 replications + A/A control + downside checks)
+
+# "Test it five times before shipping, and prove it does not make anything worse."
+#
+# sprt.yml answers one question once. This workflow answers the shipping
+# question: is TEST really stronger than BASE, reproducibly, with no hidden
+# downside? It runs, in parallel on separate runners:
+#
+#   rep1..rep5  TEST vs BASE, fixed rounds, a DIFFERENT opening seed each
+#   aa          BASE vs BASE (A/A control: harness bias detector)
+#   sf19        TEST and BASE each vs SF19 UCI_Elo N (independent-opponent
+#               downside check; self-play can hide regressions)
+#
+# then tools/ship_gate.py applies decision rules that were fixed beforehand
+# (see experiments/EXP-S1-ship-gate.md). Exit status: green only for SHIP.
+#
+# Why: PR #5 (pawn correction history) had identical bench nodes and then
+# dropped from 70.8% to 12.5% vs UCI_Elo 2400. Bench is not strength.
+#
+# Time control floor is 5+0.05. Nothing at 100 ms/move. Never lower it.
+
+on:
+  # Canary: pushing to agentS/gate-canary-block runs main(7793ad7, PR#5 corrhist
+  # regression) vs 451d933; the gate MUST say BLOCK. agentS/gate-canary-ship runs
+  # the fix (a0c6786) vs 7793ad7; the gate should say SHIP. Small, labelled
+  # preliminary, only to prove the gate itself works.
+  push:
+    branches: ["agentS/gate-canary-*"]
+  workflow_dispatch:
+    inputs:
+      test:
+        description: "Branch / tag / SHA under test"
+        required: true
+      base:
+        description: "Branch / tag / SHA that is the current stable reference"
+        default: "main"
+      mode:
+        description: "improve = must be better; neutral = must not lose > margin; perf = bench-identical + faster"
+        type: choice
+        default: improve
+        options: [improve, neutral, perf]
+      tc:
+        description: "Time control (fastchess syntax, floor 5+0.05)"
+        default: "10+0.1"
+      rounds:
+        description: "Rounds PER replication (each round = 2 games, colours swapped)"
+        default: "150"
+      seed_base:
+        description: "Opening seed base; rep i uses seed_base+i, A/A uses seed_base+100"
+        default: "20260"
+      margin:
+        description: "neutral mode: largest acceptable Elo loss"
+        default: "10"
+      min_gain:
+        description: "improve mode: minimum pooled Elo"
+        default: "0"
+      min_games:
+        description: "Minimum games per replication for a valid verdict"
+        default: "100"
+      sf_elo:
+        description: "SF19 UCI_Elo for the downside check (0 = skip, 1320-3190)"
+        default: "2400"
+      sf_games:
+        description: "Games per engine in the SF19 downside check (even)"
+        default: "100"
+      test_net:
+        description: "Optional repo path of an .nnue loaded into TEST only via CRE_NNUE_FILE"
+        default: ""
+      test_opts:
+        description: "Extra UCI options for TEST"
+        default: ""
+      base_opts:
+        description: "Extra UCI options for BASE"
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ship-${{ github.ref }}-${{ inputs.test }}-${{ inputs.base }}
+  cancel-in-progress: true
+
+env:
+  G_TEST: ${{ inputs.test || (endsWith(github.ref, '-ship') && 'a0c67860b9159fa3484d6a6700b7d27eb1ef366d' || '7793ad75dd4c152f23d2af225e8fec48485c55ad') }}
+  G_BASE: ${{ inputs.base || (endsWith(github.ref, '-ship') && '7793ad75dd4c152f23d2af225e8fec48485c55ad' || '451d9336fa83ffaa5c25bc43acc8362a61f85fe1') }}
+  G_MODE: ${{ inputs.mode || 'improve' }}
+  G_TC: ${{ inputs.tc || '10+0.1' }}
+  G_ROUNDS: ${{ inputs.rounds || '40' }}
+  G_SEED: ${{ inputs.seed_base || '20260' }}
+  G_MARGIN: ${{ inputs.margin || '10' }}
+  G_MIN_GAIN: ${{ inputs.min_gain || '0' }}
+  G_SF_ELO: ${{ inputs.sf_elo || '2400' }}
+  G_SF_GAMES: ${{ inputs.sf_games || '30' }}
+  G_MIN_GAMES: ${{ inputs.min_games || '60' }}
+  G_TEST_NET: ${{ inputs.test_net || '' }}
+  G_TEST_OPTS: ${{ inputs.test_opts || '' }}
+  G_BASE_OPTS: ${{ inputs.base_opts || '' }}
+  FASTCHESS_URL: https://github.com/Disservin/fastchess/releases/download/v1.8.3-alpha/fastchess-linux-x86-64.tar
+  SF19_URL: https://github.com/official-stockfish/Stockfish/releases/download/sf_19/stockfish-linux-x86-64-universal.tar.gz
+
+jobs:
+  match:
+    name: ${{ matrix.run }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    strategy:
+      fail-fast: false
+      matrix:
+        run: [rep1, rep2, rep3, rep4, rep5, aa]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.G_TEST }}
+          path: test
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.G_BASE }}
+          path: base
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: harness
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Validate time control
+        env:
+          TC: ${{ env.G_TC }}
+        run: |
+          python3 - <<'PY'
+          import os, sys
+          tc = os.environ["TC"]
+          base, _, inc = tc.partition("+")
+          try:
+              b = float(base.split("/")[-1]); i = float(inc or 0)
+          except ValueError:
+              sys.exit(f"bad tc {tc!r}")
+          if b < 5 or (b + 40 * i) < 7:
+              sys.exit(f"refusing tc {tc}: floor is 5+0.05")
+          print("tc ok:", tc)
+          PY
+
+      - name: Build TEST and BASE (identical flags, this runner)
+        run: |
+          for d in test base; do
+            (cd $d && RUSTFLAGS="-C target-cpu=native" cargo build --release \
+              && cp target/release/chess-rust-engine ../engine_$d)
+          done
+          # The A/A control plays BASE against itself.
+          if [ "${{ matrix.run }}" = "aa" ]; then cp engine_base engine_test; fi
+          sha256sum engine_test engine_base
+
+      - name: Perft + bench (correctness and cost; same machine for both)
+        run: |
+          mkdir -p out
+          python3 - <<'PY'
+          import json, re, statistics, subprocess
+          def bench(path):
+              runs = []
+              for _ in range(3):
+                  try:
+                      o = subprocess.run([path, "bench", "10"], capture_output=True, text=True, timeout=240)
+                      m = re.search(r"(\d+) nodes (\d+) nps", o.stdout)
+                      if o.returncode != 0 or not m:
+                          return None
+                      runs.append((int(m.group(1)), int(m.group(2))))
+                  except Exception:
+                      return None
+              return runs
+          t = bench("./engine_test"); b = bench("./engine_base")
+          out = {"bench_ok": bool(t), "base_bench_ok": bool(b)}
+          if t and b:
+              out["test_nodes"], out["base_nodes"] = t[0][0], b[0][0]
+              out["nodes_identical"] = len({x[0] for x in t}) == 1 and t[0][0] == b[0][0]
+              out["nodes_ratio"] = round(t[0][0] / b[0][0], 4)
+              out["test_nps"] = int(statistics.median(x[1] for x in t))
+              out["base_nps"] = int(statistics.median(x[1] for x in b))
+              out["nps_ratio"] = round(out["test_nps"] / out["base_nps"], 4)
+              out["bench_deterministic"] = len({x[0] for x in t}) == 1
+          json.dump(out, open("out/bench.json", "w"), indent=2)
+          print(json.dumps(out, indent=2))
+          PY
+          if (cd test && cargo test --release --test perft); then P=true; else P=false; fi
+          python3 - "$P" <<'PY'
+          import json, sys
+          d = json.load(open("out/bench.json")); d["perft_ok"] = sys.argv[1] == "true"
+          json.dump(d, open("out/bench.json", "w"), indent=2)
+          PY
+
+      - name: fastchess
+        run: |
+          mkdir -p /tmp/fc && curl -fsSL --retry 3 "$FASTCHESS_URL" -o /tmp/fc.tar
+          tar xf /tmp/fc.tar -C /tmp/fc
+          FC=$(find /tmp/fc -type f -name fastchess | head -1)
+          chmod +x "$FC"; ln -sf "$FC" /tmp/fastchess; /tmp/fastchess --version
+
+      - name: Stage optional net for TEST
+        if: ${{ env.G_TEST_NET != '' && matrix.run != 'aa' }}
+        run: |
+          test -f "test/${{ env.G_TEST_NET }}"
+          cp "test/${{ env.G_TEST_NET }}" /tmp/test.nnue
+          echo "CRE_NNUE_FILE=/tmp/test.nnue" >> "$GITHUB_ENV"
+
+      - name: Play (fixed rounds, no early stopping)
+        env:
+          TC: ${{ env.G_TC }}
+          ROUNDS: ${{ env.G_ROUNDS }}
+          SEED_BASE: ${{ env.G_SEED }}
+          RUN: ${{ matrix.run }}
+          TEST_OPTS: ${{ env.G_TEST_OPTS }}
+          BASE_OPTS: ${{ env.G_BASE_OPTS }}
+        run: |
+          if [ "$RUN" = "aa" ]; then SEED=$((SEED_BASE + 100)); TEST_OPTS="$BASE_OPTS"
+          else SEED=$((SEED_BASE + ${RUN#rep})); fi
+          OPENINGS=harness/tools/openings_book.epd
+          test -s "$OPENINGS"
+          # CRE_NNUE_FILE must reach TEST only.
+          printf '#!/bin/sh\nunset CRE_NNUE_FILE\nexec "%s" "$@"\n' "$PWD/engine_base" > base_run.sh
+          chmod +x base_run.sh
+          # Engine ORDER is alternated (odd reps: test first, even reps: base first; A/A:
+          # one half each) so any first-listed-engine bias in the harness cancels in the
+          # pooled result. Names stay test/base; tools/ship_gate.py re-orients each log.
+          play () {  # $1=order(tb|bt) $2=rounds $3=seed $4=log $5=pgn
+            T="-engine cmd=./engine_test name=test option.Hash=16 option.Threads=1 $TEST_OPTS"
+            B="-engine cmd=./base_run.sh name=base option.Hash=16 option.Threads=1 $BASE_OPTS"
+            if [ "$1" = "tb" ]; then E1="$T"; E2="$B"; else E1="$B"; E2="$T"; fi
+            # shellcheck disable=SC2086
+            /tmp/fastchess $E1 $E2 \
+              -each tc="$TC" \
+              -rounds "$2" -games 2 -repeat -concurrency 3 -srand "$3" \
+              -openings file="$OPENINGS" format=epd order=random \
+              -draw movenumber=40 movecount=8 score=10 \
+              -resign movecount=4 score=800 twosided=true \
+              -maxmoves 300 \
+              -ratinginterval 50 -recover -pgnout file="$5" \
+              2>&1 | grep -vE '^(Warning|Info|Position|Moves);' | tee "$4" | grep -E 'Elo:|Games:|Ptnml|Finished match' | tail -n 20
+          }
+          set +e
+          if [ "$RUN" = "aa" ]; then
+            H=$(( (ROUNDS + 1) / 2 ))
+            play tb "$H" "$SEED" out/run_1.log out/run_1.pgn
+            play bt "$H" "$((SEED + 1))" out/run_2.log out/run_2.pgn
+          else
+            N=${RUN#rep}
+            if [ $((N % 2)) -eq 1 ]; then ORDER=tb; else ORDER=bt; fi
+            play "$ORDER" "$ROUNDS" "$SEED" out/run.log out/run.pgn
+          fi
+          exit 0
+
+      - name: Provenance
+        run: |
+          python3 - <<PY
+          import hashlib, json, subprocess
+          def sha(p): return hashlib.sha256(open(p, "rb").read()).hexdigest()
+          def rev(d): return subprocess.run(["git", "-C", d, "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
+          fc = subprocess.run(["/tmp/fastchess", "--version"], capture_output=True, text=True).stdout.strip()
+          json.dump({
+            "test": "${{ env.G_TEST }}", "test_commit": rev("test"),
+            "base": "${{ env.G_BASE }}", "base_commit": rev("base"),
+            "harness_commit": rev("harness"), "tc": "${{ env.G_TC }}", "rounds": "${{ env.G_ROUNDS }}",
+            "seed_base": "${{ env.G_SEED }}", "run": "${{ matrix.run }}",
+            "book_sha256": sha("harness/tools/openings_book.epd"),
+            "test_bin_sha256": sha("engine_test")[:16], "base_bin_sha256": sha("engine_base")[:16],
+            "fastchess": fc, "runner_os": "ubuntu-latest",
+            "test_net": "${{ env.G_TEST_NET }}",
+          }, open("out/meta.json", "w"), indent=2)
+          PY
+          cat out/meta.json
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ship-${{ matrix.run }}
+          path: out/
+          retention-days: 90
+
+  sf19:
+    name: sf19-downside
+    if: ${{ inputs.sf_elo != '0' || github.event_name == 'push' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.G_TEST }}
+          path: test
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.G_BASE }}
+          path: base
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: harness
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Build TEST and BASE
+        run: |
+          for d in test base; do
+            (cd $d && RUSTFLAGS="-C target-cpu=native" cargo build --release \
+              && cp target/release/chess-rust-engine ../engine_$d)
+          done
+
+      - name: Fetch SF19 and fastchess
+        run: |
+          mkdir -p /tmp/sf /tmp/fc
+          curl -fsSL --retry 3 "$SF19_URL" | tar xz -C /tmp/sf
+          SF=$(find /tmp/sf -type f -name 'stockfish-linux-x86-64-universal' | head -1)
+          chmod +x "$SF"; ln -sf "$SF" /tmp/sf19
+          sha256sum "$SF" | tee /tmp/sf19.sha
+          curl -fsSL --retry 3 "$FASTCHESS_URL" -o /tmp/fc.tar
+          tar xf /tmp/fc.tar -C /tmp/fc
+          FC=$(find /tmp/fc -type f -name fastchess | head -1)
+          chmod +x "$FC"; ln -sf "$FC" /tmp/fastchess
+
+      - name: Stage optional net for TEST
+        if: ${{ env.G_TEST_NET != '' }}
+        run: |
+          test -f "test/${{ env.G_TEST_NET }}"
+          cp "test/${{ env.G_TEST_NET }}" /tmp/test.nnue
+
+      - name: Play TEST then BASE vs SF19 (same openings, same seed)
+        env:
+          TC: ${{ env.G_TC }}
+          GAMES: ${{ env.G_SF_GAMES }}
+          ELO: ${{ env.G_SF_ELO }}
+          SEED: ${{ env.G_SEED }}
+          TEST_OPTS: ${{ env.G_TEST_OPTS }}
+          BASE_OPTS: ${{ env.G_BASE_OPTS }}
+        run: |
+          mkdir -p out
+          rounds=$(( (GAMES + 1) / 2 ))
+          printf '#!/bin/sh\nexport CRE_NNUE_FILE=/tmp/test.nnue\nexec "%s" "$@"\n' "$PWD/engine_test" > test_run.sh
+          printf '#!/bin/sh\nunset CRE_NNUE_FILE\nexec "%s" "$@"\n' "$PWD/engine_base" > base_run.sh
+          if [ -z "${{ env.G_TEST_NET }}" ]; then
+            printf '#!/bin/sh\nexec "%s" "$@"\n' "$PWD/engine_test" > test_run.sh
+          fi
+          chmod +x test_run.sh base_run.sh
+          one () {  # $1=label $2=cmd $3=extra opts
+            /tmp/fastchess \
+              -engine cmd="$2" name=test option.Hash=64 option.Threads=1 $3 \
+              -engine cmd=/tmp/sf19 name=sf19 option.Hash=64 option.Threads=1 option.UCI_LimitStrength=true option.UCI_Elo="$ELO" \
+              -each tc="$TC" -rounds "$rounds" -games 2 -repeat -concurrency 3 -srand "$SEED" \
+              -openings file=harness/tools/openings_book.epd format=epd order=random \
+              -draw movenumber=40 movecount=8 score=20 \
+              -resign movecount=3 score=600 \
+              -maxmoves 400 -recover -ratinginterval 20 -pgnout file="out/$1.pgn" \
+              2>&1 | grep -vE '^(Warning|Info|Position|Moves);' | tee "out/$1.log" | grep -E 'Games:|Ptnml' | tail -n 2
+          }
+          one sf_test ./test_run.sh "$TEST_OPTS"
+          one sf_base ./base_run.sh "$BASE_OPTS"
+          cp /tmp/sf19.sha out/sf19.sha
+          mv out sf
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ship-sf
+          path: sf/
+          retention-days: 90
+
+  verdict:
+    name: verdict
+    needs: [match, sf19]
+    if: ${{ always() && needs.match.result != 'cancelled' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/download-artifact@v4
+        with:
+          path: art
+      - name: Aggregate
+        env:
+          MODE: ${{ env.G_MODE }}
+          MARGIN: ${{ env.G_MARGIN }}
+          MIN_GAIN: ${{ env.G_MIN_GAIN }}
+          SF_ELO: ${{ env.G_SF_ELO }}
+        run: |
+          mkdir -p gate
+          for d in art/ship-*; do n=${d#art/ship-}; mkdir -p gate/$n; cp -r $d/. gate/$n/; done
+          ls -R gate | head -40
+          EXTRA=""
+          if [ "$SF_ELO" != "0" ]; then EXTRA="--require-sf"; fi
+          set +e
+          python3 tools/ship_gate.py gate --reps 5 --mode "$MODE" --margin "$MARGIN" \
+            --min-gain "$MIN_GAIN" --min-games "${{ env.G_MIN_GAMES }}" $EXTRA --md gate/verdict.md --json gate/ship_gate.json
+          code=$?
+          {
+            echo "## Ship gate: test=\`${{ env.G_TEST }}\` vs base=\`${{ env.G_BASE }}\` @ ${{ env.G_TC }}"
+            echo "rounds/rep ${{ env.G_ROUNDS }}, seeds ${{ env.G_SEED }}+1..5, SF19 UCI_Elo ${{ env.G_SF_ELO }}"
+            echo
+            cat gate/verdict.md
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "gate exit code $code (0 SHIP, 1 BLOCK, 2 INVALID, 3 INCONCLUSIVE, 4 INVESTIGATE)"
+          exit $code
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ship-gate-verdict
+          path: gate/verdict.md
+          retention-days: 90
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ship-gate-json
+          path: gate/ship_gate.json
+          retention-days: 90
