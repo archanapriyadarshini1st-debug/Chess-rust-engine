@@ -46,18 +46,9 @@ pub struct ThreadData {
     pub root_depth: i32,
     pub counter: [[Move; 64]; 64],
     pub ply_move: [Move; MAX_PLY],
-    /// pawn-corrhist [stm][pawn_key % CORR_N]
-    pub corr: Vec<i16>,
 }
 
 const HIST_MAX: i32 = 16384;
-const CORR_N: usize = 16384;
-
-#[inline]
-fn pawn_corr_idx(pos: &Position) -> usize {
-    let p = pos.bb(pos.side, PieceType::Pawn) ^ pos.bb(pos.side.flip(), PieceType::Pawn).rotate_left(17);
-    pos.side.index() * CORR_N + ((p as usize) ^ ((p >> 32) as usize)) % CORR_N
-}
 
 #[inline]
 fn cont_idx(pp: usize, pt: usize, pc: usize, to: usize) -> usize {
@@ -99,7 +90,6 @@ impl ThreadData {
             root_depth: 0,
             counter: [[Move::NONE; 64]; 64],
             ply_move: [Move::NONE; MAX_PLY],
-            corr: vec![0; 2 * CORR_N],
         }
     }
 
@@ -429,16 +419,14 @@ fn search(
         }
     }
 
-    let raw_eval = if in_check {
+    // Pawn corrhist from PR #5 is *not* applied. `static_eval += corr/32`
+    // saturates at ±512 cp (gravity uses HIST_MAX=16384), poisons RFP/NMP, and
+    // scored 12.5% vs SF19 UCI_Elo 2400 against 69% with this line gone and
+    // 71% on 451d933 (pre-#5). Re-add only with a SPRT vs this baseline.
+    let static_eval = if in_check {
         -INF
     } else {
         evaluate(pos)
-    };
-    let corr_i = pawn_corr_idx(pos);
-    let static_eval = if in_check {
-        raw_eval
-    } else {
-        raw_eval + (td.corr[corr_i] as i32) / 32
     };
     td.eval_stack[ply as usize] = static_eval;
     let improving = ply >= 2
@@ -697,10 +685,6 @@ fn search(
 
     if excluded.is_none() {
         td.tt.store(pos.hash, best_move, to_tt(best, ply), depth, bound);
-        if !in_check && ply > 0 && !is_mate_score(best) {
-            let diff = (best - raw_eval).clamp(-400, 400);
-            gravity(&mut td.corr[corr_i], diff * depth / 8);
-        }
     }
     best
 }
