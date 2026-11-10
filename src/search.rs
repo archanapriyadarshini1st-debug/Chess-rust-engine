@@ -52,6 +52,20 @@ pub struct ThreadData {
 
 const HIST_MAX: i32 = 16384;
 const CORR_N: usize = 16384;
+/// Correction history, bounded (EXP-Q2). Entries are a running mean of
+/// (search score - raw eval) in 1/CORR_GRAIN cp, clamped to +-CORR_CLAMP cp, so the
+/// applied correction can never exceed +-CORR_CLAMP cp. (0676766 used gravity(), which
+/// saturates at +-512 cp: see EXP-Q1.)
+const CORR_GRAIN: i32 = 16;
+const CORR_CLAMP_CP: i32 = 32;
+
+#[inline]
+fn corr_update(e: &mut i16, diff_cp: i32, depth: i32) {
+    let target = (diff_cp.clamp(-CORR_CLAMP_CP, CORR_CLAMP_CP)) * CORR_GRAIN;
+    let w = (depth + 1).min(16);
+    let c = *e as i32;
+    *e = ((c * (256 - w) + target * w) / 256) as i16;
+}
 
 #[inline]
 fn pawn_corr_idx(pos: &Position) -> usize {
@@ -438,7 +452,7 @@ fn search(
     let static_eval = if in_check {
         raw_eval
     } else {
-        raw_eval + (td.corr[corr_i] as i32) / 32
+        raw_eval + (td.corr[corr_i] as i32) / CORR_GRAIN
     };
     td.eval_stack[ply as usize] = static_eval;
     let improving = ply >= 2
@@ -697,9 +711,11 @@ fn search(
 
     if excluded.is_none() {
         td.tt.store(pos.hash, best_move, to_tt(best, ply), depth, bound);
-        if !in_check && ply > 0 && !is_mate_score(best) {
-            let diff = (best - raw_eval).clamp(-400, 400);
-            gravity(&mut td.corr[corr_i], diff * depth / 8);
+        // Skip updates whose bound says nothing about the true error.
+        let usable = !(bound == BOUND_LOWER && best <= raw_eval)
+            && !(bound == BOUND_UPPER && best >= raw_eval);
+        if !in_check && ply > 0 && !is_mate_score(best) && usable && (best_move.is_none() || !best_move.is_capture()) {
+            corr_update(&mut td.corr[corr_i], best - raw_eval, depth);
         }
     }
     best
