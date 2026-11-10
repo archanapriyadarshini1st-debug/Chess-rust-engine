@@ -1,0 +1,42 @@
+{
+  "base": "../bin_base",
+  "test": "../bin_p25",
+  "positions": 40,
+  "depths": [
+    6,
+    8,
+    9
+  ],
+  "rounds": 7,
+  "seed": 1,
+  "book": "tools/openings_book.epd",
+  "book_bytes": 36883,
+  "determinism_mismatches": 0,
+  "equivalence_mismatches": 0,
+  "searches": 120,
+  "nps_ratio_best_of_n": 1.0809523145863291,
+  "nps_ratio_median_of_medians": 1.0909093804876429,
+  "nps_ratio_per_round_median": 1.1351354303040067,
+  "nps_ratio_min": 0.9742491715759978,
+  "nps_ratio_max": 1.1645026502522013,
+  "nps_base": [
+    2129934.0,
+    2074093.0,
+    2206306.0,
+    2439572.0,
+    2197551.0,
+    2317083.0,
+    2058672.0
+  ],
+  "nps_test": [
+    2307429.0,
+    2154797.0,
+    2551995.0,
+    2376751.0,
+    2494518.0,
+    2637061.0,
+    2397329.0
+  ],
+  "nps_cv": 0.061646551284388326,
+  "verdict": "PASS"
+}
