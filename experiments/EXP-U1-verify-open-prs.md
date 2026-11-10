@@ -59,13 +59,19 @@ arbitration, then rebase #27 once** on the result (SMP is the thinnest wrapper, 
 it needs to know whether helper threads share or clone the persisted `ThreadData`). #18 must be re-benched after the
 corrhist decision regardless, because it was measured on an engine with the broken table.
 
+## 6. Eval-equivalence check for #25 (the +533/-100-line eval rewrite)
+`position fen X` + `eval` on **895 FENs** (`experiments/EXP-P1-data/fens300.txt` = 300 mixed middlegame/endgame +
+`tools/openings_book.epd` = 595 opening positions), main vs #25 and main vs the 3-PR bundle: **0 differences** in both
+`eval` and `eval_hce` outputs. Positive control: main vs #24 (eval changed on purpose) differs on **14 / 300** FENs, so
+the harness can see a 1-term eval change. Script: `evaldiff.py` (30 lines, pasted in the issue comment). Limits: HCE only
+(no net exists), and 895 positions with no extreme endgames / promotions-heavy positions; it makes an accidental eval
+change very unlikely, not impossible.
+
 ## 5. What this does NOT show
 * Nothing about playing strength. #25/#26/#27 are node-identical, so a strength SPRT adds nothing at fixed nodes; at fixed
   time they should only help. No Elo is claimed.
 * Nothing about SMP scaling beyond "Threads=1 is unchanged and the tests pass".
-* I did not review the eval rewrite inside #25 line by line; I verified it by node-identity (any eval change would change
-  nodes) at depths 10 and 11 on the 8-position bench set only. A wider cross-check (e.g. eval of ~10k FENs, old vs new)
-  would be stronger than bench and is cheap — see "Next".
+* I did not review the eval rewrite inside #25 line by line. I verified it behaviourally: see section 6.
 
 ## Reproduce
 ```
@@ -76,6 +82,5 @@ git merge-tree --write-tree pr27 pr28     # exits non-zero on conflict
 ```
 
 ## Next (Agent U)
-1. Eval-equivalence check for #25: dump `eval` for a few thousand FENs from the existing datasets on main vs #25 and
-   diff. Node-identity on 8 positions is necessary, not sufficient.
+1. (done, section 6) eval-equivalence for #25.
 2. Re-run the 2600 gate (A's 20-game ladder harness) on the merged result of the V arbitration.
