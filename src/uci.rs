@@ -4,7 +4,7 @@
 use crate::board::{parse_uci_move, Position, START_FEN};
 use crate::eval::evaluate;
 use crate::perft::{divide, perft};
-use crate::search::{bench, iterative_deepening, ThreadData};
+use crate::search::{bench, smp_search, ThreadData};
 use crate::time::{Limits, TimeManager};
 use crate::tt::TranspositionTable;
 use crate::types::Color;
@@ -23,6 +23,7 @@ pub struct Engine {
     tt: Arc<TranspositionTable>,
     hash_mb: usize,
     overhead_ms: u64,
+    threads: usize,
 }
 
 impl Engine {
@@ -33,6 +34,7 @@ impl Engine {
             tt: Arc::new(TranspositionTable::new(16)),
             hash_mb: 16,
             overhead_ms: 20,
+            threads: 1,
         }
     }
 
@@ -79,7 +81,7 @@ pub fn run() {
                 println!("id name {} {}", ENGINE_NAME, ENGINE_VERSION);
                 println!("id author {}", ENGINE_AUTHOR);
                 println!("option name Hash type spin default 16 min 1 max 65536");
-                println!("option name Threads type spin default 1 min 1 max 1");
+                println!("option name Threads type spin default 1 min 1 max 256");
                 println!("option name MoveOverhead type spin default 20 min 0 max 5000");
                 println!("option name Clear Hash type button");
                 println!("option name UseNNUE type check default true");
@@ -114,6 +116,11 @@ pub fn run() {
                             if let Some(v) = value.and_then(|s| s.parse().ok()) {
                                 engine.hash_mb = v;
                                 engine.tt = Arc::new(TranspositionTable::new(v));
+                            }
+                        }
+                        "Threads" => {
+                            if let Some(v) = value.and_then(|s| s.trim().parse::<usize>().ok()) {
+                                engine.threads = v.clamp(1, 256);
                             }
                         }
                         "MoveOverhead" => {
@@ -243,9 +250,10 @@ pub fn run() {
                 let mut td = ThreadData::new(engine.tt.clone(), tm.clone());
                 td.hash_hist = engine.moves_played.clone();
                 let pos = engine.pos;
+                let threads = engine.threads;
                 let tm_for_job = tm.clone();
                 let handle = thread::spawn(move || {
-                    let res = iterative_deepening(&pos, &mut td, use_book);
+                    let res = smp_search(&pos, &mut td, threads, use_book);
                     println!("bestmove {}", res.best);
                     let _ = io::stdout().flush();
                 });
@@ -282,7 +290,9 @@ pub fn run() {
             }
             "bench" => {
                 let d: i32 = parts.next().and_then(|s| s.parse().ok()).unwrap_or(8);
-                let _ = bench(d);
+                let t: usize = parts.next().and_then(|s| s.parse().ok()).unwrap_or(engine.threads);
+                let h: usize = parts.next().and_then(|s| s.parse().ok()).unwrap_or(16);
+                let _ = bench(d, t, h);
             }
             "compiler" => {
                 println!(

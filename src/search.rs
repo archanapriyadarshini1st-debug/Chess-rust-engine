@@ -11,6 +11,8 @@ use crate::tt::{from_tt, to_tt, TranspositionTable, BOUND_EXACT, BOUND_LOWER, BO
 use crate::types::{
     is_mate_score, mated_in, mate_in, Color, Move, PieceType, DRAW, INF, MAX_MOVES, MAX_PLY, MATE,
 };
+use std::collections::HashMap;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
 const MVV_LVA: [[i32; 6]; 6] = [
@@ -48,6 +50,12 @@ pub struct ThreadData {
     pub ply_move: [Move; MAX_PLY],
     /// pawn-corrhist [stm][pawn_key % CORR_N]
     pub corr: Vec<i16>,
+    /// Lazy SMP: 0 = main thread, >0 = helper. Only the main thread owns the
+    /// clock, the node limit, the book and UCI output.
+    pub id: usize,
+    pub is_main: bool,
+    /// Per-thread node counters (empty when running single-threaded).
+    pub slots: Arc<Vec<AtomicU64>>,
 }
 
 const HIST_MAX: i32 = 16384;
@@ -100,7 +108,22 @@ impl ThreadData {
             counter: [[Move::NONE; 64]; 64],
             ply_move: [Move::NONE; MAX_PLY],
             corr: vec![0; 2 * CORR_N],
+            id: 0,
+            is_main: true,
+            slots: Arc::new(Vec::new()),
         }
+    }
+
+    /// Nodes searched by every thread (own count is exact, helpers' counts are
+    /// published every 2048 nodes).
+    pub fn total_nodes(&self) -> u64 {
+        let mut n = self.nodes;
+        for (i, s) in self.slots.iter().enumerate() {
+            if i != self.id {
+                n += s.load(Ordering::Relaxed);
+            }
+        }
+        n
     }
 
     #[inline]
@@ -108,13 +131,18 @@ impl ThreadData {
         if self.time.stopped() {
             return true;
         }
-        if self.nodes >= self.time.max_nodes {
+        if self.is_main && self.nodes >= self.time.max_nodes {
             self.time.request_stop();
             return true;
         }
-        if self.nodes & 2047 == 0 && self.time.hard_expired() {
-            self.time.request_stop();
-            return true;
+        if self.nodes & 2047 == 0 {
+            if let Some(slot) = self.slots.get(self.id) {
+                slot.store(self.nodes, Ordering::Relaxed);
+            }
+            if self.time.hard_expired() {
+                self.time.request_stop();
+                return true;
+            }
         }
         false
     }
@@ -722,26 +750,134 @@ pub struct SearchResult {
     pub pv: Vec<Move>,
 }
 
-pub fn iterative_deepening(pos: &Position, td: &mut ThreadData, use_book: bool) -> SearchResult {
+fn book_result(pos: &Position) -> Option<SearchResult> {
+    let mv = crate::book::probe(pos)?;
+    let mut legal = [Move::NONE; MAX_MOVES];
+    let n = legal_moves(pos, &mut legal);
+    if (0..n).any(|i| legal[i] == mv) {
+        Some(SearchResult {
+            best: mv,
+            score: 0,
+            depth: 0,
+            nodes: 0,
+            pv: vec![mv],
+        })
+    } else {
+        None
+    }
+}
+
+/// Stockfish-style depth skipping so helper threads desynchronise from the
+/// main thread (Lazy SMP). `helper` is 0-based.
+fn skip_depth(helper: usize, depth: i32) -> bool {
+    const SKIP_SIZE: [i32; 20] = [1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4];
+    const SKIP_PHASE: [i32; 20] = [0, 1, 0, 1, 2, 3, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 6, 7];
+    let i = helper % 20;
+    ((depth + SKIP_PHASE[i]) / SKIP_SIZE[i]) % 2 != 0
+}
+
+/// Lazy SMP: `threads` workers share the lockless TT and the stop flag; helpers
+/// search with skewed depths and the final move is chosen by a depth- and
+/// score-weighted vote. `threads <= 1` is exactly the single-threaded search.
+pub fn smp_search(pos: &Position, td: &mut ThreadData, threads: usize, use_book: bool) -> SearchResult {
+    if threads <= 1 {
+        return iterative_deepening(pos, td, use_book);
+    }
+    if use_book {
+        if let Some(r) = book_result(pos) {
+            if !td.silent {
+                println!("info string book {}", r.best);
+            }
+            return r;
+        }
+    }
     td.tt.new_search();
+    let slots: Arc<Vec<AtomicU64>> = Arc::new((0..threads).map(|_| AtomicU64::new(0)).collect());
+    td.slots = slots.clone();
+    td.id = 0;
+    td.is_main = true;
+    let results = std::thread::scope(|sc| {
+        let mut handles = Vec::new();
+        for id in 1..threads {
+            let tt = td.tt.clone();
+            let time = td.time.clone();
+            let hist = td.hash_hist.clone();
+            let slots = slots.clone();
+            let h = std::thread::Builder::new()
+                .stack_size(16 << 20)
+                .spawn_scoped(sc, move || {
+                    let mut h = ThreadData::new(tt, time);
+                    h.id = id;
+                    h.is_main = false;
+                    h.silent = true;
+                    h.slots = slots;
+                    h.hash_hist = hist;
+                    iterative_deepening(pos, &mut h, false)
+                })
+                .expect("spawn search thread");
+            handles.push(h);
+        }
+        let main_res = iterative_deepening(pos, td, false);
+        td.time.request_stop();
+        let mut all = vec![main_res];
+        for h in handles {
+            if let Ok(r) = h.join() {
+                all.push(r);
+            }
+        }
+        all
+    });
+    pick_best(results, td.total_nodes())
+}
+
+fn pick_best(mut all: Vec<SearchResult>, nodes: u64) -> SearchResult {
+    let valid: Vec<usize> = (0..all.len())
+        .filter(|&i| !all[i].best.is_none() && all[i].depth > 0)
+        .collect();
+    let mut pick = 0;
+    if valid.len() > 1 {
+        // A proven mate-in-N from any thread wins (shortest first).
+        let mate = valid
+            .iter()
+            .copied()
+            .filter(|&i| is_mate_score(all[i].score) && all[i].score > 0)
+            .max_by_key(|&i| all[i].score);
+        if let Some(i) = mate {
+            pick = i;
+        } else {
+            let min_score = valid.iter().map(|&i| all[i].score).min().unwrap_or(0);
+            let mut votes: HashMap<u16, i64> = HashMap::new();
+            for &i in &valid {
+                let v = (all[i].score - min_score + 14) as i64 * all[i].depth as i64;
+                *votes.entry(all[i].best.0).or_insert(0) += v;
+            }
+            let mut best_key = (i64::MIN, i32::MIN);
+            for &i in &valid {
+                let key = (votes[&all[i].best.0], all[i].score);
+                if key > best_key {
+                    best_key = key;
+                    pick = i;
+                }
+            }
+        }
+    }
+    let mut r = all.swap_remove(pick);
+    r.nodes = nodes;
+    r
+}
+
+pub fn iterative_deepening(pos: &Position, td: &mut ThreadData, use_book: bool) -> SearchResult {
+    if td.slots.is_empty() {
+        td.tt.new_search();
+    }
     td.nodes = 0;
     td.best = Move::NONE;
-    if use_book {
-        if let Some(mv) = crate::book::probe(pos) {
-            let mut legal = [Move::NONE; MAX_MOVES];
-            let n = legal_moves(pos, &mut legal);
-            if (0..n).any(|i| legal[i] == mv) {
-                if !td.silent {
-                    println!("info string book {}", mv);
-                }
-                return SearchResult {
-                    best: mv,
-                    score: 0,
-                    depth: 0,
-                    nodes: 0,
-                    pv: vec![mv],
-                };
+    if use_book && td.is_main {
+        if let Some(r) = book_result(pos) {
+            if !td.silent {
+                println!("info string book {}", r.best);
             }
+            return r;
         }
     }
     let mut last_score = 0;
@@ -763,6 +899,9 @@ pub fn iterative_deepening(pos: &Position, td: &mut ThreadData, use_book: bool) 
     td.best = root_moves[0];
 
     for depth in 1..=td.time.max_depth {
+        if td.id > 0 && skip_depth(td.id - 1, depth) {
+            continue;
+        }
         td.seldepth = 0;
         td.root_depth = depth;
         let mut alpha = -INF;
@@ -808,7 +947,8 @@ pub fn iterative_deepening(pos: &Position, td: &mut ThreadData, use_book: bool) 
         }
 
         let elapsed = td.time.elapsed().as_millis().max(1);
-        let nps = td.nodes as u128 * 1000 / elapsed as u128;
+        let total = td.total_nodes();
+        let nps = total as u128 * 1000 / elapsed as u128;
         let mut pv_s = String::new();
         for m in &last_pv {
             pv_s.push(' ');
@@ -830,7 +970,7 @@ pub fn iterative_deepening(pos: &Position, td: &mut ThreadData, use_book: bool) 
                 depth,
                 td.seldepth,
                 score_str,
-                td.nodes,
+                total,
                 nps,
                 elapsed,
                 pv_s
@@ -842,10 +982,10 @@ pub fn iterative_deepening(pos: &Position, td: &mut ThreadData, use_book: bool) 
         } else {
             stable = 0;
         }
-        if td.time.soft_expired(stable >= 4) {
+        if td.is_main && td.time.soft_expired(stable >= 4) {
             break;
         }
-        if td.nodes >= td.time.max_nodes {
+        if td.is_main && td.nodes >= td.time.max_nodes {
             break;
         }
     }
@@ -857,14 +997,14 @@ pub fn iterative_deepening(pos: &Position, td: &mut ThreadData, use_book: bool) 
         best: td.best,
         score: last_score,
         depth: last_depth,
-        nodes: td.nodes,
+        nodes: td.total_nodes(),
         pv: last_pv,
     }
 }
 
 /// OpenBench / Reckless-style bench: search a fixed set of positions to a
 /// fixed depth and print `nodes nps`.
-pub fn bench(depth: i32) -> (u64, u64) {
+pub fn bench(depth: i32, threads: usize, hash_mb: usize) -> (u64, u64) {
     const FENS: &[&str] = &[
         "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
         "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
@@ -880,7 +1020,7 @@ pub fn bench(depth: i32) -> (u64, u64) {
         "2r3k1/1q1nbppp/r3p3/3pP3/pPpP4/P1Q2N2/2RN1PPP/2R4K b - b3 0 23",
     ];
     let _ = crate::attacks::tables();
-    let tt = Arc::new(TranspositionTable::new(16));
+    let tt = Arc::new(TranspositionTable::new(hash_mb));
     let mut total_nodes = 0u64;
     let start = std::time::Instant::now();
     for fen in FENS {
@@ -895,8 +1035,8 @@ pub fn bench(depth: i32) -> (u64, u64) {
         // TimeManager with only depth set becomes infinite-time; we cap via max_depth.
         let mut td = ThreadData::new(tt.clone(), tm);
         td.silent = true;
-        let _ = iterative_deepening(&pos, &mut td, false);
-        total_nodes += td.nodes;
+        let _ = smp_search(&pos, &mut td, threads, false);
+        total_nodes += td.total_nodes();
         tt.clear();
     }
     let ms = start.elapsed().as_millis().max(1);
