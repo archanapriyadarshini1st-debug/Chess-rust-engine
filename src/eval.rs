@@ -204,6 +204,21 @@ pub fn evaluate_hce(pos: &Position) -> i32 {
                     mg[color_i] += PASSED_MG[rel_rank] / 2;
                     eg[color_i] += PASSED_EG[rel_rank] / 2;
                 }
+                // Rook behind the passer: supports the push, classic +Elo term.
+                let mut rks = pos.bb(color, PieceType::Rook) & FILES[file];
+                while rks != 0 {
+                    let rsq = Square(rks.trailing_zeros() as u8);
+                    rks &= rks - 1;
+                    let behind = if color == Color::White {
+                        rsq.rank() < sq.rank()
+                    } else {
+                        rsq.rank() > sq.rank()
+                    };
+                    if behind {
+                        mg[color_i] += 12;
+                        eg[color_i] += 18;
+                    }
+                }
             }
         }
 
