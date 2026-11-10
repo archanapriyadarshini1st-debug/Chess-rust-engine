@@ -339,6 +339,7 @@ fn qsearch(pos: &Position, td: &mut ThreadData, mut alpha: i32, beta: i32, ply: 
         if np.was_illegal() {
             continue;
         }
+        td.tt.prefetch(np.hash);
         td.hash_hist.push(pos.hash);
         let score = -qsearch(&np, td, -beta, -alpha, ply + 1);
         td.hash_hist.pop();
@@ -583,6 +584,7 @@ fn search(
         if np.was_illegal() {
             continue;
         }
+        td.tt.prefetch(np.hash);
         legal += 1;
         let gives_check = np.in_check();
 
