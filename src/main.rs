@@ -8,7 +8,9 @@ fn main() {
     match args.next().as_deref() {
         Some("bench") => {
             let depth: i32 = args.next().and_then(|s| s.parse().ok()).unwrap_or(8);
-            let _ = bench(depth);
+            let threads: usize = args.next().and_then(|s| s.parse().ok()).unwrap_or(1);
+            let hash: usize = args.next().and_then(|s| s.parse().ok()).unwrap_or(16);
+            let _ = bench(depth, threads, hash);
         }
         Some("datagen") => {
             let n: usize = args.next().and_then(|s| s.parse().ok()).unwrap_or(20_000);
