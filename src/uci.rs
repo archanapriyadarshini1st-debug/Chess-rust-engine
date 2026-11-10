@@ -83,6 +83,9 @@ pub fn run() {
                 println!("option name MoveOverhead type spin default 20 min 0 max 5000");
                 println!("option name Clear Hash type button");
                 println!("option name UseNNUE type check default true");
+                for line in crate::params::uci_options() {
+                    println!("{}", line);
+                }
                 println!("uciok");
             }
             "isready" => {
@@ -124,8 +127,19 @@ pub fn run() {
                                 crate::nnue::set_enabled(v.eq_ignore_ascii_case("true"));
                             }
                         }
-                        _ => {}
+                        other => {
+                            // Search tunables (src/params.rs). Unknown names are ignored per UCI.
+                            if let Some(v) = value.and_then(|s| s.trim().parse::<i32>().ok()) {
+                                crate::params::set(other, v);
+                            }
+                        }
                     }
+                }
+            }
+            "params" => {
+                // OpenBench-style SPSA spec: name, int, default, min, max, c_end, r_end
+                for line in crate::params::spsa_spec() {
+                    println!("{}", line);
                 }
             }
             "position" => {
