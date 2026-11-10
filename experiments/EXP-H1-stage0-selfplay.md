@@ -32,3 +32,15 @@
 
 ## Not claimed
 No Elo number. 54 games, one seed, one net size, one run.
+
+
+## Update 1 (same day): final gate-1 count, and the imbalance follow-up (EXP-H1b)
+- **Gate 1 final (stopped at 68 of 100 because the result was decisive): STAGE0 0-2-66 over 68 games.** (Earlier text in this file says 54 games; this supersedes it.)
+- **EXP-H1b:** same data + 394,087 synthetic positions (1-2 non-king pieces removed from self-play positions, legality-checked, labelled by the engine's *static HCE eval* via `hce-dump`; result field set from score sign: >150 win, <-150 loss, else draw). 1,367,729 unique positions, 8 min training, best val 0.00864.
+- **Static evals on the in-game failure positions (HCE / net):**
+```
+net-A(stage0) ply6: HCE -47 / net 163; ply13: HCE 116 / net -202; ply14 (W a knight down): HCE -457 / net -4; ply16: HCE -377 / net 5; ply28: HCE -314 / net -10
+net-B(+imbalance) ply6: HCE -47 / net 61; ply13: HCE 116 / net -118; ply14 (W a knight down): HCE -457 / net -36; ply16: HCE -377 / net -116; ply28: HCE -314 / net -207
+```
+- **Gate 2 (same setup, 10+0.1, colours reversed, 40 requested): STAGE0B vs HCE = 7-2-31 over 40 games.**
+- Interpretation is deliberately limited: one run, one seed, 40 games. Whatever the number, it is a single data point on hypothesis H-a/H-b.
