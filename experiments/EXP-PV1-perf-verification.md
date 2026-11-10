@@ -49,3 +49,22 @@ Bench 10 nodes: 553783 for base, #25, #26 (all identical). #25 and #26 touch dis
 ## Limits (not hidden)
 
 120 searches at depth <= 10 cannot prove identity at every depth/position (no test can); it makes an accidental behavioural change very unlikely and, unlike `bench`, would have caught a PR-#5-style change. SMP (`Threads>1`) is not deterministic and is out of scope here. Speed was not measured on quiet hardware.
+
+## Addendum - 5x replicated side-effect probe (games, NOT an Elo measurement)
+
+Owner rule: "test it 5 times before shipping; does it have a downside?". `main` (52cb805) vs `#25+#26` (local merge, bin sha `5ecbf4a5f92581d9`),
+fastchess 1.8.3-alpha, **5 independent replicates** (srand 20269029, 20276948, 20284867, 20292786, 20300705), 12 games each, 5+0.05, Hash 64,
+concurrency 2, 595-position book, colours swapped (`-repeat`), draw/resign adjudication as in `sprt.yml`. Raw PGNs: `EXP-PV1-data/rep{1..5}.pgn`.
+
+| replicate | #25+#26 W-D-L vs main | score |
+|---|---|---|
+| 1 | 1-9-2 | 45.8% |
+| 2 | 6-5-1 | 70.8% |
+| 3 | 2-5-5 | 37.5% |
+| 4 | 4-8-0 | 66.7% |
+| 5 | 1-10-1 | 50.0% |
+| **pooled** | **14-37-9** | **54.2% over 60 games** |
+
+- **Side effects:** 0 illegal moves, 0 disconnects/stalls/crashes, 0 time losses in all 60 games (grep of all five logs; terminations: 34 normal, 26 adjudication).
+- **What the spread teaches:** identical engines-pair, identical settings, replicate scores range 37.5%-70.8%. A single 12-game (or even 20-game) match cannot rank a patch; that is the reason for replicating and for SPRT.
+- **What it does not show:** 60 games has a +/- ~8 percentage-point (about +/-55 Elo) error bar. The pooled 54.2% is consistent with "no downside, small gain from speed", and equally with "no effect". I make **no strength claim**; the evidence for safety is the 120/120 node-identity result, the games only confirm there is no operational problem (crashes, illegal moves, time forfeits) with the faster binary.
