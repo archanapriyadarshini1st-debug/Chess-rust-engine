@@ -282,8 +282,10 @@ fn qsearch(pos: &Position, td: &mut ThreadData, mut alpha: i32, beta: i32, ply: 
     let in_check = pos.in_check();
     let orig_alpha = alpha;
     let q_pv = beta - alpha > 1;
-    if let Some((_mv, s, d, b)) = td.tt.probe(pos.hash) {
+    let mut tt_move = Move::NONE;
+    if let Some((mv, s, d, b)) = td.tt.probe(pos.hash) {
         let _ = d;
+        tt_move = mv;
         if !q_pv {
             let ts = from_tt(s, ply);
             if b == BOUND_EXACT
@@ -317,9 +319,10 @@ fn qsearch(pos: &Position, td: &mut ThreadData, mut alpha: i32, beta: i32, ply: 
     if n == 0 {
         return if in_check { mated_in(ply) } else { stand };
     }
-    sort_moves(td, pos, &mut moves, n, Move::NONE, ply as usize);
+    sort_moves(td, pos, &mut moves, n, tt_move, ply as usize);
 
     let mut best = stand;
+    let mut best_move = Move::NONE;
     for i in 0..n {
         let mv = moves[i];
         if !in_check {
@@ -346,6 +349,7 @@ fn qsearch(pos: &Position, td: &mut ThreadData, mut alpha: i32, beta: i32, ply: 
         }
         if score > best {
             best = score;
+            best_move = mv;
             if score > alpha {
                 alpha = score;
                 if score >= beta {
@@ -361,7 +365,7 @@ fn qsearch(pos: &Position, td: &mut ThreadData, mut alpha: i32, beta: i32, ply: 
     } else {
         BOUND_UPPER
     };
-    td.tt.store(pos.hash, Move::NONE, to_tt(best, ply), 0, qb);
+    td.tt.store(pos.hash, best_move, to_tt(best, ply), 0, qb);
     best
 }
 
@@ -747,6 +751,7 @@ pub fn iterative_deepening(pos: &Position, td: &mut ThreadData, use_book: bool) 
     let mut last_pv: Vec<Move> = Vec::new();
     let mut last_depth = 0;
     let mut stable = 0;
+    let mut prev_score = 0;
 
     let mut root_moves = [Move::NONE; MAX_MOVES];
     let rn = legal_moves(pos, &mut root_moves);
@@ -797,6 +802,8 @@ pub fn iterative_deepening(pos: &Position, td: &mut ThreadData, use_book: bool) 
         }
 
         last_depth = depth;
+        let drop = prev_score - score;
+        prev_score = score;
         last_score = score;
         td.score = score;
         if td.pv_len[0] > 0 {
@@ -841,7 +848,9 @@ pub fn iterative_deepening(pos: &Position, td: &mut ThreadData, use_book: bool) 
         } else {
             stable = 0;
         }
-        if td.time.soft_expired(stable >= 4) {
+        // Root fail-low: spend the hard bound, not the soft one. Stopping after a
+        // 50+ cp drop is how engines hang pieces with time left on the clock.
+        if td.time.soft_expired(stable >= 4) && !(depth >= 6 && drop >= 50) {
             break;
         }
         if td.nodes >= td.time.max_nodes {
