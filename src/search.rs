@@ -499,7 +499,7 @@ fn search(
     if excluded.is_none()
         && !in_check
         && ply > 0
-        && depth >= 8
+        && depth >= 8 && depth >= 9999 // diag: SE off
         && !tt_move.is_none()
         && tt_hit
         && tt_depth >= depth - 3
