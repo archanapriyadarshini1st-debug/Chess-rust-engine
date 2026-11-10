@@ -72,3 +72,34 @@ precise figure. Build here has no `target-cpu=native`.
 - Hardware: Intel Xeon @ 2.60 GHz, 4 vCPU, 3.9 GB, Linux 6.1 x86_64, shared VM. Hash 16 MB, 1 thread, `CRE_NO_NNUE=1`.
 - Book: `tools/openings_book.epd` (595 positions). Seeds 1-5. Reference: python-chess 1.11.2.
 - Reproduce: `pip install chess && cargo build --release && python3 tools/correctness_oracle.py target/release/chess-rust-engine --games 60 --plies 170 --seed 1 --book tools/openings_book.epd`
+
+
+---
+# EXP-X2: pre-registered 500-game confirmation of "80% vs SF19 UCI_Elo 2600" [Agent X1]
+
+Pre-registration: issue #1 comment 6768845269 (posted before any game started).
+Engine: `main` @ `40faeb77f7ee604fd1cc6750b0173a47ed3ada20` (#36 persist-history + #25 + #26 + #30). Repo: `archanapriyadarshini1st-debug/Chess-rust-engine`.
+Opponent: official SF19 (`sf_19`, release binary), `UCI_LimitStrength=true`, `UCI_Elo=2600`.
+Config (unchanged `sf19-match.yml`, `mode=ladder`): 10+0.1, Hash=64, Threads=1 each, `tools/openings.epd` random order, colours swapped (`-repeat`),
+fastchess 1.8.3-alpha, adjudication draw `movenumber=40 movecount=8 score=20`, resign `movecount=3 score=600`, `RUSTFLAGS=-C target-cpu=native`,
+GitHub-hosted `ubuntu-latest` runners, concurrency 2 per runner. 5 replicates dispatched from 5 branches.
+
+| rep | Actions run | W-D-L | score |
+|---|---|---|---|
+| 1 | 42826775208 | 56-14-30 | 63.0% |
+| 2 | 42826782004 | 63-6-31 | 66.0% |
+| 3 | 42826786314 | 72-7-21 | 75.5% |
+| 4 | 42826792251 | 61-4-35 | 63.0% |
+| 5 | 42826800905 | 66-6-28 | 69.0% |
+| **pooled** | | **318-37-145 (500 games)** | **67.30%, 95% CI [63.4, 71.2]** |
+
+- Logistic Elo vs the SF19 UCI_Elo-2600 limiter: **+125 [+95, +158]** (limiter scale, **not** CCRL, not calibrated).
+- Replicate heterogeneity: chi2 = 5.40, df = 4, p = 0.25 -> replicates are consistent with one true score.
+- No game ended on time forfeit, illegal move, crash or disconnect (searched all 5 logs). Colour balance by construction.
+- **Pre-registered verdict: NOT MET.** Pooled point estimate 67.3% < 80.0%; one-sided p(true score >= 80%) ~ 1e-10.
+- Relation to A's 81.8% (35-2-7, 44 games, #36 branch): under a true score of 67.3% a 44-game match reaches >= 81.8% with probability ~1.5%
+  (per-game sd ~0.45, z ~ 2.2). Either that match was a lucky sample, or its configuration (hardware, concurrency, binary, openings) differs from
+  this one. I cannot tell which from here; both are testable: A's exact command + commit should be rerun once through this workflow.
+- This says nothing about 3000. It says: at this configuration, `main` is about +100 Elo (limiter scale) short of the 80% gate.
+
+Decision for EXP-X2: **measurement recorded, target not reached; do not report "80% vs 2600 met" for `main` 40faeb7.**
