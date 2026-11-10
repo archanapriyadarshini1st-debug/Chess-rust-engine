@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-11-10T07:44:51.047131+00:00",
+  "mode": "structure-only",
+  "training_eligible": false,
+  "input": "/tmp/nextgen-teacher.bin",
+  "input_sha256": "31adff34664b5b37abc495cfca0c10862ca822e4a3b1a91e9f7738f9a6e5a476",
+  "records": 348714,
+  "unique_positions": 348714,
+  "duplicate_records": 0,
+  "conflicting_positions": 0,
+  "invalid_records": 0,
+  "split_counts": {
+    "train": 0,
+    "validation": 0,
+    "test": 0
+  },
+  "split_method": null,
+  "seed": 42,
+  "validation_fraction": 0.1,
+  "test_fraction": 0.1,
+  "source_manifest": {},
+  "outputs": {},
+  "caveats": [
+    "Packed records omit castling, en passant and repetition state; the sidecar preserves history.",
+    "Game-group splitting controls exact game leakage, not semantic similarity across games.",
+    "Audit eligibility is not an Elo claim or a substitute for a promotion match."
+  ]
+}
