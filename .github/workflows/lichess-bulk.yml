@@ -76,14 +76,14 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install pyarrow python-chess numpy
-      - name: Converter self-test (packer == datagen_movetime.pack, in_check == python-chess)
+      - name: "Converter self-test (packer vs datagen_movetime.pack, in_check vs python-chess)"
         run: python3 tools/nnue/lichess_to_records.py --selftest
       - name: Download shard
         run: |
           N=$(printf '%04d' ${{ matrix.shard }})
           curl -fL --retry 6 --retry-delay 10 -o /tmp/shard.parquet "$HF_BASE/data_$N.parquet"
           ls -la /tmp/shard.parquet
-      - name: Score-perspective guard (cp must be White-POV)
+      - name: "Score-perspective guard (cp must be White-POV)"
         run: python3 tools/nnue/lichess_pov_check.py /tmp/shard.parquet 100000 | tee /tmp/pov.txt && grep -q "WHITE-POV" /tmp/pov.txt
       - name: Convert
         run: |
@@ -122,16 +122,17 @@ jobs:
           pip install torch --index-url https://download.pytorch.org/whl/cpu
       - name: Data summary
         run: |
-          ls -la data; cat data/*.json | python3 -c "
-          import sys,json,re
-          txt=sys.stdin.read()
-          dec=json.JSONDecoder(); i=0; tot=0
-          while i < len(txt):
-              while i < len(txt) and txt[i].isspace(): i+=1
-              if i>=len(txt): break
-              o,j=dec.raw_decode(txt,i); i=j; tot+=o['records']; print(o['source_file'], o['records'], o['stats'])
-          print('total records', tot)" | tee data_summary.txt
-      - name: Train (lam=1.0: Lichess data has no game results)
+          ls -la data
+          python3 - <<'PY' | tee data_summary.txt
+          import glob, json
+          tot = 0
+          for f in sorted(glob.glob("data/*.json")):
+              o = json.load(open(f))
+              tot += o["records"]
+              print(o["source_file"], o["records"], o["stats"])
+          print("total records", tot)
+          PY
+      - name: "Train (lam=1.0, Lichess data has no game results)"
         run: |
           python3 tools/nnue/train.py --data 'data/*.bin' --out net.bin --lam 1.0 \
             --minutes ${{ inputs.train_minutes }} 2>&1 | tee train.log | grep -E "files|decoded|==|final|exported" | tail -80
@@ -166,7 +167,7 @@ jobs:
           mkdir -p /tmp/fc
           curl -fsSL --retry 3 "$FASTCHESS_URL" -o /tmp/fc.tar && tar xf /tmp/fc.tar -C /tmp/fc
           FC=$(find /tmp/fc -type f -name fastchess | head -1); chmod +x "$FC"; ln -sf "$FC" /tmp/fastchess
-      - name: Gate - net vs HCE (same binary), colours reversed
+      - name: "Gate: net vs HCE (same binary), colours reversed"
         run: |
           FASTCHESS=/tmp/fastchess bash tools/gate_net.sh ./engine net/net.bin ${{ inputs.gate_games }} "${{ inputs.gate_tc }}" 3 gate_out
       - name: Summary
