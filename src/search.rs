@@ -448,22 +448,6 @@ fn search(
         && !in_check
         && static_eval > td.eval_stack[(ply as usize).saturating_sub(2)];
 
-    // Razoring: only the shallowest non-PV nodes. depth<=3 ate ~30% of bench 8
-    // and is too willing to throw away a full-width ply.
-    if excluded.is_none()
-        && !is_pv
-        && !in_check
-        && ply > 0
-        && depth <= 2
-        && static_eval + 280 + 220 * depth <= alpha
-        && static_eval.abs() < MATE_IN_MAX_LOCAL
-    {
-        let qs = qsearch(pos, td, alpha, alpha + 1, ply);
-        if qs <= alpha {
-            return qs;
-        }
-    }
-
     // Reverse futility pruning
     if excluded.is_none()
         && !is_pv
@@ -504,65 +488,6 @@ fn search(
         }
         if score >= beta {
             return if is_mate_score(score) { beta } else { score };
-        }
-    }
-
-    // ProbCut: a reduced-depth capture search vs beta+margin. If it still
-    // fails high the node is almost certainly a cutoff (Stockfish / Reckless).
-    if excluded.is_none()
-        && !is_pv
-        && !in_check
-        && ply > 0
-        && depth >= 5
-        && depth <= 14
-        && static_eval.abs() < MATE_IN_MAX_LOCAL
-    {
-        let pc_beta = (beta + 110 - if improving { 35 } else { 0 }).min(MATE_IN_MAX_LOCAL - 1);
-        if static_eval >= pc_beta - 90
-            || (tt_hit && tt_bound != BOUND_UPPER && tt_score >= pc_beta)
-        {
-            if tt_hit && tt_depth >= depth - 3 && tt_bound != BOUND_UPPER && tt_score >= pc_beta {
-                return tt_score;
-            }
-            let rdepth = (depth - 4).max(1);
-            let mut pc_moves = [Move::NONE; MAX_MOVES];
-            let pn = noisy_moves(pos, &mut pc_moves);
-            sort_moves(td, pos, &mut pc_moves, pn, tt_move, ply as usize);
-            let see_th = pc_beta.saturating_sub(static_eval);
-            for i in 0..pn {
-                let mv = pc_moves[i];
-                if !see_ge(pos, mv, see_th) {
-                    continue;
-                }
-                let mut np = *pos;
-                np.make(mv);
-                if np.was_illegal() {
-                    continue;
-                }
-                td.hash_hist.push(pos.hash);
-                td.stack_pc[ply as usize] = pos.piece_on(mv.from()).index() as u8;
-                td.stack_to[ply as usize] = mv.to().index() as u8;
-                td.ply_move[ply as usize] = mv;
-                let s = -search(
-                    &np,
-                    td,
-                    -pc_beta,
-                    -pc_beta + 1,
-                    rdepth,
-                    ply + 1,
-                    false,
-                    !cut_node,
-                    Move::NONE,
-                );
-                td.hash_hist.pop();
-                if td.time.stopped() {
-                    return 0;
-                }
-                if s >= pc_beta {
-                    td.tt.store(pos.hash, mv, to_tt(s, ply), rdepth, BOUND_LOWER);
-                    return s;
-                }
-            }
         }
     }
 
@@ -826,6 +751,7 @@ pub fn iterative_deepening(pos: &Position, td: &mut ThreadData, use_book: bool) 
     let mut last_pv: Vec<Move> = Vec::new();
     let mut last_depth = 0;
     let mut stable = 0;
+    let mut prev_score = 0;
 
     let mut root_moves = [Move::NONE; MAX_MOVES];
     let rn = legal_moves(pos, &mut root_moves);
@@ -876,6 +802,8 @@ pub fn iterative_deepening(pos: &Position, td: &mut ThreadData, use_book: bool) 
         }
 
         last_depth = depth;
+        let drop = prev_score - score;
+        prev_score = score;
         last_score = score;
         td.score = score;
         if td.pv_len[0] > 0 {
@@ -920,7 +848,9 @@ pub fn iterative_deepening(pos: &Position, td: &mut ThreadData, use_book: bool) 
         } else {
             stable = 0;
         }
-        if td.time.soft_expired(stable >= 4) {
+        // Root fail-low: spend the hard bound, not the soft one. Stopping after a
+        // 50+ cp drop is how engines hang pieces with time left on the clock.
+        if td.time.soft_expired(stable >= 4) && !(depth >= 6 && drop >= 50) {
             break;
         }
         if td.nodes >= td.time.max_nodes {
