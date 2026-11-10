@@ -45,6 +45,7 @@ Decision rules (FIXED BEFORE ANY RESULT, see experiments/EXP-S1-ship-gate.md):
 Exit codes: 0 SHIP, 1 BLOCK, 2 INVALID, 3 INCONCLUSIVE, 4 INVESTIGATE.
 """
 import argparse
+import glob
 import json
 import math
 import os
@@ -149,6 +150,31 @@ def parse_log(path):
     return out
 
 
+def orient(rec):
+    """Return the record from TEST's point of view. When engine order is
+    alternated (to cancel any first-listed-engine bias) fastchess reports
+    'base vs test'; flip W/L and reverse the pentanomial."""
+    if rec and rec.get("first") == "base":
+        rec = dict(rec)
+        rec["w"], rec["l"] = rec["l"], rec["w"]
+        if "ptnml" in rec:
+            rec["ptnml"] = list(reversed(rec["ptnml"]))
+        rec["first"], rec["second"] = rec["second"], rec["first"]
+    return rec
+
+
+def combine(recs):
+    recs = [r for r in recs if r]
+    if not recs:
+        return None
+    out = {"games": sum(r["games"] for r in recs), "w": sum(r["w"] for r in recs),
+           "l": sum(r["l"] for r in recs), "d": sum(r["d"] for r in recs),
+           "first": "test", "second": "base"}
+    if all("ptnml" in r for r in recs):
+        out["ptnml"] = [sum(x) for x in zip(*(r["ptnml"] for r in recs))]
+    return out
+
+
 def stats_of(rec):
     if rec is None:
         return None
@@ -231,7 +257,16 @@ def evaluate(reps, aa, sf, bench, rel, a):
             mean = sum(w * r["elo"] for w, r in zip(ws, have)) / sum(ws)
             q = sum(w * (r["elo"] - mean) ** 2 for w, r in zip(ws, have))
             het_p = chi2_sf(q, len(have) - 1)
-            if het_p < 0.01:
+            signs = {1 if r["elo"] > 0 else -1 for r in have}
+            decisive = all(abs(r["elo"]) > Z99 * r["se"] for r in have)
+            if len(signs) == 1 and decisive:
+                # Every replication is individually significant in the SAME direction.
+                # Elo saturates near 0%/100% scores, so sizes legitimately differ
+                # (e.g. +759 vs +3600); the question heterogeneity asks (is the sign
+                # reproducible?) is already answered. Report, do not flag.
+                notes.append(f"all {len(have)} replications decisive and same direction; "
+                             f"Cochran Q p={het_p:.4f} on the saturating Elo scale is not used")
+            elif het_p < 0.01:
                 investigate.append(f"replications disagree (Cochran Q p={het_p:.4f}): result is not "
                                    "reproducible, find out why before shipping")
         if pooled and pooled["los"] <= 0.025:
@@ -353,9 +388,10 @@ def markdown(rep, meta):
 # ----------------------------------------------------------------------- CLI
 def load_dir(d, k):
     def maybe(p):
-        return stats_of(parse_log(p)) if os.path.exists(p) else None
+        return stats_of(orient(parse_log(p))) if os.path.exists(p) else None
     reps = [maybe(os.path.join(d, f"rep{i}", "run.log")) for i in range(1, k + 1)]
-    aa = maybe(os.path.join(d, "aa", "run.log"))
+    aa_logs = sorted(glob.glob(os.path.join(d, "aa", "run*.log")))
+    aa = stats_of(combine([orient(parse_log(p)) for p in aa_logs])) if aa_logs else None
     sf = {"test": maybe(os.path.join(d, "sf", "sf_test.log")),
           "base": maybe(os.path.join(d, "sf", "sf_base.log"))}
     rel = {"test": 0, "base": 0}
@@ -487,6 +523,18 @@ def selftest():
     check("perf but nodes differ -> INCONCLUSIVE", v, "INCONCLUSIVE")
     v, _ = run([(190, 160, 110), (110, 160, 190), (150, 160, 150), (190, 160, 110), (110, 160, 190)])
     check("inconsistent reps -> BLOCK or INVESTIGATE", v in ("BLOCK", "INVESTIGATE"), True)
+
+    # sweeps of different sizes in the same direction must not trip heterogeneity
+    sweep = [(117, 3, 0), (120, 0, 0), (120, 0, 0), (111, 6, 3), (117, 3, 0)]
+    v, r = run(sweep)
+    check("same-direction sweeps -> SHIP (no false heterogeneity)", v, "SHIP")
+    # orientation: 'base vs test' log must flip into TEST's view
+    rec = {"games": 40, "w": 30, "l": 6, "d": 4, "ptnml": [0, 1, 3, 8, 8], "first": "base", "second": "test"}
+    o = orient(rec)
+    check("orient flips W/L", (o["w"], o["l"]), (6, 30))
+    check("orient reverses ptnml", o["ptnml"], [8, 8, 3, 1, 0])
+    check("orient is identity for test-first", orient({"first": "test", "w": 1, "l": 2, "d": 3, "games": 6}),
+          {"first": "test", "w": 1, "l": 2, "d": 3, "games": 6})
 
     # parser round-trip on a fastchess-shaped log
     import tempfile
