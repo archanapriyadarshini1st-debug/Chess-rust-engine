@@ -1,6 +1,7 @@
 //! Fail-soft PVS with the pruning / ordering stack used by Reckless, Viridithas
 //! and Stockfish. Conservative margins first; tune on OpenBench (see ROADMAP).
 
+use crate::params;
 use crate::board::Position;
 use crate::eval::evaluate;
 use crate::movegen::{legal_moves, noisy_moves, pseudo_legal};
@@ -448,8 +449,8 @@ fn search(
     if excluded.is_none()
         && !is_pv
         && !in_check
-        && depth <= 8
-        && static_eval - 70 * depth + (if improving { 40 } else { 0 }) >= beta
+        && depth <= params::rfp_depth()
+        && static_eval - params::rfp_margin() * depth + (if improving { params::rfp_improving() } else { 0 }) >= beta
         && static_eval.abs() < MATE_IN_MAX_LOCAL
     {
         return static_eval;
@@ -464,7 +465,7 @@ fn search(
         && pos.bb(pos.side, PieceType::Pawn) != pos.colors[pos.side.index()] ^ pos.bb(pos.side, PieceType::King)
         && !(tt_hit && tt_bound == BOUND_UPPER && tt_score < beta)
     {
-        let r = 3 + depth / 4 + ((static_eval - beta) / 200).clamp(0, 3);
+        let r = params::nmp_base() + depth / params::nmp_depth_div() + ((static_eval - beta) / params::nmp_eval_div()).clamp(0, 3);
         let mut np = *pos;
         // make null
         if let Some(ep) = np.ep {
@@ -505,7 +506,7 @@ fn search(
         && tt_bound != BOUND_UPPER
         && tt_score.abs() < MATE_IN_MAX_LOCAL
     {
-        let rbeta = (tt_score - (40 + depth)).max(-MATE_IN_MAX_LOCAL);
+        let rbeta = (tt_score - (params::se_margin() + depth)).max(-MATE_IN_MAX_LOCAL);
         let sdepth = ((depth - 1) / 2).max(1);
         let s = search(pos, td, rbeta - 1, rbeta, sdepth, ply, false, cut_node, tt_move);
         if td.time.stopped() {
@@ -547,20 +548,20 @@ fn search(
             && is_quiet
             && legal > 0
             && depth <= 7
-            && legal >= 4 + depth * depth / if improving { 1 } else { 2 }
+            && legal >= params::lmp_base() + depth * depth / if improving { 1 } else { 2 }
         {
             continue;
         }
 
         // History pruning of quiets that have consistently failed
         let mv_hist = if is_quiet { quiet_hist(td, pos, mv, ply as usize) } else { 0 };
-        if !is_pv && !in_check && is_quiet && legal > 0 && depth <= 4 && mv_hist < -2500 * depth {
+        if !is_pv && !in_check && is_quiet && legal > 0 && depth <= 4 && mv_hist < -params::hist_prune() * depth {
             continue;
         }
 
         // SEE pruning of bad captures / quiets
         if !is_pv && !in_check && legal > 0 && depth <= 6 {
-            let th = if is_quiet { -20 * depth } else { -100 * depth };
+            let th = if is_quiet { -params::see_quiet() * depth } else { -params::see_capture() * depth };
             if !see_ge(pos, mv, th) {
                 continue;
             }
@@ -570,8 +571,8 @@ fn search(
         if !is_pv
             && !in_check
             && is_quiet
-            && depth <= 6
-            && static_eval + 120 * depth < alpha
+            && depth <= params::futility_depth()
+            && static_eval + params::futility_margin() * depth < alpha
             && legal > 0
         {
             continue;
@@ -616,7 +617,7 @@ fn search(
                 if gives_check {
                     r = r.saturating_sub(1);
                 }
-                r -= mv_hist / 6000;
+                r -= mv_hist / params::lmr_hist_div();
                 r = r.clamp(0, new_depth - 1);
             }
             score = -search(
@@ -708,7 +709,7 @@ fn lmr_reduction(depth: i32, move_no: i32) -> i32 {
     // ln(depth)*ln(move_no) style table, integer approx
     let d = depth.max(1) as f32;
     let m = move_no.max(1) as f32;
-    ((d.ln() * m.ln()) * 0.45) as i32
+    ((d.ln() * m.ln()) * (params::lmr_scale() as f32 / 100.0)) as i32
 }
 
 const MATE_IN_MAX_LOCAL: i32 = crate::types::MATE_IN_MAX;
@@ -766,7 +767,7 @@ pub fn iterative_deepening(pos: &Position, td: &mut ThreadData, use_book: bool) 
         td.root_depth = depth;
         let mut alpha = -INF;
         let mut beta = INF;
-        let mut window = 25;
+        let mut window = params::asp_window();
         if depth >= 5 {
             alpha = last_score - window;
             beta = last_score + window;
