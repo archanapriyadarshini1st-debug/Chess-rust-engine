@@ -52,6 +52,12 @@ pub struct ThreadData {
 
 const HIST_MAX: i32 = 16384;
 const CORR_N: usize = 16384;
+/// Pawn correction history is OFF. The version merged in 0676766 fed a
+/// `gravity()` (history-style) table, whose fixed point is +-HIST_MAX for any
+/// consistently-signed update, straight into static eval at /32 => up to +-512 cp
+/// of noise (EXP-Q1: 0-205-3 vs the pre-SE commit; disabling only this term
+/// beat main 58-0-2). See experiments/EXP-Q1-corrhist-saturation.md.
+const CORRHIST: bool = false;
 
 #[inline]
 fn pawn_corr_idx(pos: &Position) -> usize {
@@ -435,7 +441,7 @@ fn search(
         evaluate(pos)
     };
     let corr_i = pawn_corr_idx(pos);
-    let static_eval = if in_check {
+    let static_eval = if in_check || !CORRHIST {
         raw_eval
     } else {
         raw_eval + (td.corr[corr_i] as i32) / 32
@@ -697,7 +703,7 @@ fn search(
 
     if excluded.is_none() {
         td.tt.store(pos.hash, best_move, to_tt(best, ply), depth, bound);
-        if !in_check && ply > 0 && !is_mate_score(best) {
+        if CORRHIST && !in_check && ply > 0 && !is_mate_score(best) {
             let diff = (best - raw_eval).clamp(-400, 400);
             gravity(&mut td.corr[corr_i], diff * depth / 8);
         }
