@@ -111,6 +111,102 @@ const KING_ATT_W: [i32; 6] = [0, 2, 2, 3, 5, 0];
 const PASSED_MG: [i32; 8] = [0, 2, 6, 12, 24, 48, 80, 0];
 const PASSED_EG: [i32; 8] = [0, 8, 14, 28, 52, 90, 140, 0];
 
+
+// ---------------------------------------------------------------------------
+// Tunable parameter vector (Texel tuning, Agent I).
+//
+// Every number the HCE multiplies a feature by lives in one flat `[i32; NP]`.
+// `PESTO_PARAMS` reproduces the constants above bit-for-bit; `DEFAULT_PARAMS`
+// (src/hce_params.in) is what the engine plays with; `bin/texel` fits the vector to Stockfish 19 MAX labels.
+// `evaluate_hce` passes the compile-time default, so the optimizer folds the
+// constants back into immediates (no runtime cost on the search path).
+// ---------------------------------------------------------------------------
+pub const P_MG_VALUE: usize = 0; // 6
+pub const P_EG_VALUE: usize = 6; // 6
+pub const P_MG_PST: usize = 12; // 6 * 64
+pub const P_EG_PST: usize = 396; // 6 * 64
+pub const P_BISHOP_PAIR_MG: usize = 780;
+pub const P_BISHOP_PAIR_EG: usize = 781;
+pub const P_DOUBLED_MG: usize = 782;
+pub const P_DOUBLED_EG: usize = 783;
+pub const P_ISOLATED_MG: usize = 784;
+pub const P_ISOLATED_EG: usize = 785;
+pub const P_ROOK_OPEN_MG: usize = 786;
+pub const P_ROOK_OPEN_EG: usize = 787;
+pub const P_ROOK_SEMI_MG: usize = 788;
+pub const P_ROOK_SEMI_EG: usize = 789;
+pub const P_ROOK_SEVENTH_MG: usize = 790;
+pub const P_ROOK_SEVENTH_EG: usize = 791;
+pub const P_OUTPOST_MG: usize = 792;
+pub const P_OUTPOST_EG: usize = 793;
+pub const P_TEMPO: usize = 794;
+pub const P_PASSED_MG: usize = 795; // 8
+pub const P_PASSED_EG: usize = 803; // 8
+pub const P_MOB_MG: usize = 811; // N, B, R, Q
+pub const P_MOB_EG: usize = 815; // N, B, R, Q
+pub const P_SHIELD: usize = 819;
+pub const P_STORM: usize = 820;
+pub const NP: usize = 821;
+
+pub type Params = [i32; NP];
+
+const fn default_params() -> Params {
+    let mut p = [0i32; NP];
+    let mut i = 0;
+    while i < 6 {
+        p[P_MG_VALUE + i] = MG_VALUE[i];
+        p[P_EG_VALUE + i] = EG_VALUE[i];
+        let mut j = 0;
+        while j < 64 {
+            p[P_MG_PST + i * 64 + j] = MG_PST[i][j];
+            p[P_EG_PST + i * 64 + j] = EG_PST[i][j];
+            j += 1;
+        }
+        i += 1;
+    }
+    p[P_BISHOP_PAIR_MG] = BISHOP_PAIR_MG;
+    p[P_BISHOP_PAIR_EG] = BISHOP_PAIR_EG;
+    p[P_DOUBLED_MG] = DOUBLED_MG;
+    p[P_DOUBLED_EG] = DOUBLED_EG;
+    p[P_ISOLATED_MG] = ISOLATED_MG;
+    p[P_ISOLATED_EG] = ISOLATED_EG;
+    p[P_ROOK_OPEN_MG] = ROOK_OPEN_MG;
+    p[P_ROOK_OPEN_EG] = ROOK_OPEN_EG;
+    p[P_ROOK_SEMI_MG] = ROOK_SEMI_MG;
+    p[P_ROOK_SEMI_EG] = ROOK_SEMI_EG;
+    p[P_ROOK_SEVENTH_MG] = ROOK_SEVENTH_MG;
+    p[P_ROOK_SEVENTH_EG] = ROOK_SEVENTH_EG;
+    p[P_OUTPOST_MG] = OUTPOST_MG;
+    p[P_OUTPOST_EG] = OUTPOST_EG;
+    p[P_TEMPO] = TEMPO;
+    let mut r = 0;
+    while r < 8 {
+        p[P_PASSED_MG + r] = PASSED_MG[r];
+        p[P_PASSED_EG + r] = PASSED_EG[r];
+        r += 1;
+    }
+    // mobility weights per (knight, bishop, rook, queen)
+    p[P_MOB_MG] = 3;
+    p[P_MOB_MG + 1] = 3;
+    p[P_MOB_MG + 2] = 2;
+    p[P_MOB_MG + 3] = 1;
+    p[P_MOB_EG] = 2;
+    p[P_MOB_EG + 1] = 2;
+    p[P_MOB_EG + 2] = 3;
+    p[P_MOB_EG + 3] = 2;
+    p[P_SHIELD] = 10;
+    p[P_STORM] = 5;
+    p
+}
+
+/// The original PeSTO + hand-set terms. Never edited: it is the baseline the
+/// tuner regularises towards and the rollback target.
+pub const PESTO_PARAMS: Params = default_params();
+
+/// The parameters the engine actually plays with. One data file, one-line
+/// diff to promote a tuned set, one-line revert (see tools/texel/README.md).
+pub const DEFAULT_PARAMS: Params = include!("hce_params.in");
+
 #[inline]
 fn pst_index(color: Color, sq: Square) -> usize {
     if color == Color::White {
@@ -130,7 +226,14 @@ pub fn evaluate(pos: &Position) -> i32 {
 
 /// Hand-crafted eval (PeSTO + structure). Used when no NNUE net is loaded
 /// and as the teacher for the first net.
+#[inline(always)]
 pub fn evaluate_hce(pos: &Position) -> i32 {
+    evaluate_hce_with(pos, &DEFAULT_PARAMS)
+}
+
+/// Same evaluation with an explicit parameter vector (used by the tuner).
+#[inline(always)]
+pub fn evaluate_hce_with(pos: &Position, prm: &Params) -> i32 {
     let mut mg = [0i32; 2];
     let mut eg = [0i32; 2];
     let mut phase = 0i32;
@@ -146,8 +249,8 @@ pub fn evaluate_hce(pos: &Position) -> i32 {
                 let sq = Square(bb.trailing_zeros() as u8);
                 bb &= bb - 1;
                 let idx = pst_index(color, sq);
-                mg[color_i] += MG_VALUE[ty] + MG_PST[ty][idx];
-                eg[color_i] += EG_VALUE[ty] + EG_PST[ty][idx];
+                mg[color_i] += prm[P_MG_VALUE + ty] + prm[P_MG_PST + ty * 64 + idx];
+                eg[color_i] += prm[P_EG_VALUE + ty] + prm[P_EG_PST + ty * 64 + idx];
                 phase += PHASE_INC[ty];
             }
         }
@@ -160,8 +263,8 @@ pub fn evaluate_hce(pos: &Position) -> i32 {
 
         // Bishop pair
         if pos.bb(color, PieceType::Bishop).count_ones() >= 2 {
-            mg[color_i] += BISHOP_PAIR_MG;
-            eg[color_i] += BISHOP_PAIR_EG;
+            mg[color_i] += prm[P_BISHOP_PAIR_MG];
+            eg[color_i] += prm[P_BISHOP_PAIR_EG];
         }
 
         // Doubled / isolated / passed pawns
@@ -179,13 +282,13 @@ pub fn evaluate_hce(pos: &Position) -> i32 {
                     t.forward_file[Color::White.index()][sq.index()]
                 };
                 if ours_file & behind != 0 {
-                    mg[color_i] += DOUBLED_MG;
-                    eg[color_i] += DOUBLED_EG;
+                    mg[color_i] += prm[P_DOUBLED_MG];
+                    eg[color_i] += prm[P_DOUBLED_EG];
                 }
             }
             if pawns & ADJACENT_FILES[file] == 0 {
-                mg[color_i] += ISOLATED_MG;
-                eg[color_i] += ISOLATED_EG;
+                mg[color_i] += prm[P_ISOLATED_MG];
+                eg[color_i] += prm[P_ISOLATED_EG];
             }
             if enemy_pawns & t.passed[color.index()][sq.index()] == 0 {
                 let rel_rank = if color == Color::White {
@@ -193,12 +296,12 @@ pub fn evaluate_hce(pos: &Position) -> i32 {
                 } else {
                     7 - sq.rank()
                 } as usize;
-                mg[color_i] += PASSED_MG[rel_rank];
-                eg[color_i] += PASSED_EG[rel_rank];
+                mg[color_i] += prm[P_PASSED_MG + rel_rank];
+                eg[color_i] += prm[P_PASSED_EG + rel_rank];
                 // Connected / protected passer
                 if pawns & ADJACENT_FILES[file] != 0 {
-                    mg[color_i] += PASSED_MG[rel_rank] / 2;
-                    eg[color_i] += PASSED_EG[rel_rank] / 2;
+                    mg[color_i] += prm[P_PASSED_MG + rel_rank] / 2;
+                    eg[color_i] += prm[P_PASSED_EG + rel_rank] / 2;
                 }
             }
         }
@@ -212,16 +315,16 @@ pub fn evaluate_hce(pos: &Position) -> i32 {
             let ours = pawns & FILES[file];
             let theirs = enemy_pawns & FILES[file];
             if ours == 0 && theirs == 0 {
-                mg[color_i] += ROOK_OPEN_MG;
-                eg[color_i] += ROOK_OPEN_EG;
+                mg[color_i] += prm[P_ROOK_OPEN_MG];
+                eg[color_i] += prm[P_ROOK_OPEN_EG];
             } else if ours == 0 {
-                mg[color_i] += ROOK_SEMI_MG;
-                eg[color_i] += ROOK_SEMI_EG;
+                mg[color_i] += prm[P_ROOK_SEMI_MG];
+                eg[color_i] += prm[P_ROOK_SEMI_EG];
             }
             let seventh = if color == Color::White { 6 } else { 1 };
             if sq.rank() == seventh {
-                mg[color_i] += ROOK_SEVENTH_MG;
-                eg[color_i] += ROOK_SEVENTH_EG;
+                mg[color_i] += prm[P_ROOK_SEVENTH_MG];
+                eg[color_i] += prm[P_ROOK_SEVENTH_EG];
             }
         }
 
@@ -232,32 +335,32 @@ pub fn evaluate_hce(pos: &Position) -> i32 {
             let sq = Square(kn.trailing_zeros() as u8);
             kn &= kn - 1;
             let mob = (knight_attacks(sq) & !us_occ).count_ones() as i32;
-            mg[color_i] += (mob - 4) * 3;
-            eg[color_i] += (mob - 4) * 2;
+            mg[color_i] += (mob - 4) * prm[P_MOB_MG];
+            eg[color_i] += (mob - 4) * prm[P_MOB_EG];
         }
         let mut b = pos.bb(color, PieceType::Bishop);
         while b != 0 {
             let sq = Square(b.trailing_zeros() as u8);
             b &= b - 1;
             let mob = (bishop_attacks(sq, occ) & !us_occ).count_ones() as i32;
-            mg[color_i] += (mob - 5) * 3;
-            eg[color_i] += (mob - 5) * 2;
+            mg[color_i] += (mob - 5) * prm[P_MOB_MG + 1];
+            eg[color_i] += (mob - 5) * prm[P_MOB_EG + 1];
         }
         let mut r = pos.bb(color, PieceType::Rook);
         while r != 0 {
             let sq = Square(r.trailing_zeros() as u8);
             r &= r - 1;
             let mob = (rook_attacks(sq, occ) & !us_occ).count_ones() as i32;
-            mg[color_i] += (mob - 5) * 2;
-            eg[color_i] += (mob - 5) * 3;
+            mg[color_i] += (mob - 5) * prm[P_MOB_MG + 2];
+            eg[color_i] += (mob - 5) * prm[P_MOB_EG + 2];
         }
         let mut q = pos.bb(color, PieceType::Queen);
         while q != 0 {
             let sq = Square(q.trailing_zeros() as u8);
             q &= q - 1;
             let mob = (queen_attacks(sq, occ) & !us_occ).count_ones() as i32;
-            mg[color_i] += (mob - 8) * 1;
-            eg[color_i] += (mob - 8) * 2;
+            mg[color_i] += (mob - 8) * prm[P_MOB_MG + 3];
+            eg[color_i] += (mob - 8) * prm[P_MOB_EG + 3];
         }
 
         // King pawn shield (opening only)
@@ -277,7 +380,7 @@ pub fn evaluate_hce(pos: &Position) -> i32 {
                 }
             }
         }
-        mg[color_i] += (shield - 2) * 10;
+        mg[color_i] += (shield - 2) * prm[P_SHIELD];
 
         // Pawn storm against the enemy king (opening/middlegame)
         let ek = pos.king_sq(color.flip());
@@ -296,7 +399,7 @@ pub fn evaluate_hce(pos: &Position) -> i32 {
                     7 - sq.rank()
                 } as i32;
                 if rel >= 4 {
-                    mg[color_i] += 5 * (rel - 3);
+                    mg[color_i] += prm[P_STORM] * (rel - 3);
                 }
             }
         }
@@ -316,8 +419,8 @@ pub fn evaluate_hce(pos: &Position) -> i32 {
                 let supported = pawn_attacks(color.flip(), sq) & pawns != 0;
                 let attackable = pawn_attacks(color, sq) & enemy_pawns != 0;
                 if supported && !attackable {
-                    mg[color_i] += OUTPOST_MG;
-                    eg[color_i] += OUTPOST_EG;
+                    mg[color_i] += prm[P_OUTPOST_MG];
+                    eg[color_i] += prm[P_OUTPOST_EG];
                 }
             }
         }
@@ -380,7 +483,7 @@ pub fn evaluate_hce(pos: &Position) -> i32 {
 
     let mg_phase = phase.min(24);
     let eg_phase = 24 - mg_phase;
-    (mg_score * mg_phase + eg_score * eg_phase) / 24 + TEMPO
+    (mg_score * mg_phase + eg_score * eg_phase) / 24 + prm[P_TEMPO]
 }
 
 pub fn material_total(pos: &Position) -> i32 {
