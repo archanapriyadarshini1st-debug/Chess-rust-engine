@@ -85,13 +85,13 @@ env:
   G_BASE: ${{ inputs.base || (endsWith(github.ref, '-ship') && '7793ad75dd4c152f23d2af225e8fec48485c55ad' || '451d9336fa83ffaa5c25bc43acc8362a61f85fe1') }}
   G_MODE: ${{ inputs.mode || 'improve' }}
   G_TC: ${{ inputs.tc || '10+0.1' }}
-  G_ROUNDS: ${{ inputs.rounds || '20' }}
+  G_ROUNDS: ${{ inputs.rounds || '40' }}
   G_SEED: ${{ inputs.seed_base || '20260' }}
   G_MARGIN: ${{ inputs.margin || '10' }}
   G_MIN_GAIN: ${{ inputs.min_gain || '0' }}
   G_SF_ELO: ${{ inputs.sf_elo || '2400' }}
-  G_SF_GAMES: ${{ inputs.sf_games || '20' }}
-  G_MIN_GAMES: ${{ inputs.min_games || '30' }}
+  G_SF_GAMES: ${{ inputs.sf_games || '30' }}
+  G_MIN_GAMES: ${{ inputs.min_games || '60' }}
   G_TEST_NET: ${{ inputs.test_net || '' }}
   G_TEST_OPTS: ${{ inputs.test_opts || '' }}
   G_BASE_OPTS: ${{ inputs.base_opts || '' }}
@@ -216,19 +216,34 @@ jobs:
           # CRE_NNUE_FILE must reach TEST only.
           printf '#!/bin/sh\nunset CRE_NNUE_FILE\nexec "%s" "$@"\n' "$PWD/engine_base" > base_run.sh
           chmod +x base_run.sh
+          # Engine ORDER is alternated (odd reps: test first, even reps: base first; A/A:
+          # one half each) so any first-listed-engine bias in the harness cancels in the
+          # pooled result. Names stay test/base; tools/ship_gate.py re-orients each log.
+          play () {  # $1=order(tb|bt) $2=rounds $3=seed $4=log $5=pgn
+            T="-engine cmd=./engine_test name=test option.Hash=16 option.Threads=1 $TEST_OPTS"
+            B="-engine cmd=./base_run.sh name=base option.Hash=16 option.Threads=1 $BASE_OPTS"
+            if [ "$1" = "tb" ]; then E1="$T"; E2="$B"; else E1="$B"; E2="$T"; fi
+            # shellcheck disable=SC2086
+            /tmp/fastchess $E1 $E2 \
+              -each tc="$TC" \
+              -rounds "$2" -games 2 -repeat -concurrency 3 -srand "$3" \
+              -openings file="$OPENINGS" format=epd order=random \
+              -draw movenumber=40 movecount=8 score=10 \
+              -resign movecount=4 score=800 twosided=true \
+              -maxmoves 300 \
+              -ratinginterval 50 -recover -pgnout file="$5" \
+              2>&1 | grep -vE '^(Warning|Info|Position|Moves);' | tee "$4" | grep -E 'Elo:|Games:|Ptnml|Finished match' | tail -n 20
+          }
           set +e
-          # shellcheck disable=SC2086
-          /tmp/fastchess \
-            -engine cmd=./engine_test name=test option.Hash=16 option.Threads=1 $TEST_OPTS \
-            -engine cmd=./base_run.sh name=base option.Hash=16 option.Threads=1 $BASE_OPTS \
-            -each tc="$TC" \
-            -rounds "$ROUNDS" -games 2 -repeat -concurrency 3 -srand "$SEED" \
-            -openings file="$OPENINGS" format=epd order=random \
-            -draw movenumber=40 movecount=8 score=10 \
-            -resign movecount=4 score=800 twosided=true \
-            -maxmoves 300 \
-            -ratinginterval 50 -recover -pgnout file=out/run.pgn \
-            2>&1 | grep -vE '^(Warning|Info|Position|Moves);' | tee out/run.log | grep -E 'Elo:|Games:|Ptnml|Finished match' | tail -n 20
+          if [ "$RUN" = "aa" ]; then
+            H=$(( (ROUNDS + 1) / 2 ))
+            play tb "$H" "$SEED" out/run_1.log out/run_1.pgn
+            play bt "$H" "$((SEED + 1))" out/run_2.log out/run_2.pgn
+          else
+            N=${RUN#rep}
+            if [ $((N % 2)) -eq 1 ]; then ORDER=tb; else ORDER=bt; fi
+            play "$ORDER" "$ROUNDS" "$SEED" out/run.log out/run.pgn
+          fi
           exit 0
 
       - name: Provenance
