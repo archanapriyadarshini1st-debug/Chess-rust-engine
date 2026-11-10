@@ -68,6 +68,26 @@ fn cap_idx(pc: usize, to: usize, victim: usize) -> usize {
     (pc * 64 + to) * 6 + victim
 }
 
+/// Fixed-point scale of the correction-history entries (entry = cp * CORR_GRAIN).
+const CORR_GRAIN: i32 = 16;
+
+/// Hard cap (cp) on the learned static-eval correction. Fixed-node screens
+/// (25k nodes, 800 games each, vs correction off): cap 24 -> +6.5 +/- 18,
+/// cap 48 -> -9.1 +/- 17, i.e. a pawn-keyed table is neutral; the cap's job is
+/// to make it unable to hurt (the old table could move eval by +-512 cp).
+const CORR_MAX: i32 = 24;
+
+/// Exponential moving average of (search score - raw static eval), per pawn
+/// structure, hard-capped. The old rule (`gravity` with diff*depth/8) had no
+/// effective cap below +-512 cp and saturated on bound-biased results.
+fn corr_update(e: &mut i16, diff: i32, depth: i32, maxc: i32) {
+    let w = (depth + 1).min(16);
+    let target = diff.clamp(-maxc, maxc) * CORR_GRAIN;
+    let lim = maxc * CORR_GRAIN;
+    let v = (*e as i32 * (256 - w) + target * w) / 256;
+    *e = v.clamp(-lim, lim) as i16;
+}
+
 #[inline]
 fn gravity(e: &mut i16, bonus: i32) {
     let b = bonus.clamp(-HIST_MAX, HIST_MAX);
@@ -101,6 +121,30 @@ impl ThreadData {
             ply_move: [Move::NONE; MAX_PLY],
             corr: vec![0; 2 * CORR_N],
         }
+    }
+
+    /// Re-arm a ThreadData for a new `go` while KEEPING what the engine has
+    /// learned during this game: butterfly history, capture history,
+    /// continuation history, counter moves and correction history. Per-search
+    /// scratch (killers, PV, eval/move stacks, node counter) is reset.
+    /// A fresh `ThreadData::new` per `go` threw all of that away before every
+    /// move; Stockfish/Reckless only clear on `ucinewgame`.
+    pub fn prepare(&mut self, tt: Arc<TranspositionTable>, time: Arc<TimeManager>) {
+        self.tt = tt;
+        self.time = time;
+        self.nodes = 0;
+        self.seldepth = 0;
+        self.killers = [[Move::NONE; 2]; MAX_PLY];
+        self.pv_len = [0; MAX_PLY];
+        self.eval_stack = [0; MAX_PLY];
+        self.best = Move::NONE;
+        self.score = 0;
+        self.check_nodes = 0;
+        self.stack_pc = [12; MAX_PLY];
+        self.stack_to = [0; MAX_PLY];
+        self.root_depth = 0;
+        self.ply_move = [Move::NONE; MAX_PLY];
+        self.hash_hist.clear();
     }
 
     #[inline]
@@ -438,7 +482,7 @@ fn search(
     let static_eval = if in_check {
         raw_eval
     } else {
-        raw_eval + (td.corr[corr_i] as i32) / 32
+        raw_eval + (td.corr[corr_i] as i32) / CORR_GRAIN
     };
     td.eval_stack[ply as usize] = static_eval;
     let improving = ply >= 2
@@ -697,9 +741,17 @@ fn search(
 
     if excluded.is_none() {
         td.tt.store(pos.hash, best_move, to_tt(best, ply), depth, bound);
-        if !in_check && ply > 0 && !is_mate_score(best) {
-            let diff = (best - raw_eval).clamp(-400, 400);
-            gravity(&mut td.corr[corr_i], diff * depth / 8);
+        // Only learn from results consistent with their bound (Stockfish rule):
+        // a fail-low (upper bound) can only say "eval is too high", a fail-high
+        // (lower bound) only "eval is too low". Skip noisy best-move captures.
+        let best_is_cap = !best_move.is_none() && (best_move.is_capture() || best_move.is_promo());
+        let consistent = match bound {
+            BOUND_UPPER => best <= static_eval,
+            BOUND_LOWER => best > static_eval,
+            _ => true,
+        };
+        if !in_check && ply > 0 && !is_mate_score(best) && !best_is_cap && consistent {
+            corr_update(&mut td.corr[corr_i], best - raw_eval, depth, CORR_MAX);
         }
     }
     best

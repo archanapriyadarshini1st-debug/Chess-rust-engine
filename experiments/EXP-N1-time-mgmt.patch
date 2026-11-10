@@ -1,0 +1,108 @@
+--- src/search.rs	2026-11-10 09:58:14.730680554 +0000
++++ /tmp/full_search.rs	2026-11-10 09:58:14.718680554 +0000
+@@ -48,6 +48,8 @@
+     pub ply_move: [Move; MAX_PLY],
+     /// pawn-corrhist [stm][pawn_key % CORR_N]
+     pub corr: Vec<i16>,
++    /// nodes spent under each root move in the current iteration [from][to]
++    pub root_nodes: Vec<u64>,
+ }
+ 
+ const HIST_MAX: i32 = 16384;
+@@ -120,6 +122,7 @@
+             counter: [[Move::NONE; 64]; 64],
+             ply_move: [Move::NONE; MAX_PLY],
+             corr: vec![0; 2 * CORR_N],
++            root_nodes: vec![0; 64 * 64],
+         }
+     }
+ 
+@@ -641,6 +644,7 @@
+         td.stack_to[ply as usize] = mv.to().index() as u8;
+         td.ply_move[ply as usize] = mv;
+ 
++        let nodes_before = td.nodes;
+         let mut score;
+         if legal == 1 {
+             score = -search(&np, td, -beta, -alpha, new_depth, ply + 1, is_pv, false, Move::NONE);
+@@ -687,6 +691,9 @@
+         if td.time.stopped() {
+             return 0;
+         }
++        if ply == 0 {
++            td.root_nodes[mv.from().index() * 64 + mv.to().index()] += td.nodes - nodes_before;
++        }
+ 
+         if score > best {
+             best = score;
+@@ -814,7 +821,13 @@
+     }
+     td.best = root_moves[0];
+ 
++    let mut prev_best = Move::NONE;
++    let timed = !td.time.infinite && td.time.max_depth == 128 && td.time.max_nodes == u64::MAX;
+     for depth in 1..=td.time.max_depth {
++        for x in td.root_nodes.iter_mut() {
++            *x = 0;
++        }
++        let score_before = last_score;
+         td.seldepth = 0;
+         td.root_depth = depth;
+         let mut alpha = -INF;
+@@ -889,12 +902,36 @@
+             );
+         }
+ 
+-        if last_pv.first().copied() == Some(td.best) {
++        // Best-move stability. (Previously compared td.best with itself - it was
++        // assigned from the same PV just above - so `stable` always grew and the
++        // "unstable: think longer" branch could never run.)
++        if prev_best == td.best {
+             stable += 1;
+         } else {
+             stable = 0;
+         }
+-        if td.time.soft_expired(stable >= 4) {
++        prev_best = td.best;
++
++        if timed && rn == 1 && depth >= 4 {
++            break; // forced move: do not burn the clock
++        }
++        if timed && depth >= 5 {
++            // Soft-limit scale (percent), SF/Reckless style: think longer when
++            // the best move keeps changing, when the best move got a small share
++            // of the nodes, or when the score just dropped; shorter otherwise.
++            const STAB: [u64; 8] = [170, 140, 120, 105, 95, 88, 82, 78];
++            let stab_pct = STAB[(stable as usize).min(7)];
++            let tot = td.nodes.max(1);
++            let bn = td.root_nodes[td.best.from().index() * 64 + td.best.to().index()];
++            let frac_pct = (bn * 100 / tot).min(100);
++            let nf_pct = 170 - frac_pct;
++            let drop = (score_before - score).clamp(0, 100) as u64;
++            let drop_pct = 100 + drop / 2;
++            let pct = (stab_pct * nf_pct * drop_pct / 10_000).clamp(40, 300);
++            if td.time.soft_expired_scaled(pct) {
++                break;
++            }
++        } else if td.time.soft_expired(true) {
+             break;
+         }
+         if td.nodes >= td.time.max_nodes {
+
+--- /dev/fd/63	2026-11-10 09:58:19.878680554 +0000
++++ /tmp/full_time.rs	2026-11-10 09:58:14.718680554 +0000
+@@ -110,6 +110,14 @@
+         !self.infinite && self.elapsed() >= self.hard
+     }
+ 
++    /// Soft limit scaled by `pct` percent (100 = the base allocation).
++    pub fn soft_expired_scaled(&self, pct: u64) -> bool {
++        if self.infinite {
++            return false;
++        }
++        self.elapsed() >= self.soft.saturating_mul(pct as u32) / 100
++    }
++
+     pub fn soft_expired(&self, stable: bool) -> bool {
+         if self.infinite {
+             return false;
