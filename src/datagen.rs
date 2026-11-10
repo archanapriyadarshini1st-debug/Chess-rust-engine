@@ -77,7 +77,21 @@ fn load_openings() -> Vec<String> {
 pub fn run(n: usize, depth: i32, out_path: &str) {
     let openings = load_openings();
     let tt = Arc::new(TranspositionTable::new(16));
-    let mut rng = Rng(0xC0FF_EE12_3456_789A);
+    // Seed per shard (CRE_SEED) so parallel workers play different games; the
+    // old fixed seed made every process emit the identical dataset.
+    let seed = std::env::var("CRE_SEED")
+        .ok()
+        .and_then(|s| s.parse::<u64>().ok())
+        .unwrap_or(0);
+    let mut rng = Rng(0xC0FF_EE12_3456_789A ^ seed.wrapping_mul(0x9E37_79B9_7F4A_7C15));
+    for _ in 0..8 {
+        rng.next();
+    }
+    let max_scramble: u32 = std::env::var("CRE_SCRAMBLE")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(5)
+        .max(1);
     let file = File::create(out_path).expect("datagen out");
     let mut w = BufWriter::new(file);
     let start = Instant::now();
@@ -90,7 +104,7 @@ pub fn run(n: usize, depth: i32, out_path: &str) {
         let mut pos = Position::from_fen(fen).unwrap_or_else(Position::startpos);
         // short scramble from the book — long random walks produce junk kings
         // on f6 at move 7, which even SF19 labels into a net that loses to HCE.
-        let scramble = rng.u32(5) as i32;
+        let scramble = rng.u32(max_scramble) as i32;
         for _ in 0..scramble {
             let mut moves = [Move::NONE; MAX_MOVES];
             let k = legal_moves(&pos, &mut moves);
