@@ -1,0 +1,141 @@
+name: SF19 MAX odds ladder (fixed nodes, no limiter)
+
+# Agent K. Measures the engine against Stockfish 19 at FULL strength
+# (UCI_LimitStrength off) with SF given a FIXED NODE BUDGET per move.
+# Why: UCI_Elo is uncalibrated at this level and 0-20 vs unrestricted SF
+# carries no information. SF19 at `go nodes N` is deterministic and hardware
+# independent, so the rungs are a reproducible ruler. Output is a table of
+# Elo-vs-SF19@N plus `node_equiv` (the interpolated 50% crossing).
+#
+# Our engine plays at a real clock (default 10+0.1, repo floor is 5+0.05, never
+# 100 ms). Set `our_nodes` to also fix OUR node count => fully hardware-free.
+# Not training data: these games are a measurement instrument.
+
+on:
+  workflow_dispatch:
+    inputs:
+      rungs:
+        description: "SF19 nodes per move, comma list"
+        default: "1000,4000,16000,64000,256000"
+      games:
+        description: "Games per rung (even)"
+        default: "100"
+      tc:
+        description: "Our time control (fastchess tc). Ignored if our_nodes is set"
+        default: "10+0.1"
+      our_nodes:
+        description: "Optional: fix OUR nodes/move too (hardware-independent mode)"
+        default: ""
+      ref:
+        description: "Branch/tag/SHA of the engine to test"
+        default: ""
+  push:
+    branches: ["agentK-odds-*"]
+
+permissions:
+  contents: read
+
+env:
+  FASTCHESS_URL: https://github.com/Disservin/fastchess/releases/download/v1.8.3-alpha/fastchess-linux-x86-64.tar
+  SF19_URL: https://github.com/official-stockfish/Stockfish/releases/download/sf_19/stockfish-linux-x86-64-universal.tar.gz
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.m.outputs.matrix }}
+    steps:
+      - id: m
+        env:
+          RUNGS: ${{ inputs.rungs || '1000,4000,16000,64000,256000' }}
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os
+          r = [int(x) for x in os.environ["RUNGS"].split(",") if x.strip()]
+          print("matrix=" + json.dumps({"nodes": r}))
+          PY
+
+  rung:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build engine (native) and gate on perft
+        run: |
+          RUSTFLAGS="-C target-cpu=native" cargo build --release
+          cp target/release/chess-rust-engine ./engine
+          cargo test --release --test perft
+      - name: Fetch Stockfish 19 (pinned release) and fastchess
+        run: |
+          mkdir -p /tmp/sf /tmp/fc
+          curl -fsSL --retry 3 "$SF19_URL" | tar xz -C /tmp/sf
+          SF=$(find /tmp/sf -type f -name 'stockfish-linux-x86-64-universal' | head -1)
+          chmod +x "$SF"; ln -sf "$SF" /tmp/sf19
+          sha256sum "$SF" | tee /tmp/sf19.sha256
+          curl -fsSL --retry 3 "$FASTCHESS_URL" -o /tmp/fc.tar
+          tar xf /tmp/fc.tar -C /tmp/fc
+          FC=$(find /tmp/fc -type f -name fastchess | head -1)
+          chmod +x "$FC"; ln -sf "$FC" /tmp/fastchess
+          printf 'uci\nquit\n' | /tmp/sf19 | grep -E 'id name'
+      - name: Play rung
+        env:
+          N: ${{ matrix.nodes }}
+          GAMES: ${{ inputs.games || '100' }}
+          TC: ${{ inputs.tc || '10+0.1' }}
+          ONODES: ${{ inputs.our_nodes }}
+        run: |
+          mkdir -p out
+          rounds=$(( (GAMES + 1) / 2 ))
+          if [ -n "$ONODES" ]; then OURS="nodes=$ONODES"; else OURS="tc=$TC"; fi
+          BOOK=tools/openings_book.epd; [ -s "$BOOK" ] || BOOK=tools/openings.epd
+          /tmp/fastchess \
+            -engine cmd=./engine name=Rust $OURS option.Hash=64 option.Threads=1 \
+            -engine cmd=/tmp/sf19 name=SF19 nodes="$N" option.Hash=64 option.Threads=1 \
+            -rounds "$rounds" -games 2 -repeat -concurrency 2 \
+            -openings file="$BOOK" format=epd order=random \
+            -draw movenumber=40 movecount=8 score=15 \
+            -resign movecount=4 score=700 \
+            -maxmoves 300 \
+            -pgnout file="out/odds_${N}.pgn" -recover -ratinginterval 20 \
+            2>&1 | grep -vE '^(Warning|Info|Position|Moves);' | tee "out/odds_${N}.log" | tail -n 25
+          {
+            echo "engine_sha=$(git rev-parse HEAD)"
+            echo "sf19_sha256=$(cut -d' ' -f1 /tmp/sf19.sha256)"
+            echo "cpu=$(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2 | xargs)"
+            echo "ours=$OURS sf_nodes=$N hash=64 threads=1 book=$BOOK"
+          } > "out/odds_${N}.provenance.txt"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: odds-rung-${{ matrix.nodes }}
+          path: out/
+          retention-days: 90
+
+  report:
+    needs: rung
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: odds-rung-*
+          path: collected
+      - name: Report
+        run: |
+          python3 tools/odds_report.py collected --json collected/odds.json \
+            --label "(commit $(git rev-parse --short HEAD))" | tee -a "$GITHUB_STEP_SUMMARY"
+          { echo '```'; cat collected/*/odds_*.provenance.txt; echo '```'; } | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: odds-ladder-report-${{ github.run_id }}
+          path: collected/
+          retention-days: 90
