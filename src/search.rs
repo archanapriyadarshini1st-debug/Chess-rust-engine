@@ -438,7 +438,7 @@ fn search(
     let static_eval = if in_check {
         raw_eval
     } else {
-        raw_eval + (td.corr[corr_i] as i32) / 32
+        raw_eval + 0 * (td.corr[corr_i] as i32) / 32
     };
     td.eval_stack[ply as usize] = static_eval;
     let improving = ply >= 2
