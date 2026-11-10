@@ -9,7 +9,7 @@ use crate::time::{Limits, TimeManager};
 use crate::tt::TranspositionTable;
 use crate::types::Color;
 use std::io::{self, BufRead, Write};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::thread;
 use std::thread::JoinHandle;
 
@@ -58,6 +58,8 @@ pub fn run() {
     // Pre-init attack tables so `isready` is instant.
     let _ = crate::attacks::tables();
     let mut search_job: Option<(Arc<TimeManager>, JoinHandle<()>)> = None;
+    // Learned search tables survive between `go` commands of one game.
+    let persist: Arc<Mutex<Option<Box<ThreadData>>>> = Arc::new(Mutex::new(None));
 
     fn wait_search(job: &mut Option<(Arc<TimeManager>, JoinHandle<()>)>) {
         if let Some((tm, handle)) = job.take() {
@@ -95,6 +97,7 @@ pub fn run() {
             "ucinewgame" => {
                 wait_search(&mut search_job);
                 engine.tt.clear();
+                *persist.lock().unwrap() = None;
                 engine.pos = Position::startpos();
                 engine.reset_hist();
             }
@@ -240,12 +243,22 @@ pub fn run() {
                     engine.pos.side == Color::White,
                     engine.overhead_ms,
                 ));
-                let mut td = ThreadData::new(engine.tt.clone(), tm.clone());
+                let reused = persist.lock().unwrap().take();
+                let mut td = match reused {
+                    Some(mut b) => {
+                        b.prepare(engine.tt.clone(), tm.clone());
+                        b
+                    }
+                    None => Box::new(ThreadData::new(engine.tt.clone(), tm.clone())),
+                };
                 td.hash_hist = engine.moves_played.clone();
                 let pos = engine.pos;
                 let tm_for_job = tm.clone();
+                let persist_job = persist.clone();
                 let handle = thread::spawn(move || {
                     let res = iterative_deepening(&pos, &mut td, use_book);
+                    // Store BEFORE announcing bestmove so the next `go` cannot race us.
+                    *persist_job.lock().unwrap() = Some(td);
                     println!("bestmove {}", res.best);
                     let _ = io::stdout().flush();
                 });
