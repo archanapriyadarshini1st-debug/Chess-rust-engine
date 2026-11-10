@@ -216,6 +216,9 @@ def evaluate(reps, aa, sf, bench, rel, a):
         else:
             pooled = stats_from_wdl(sum(r["w"] for r in have), sum(r["d"] for r in have),
                                     sum(r["l"] for r in have))
+        if pooled:
+            pooled.update(w=sum(r["w"] for r in have), d=sum(r["d"] for r in have),
+                          l=sum(r["l"] for r in have))
         for i, r in enumerate(reps, 1):
             if not r:
                 continue
@@ -309,7 +312,7 @@ def fmt(s):
     if not s:
         return "n/a"
     return (f"{s['elo']:+.1f} +/- {Z95*s['se']:.1f} (95%), LOS {s['los']*100:.1f}%, "
-            f"{s['games']}g +{s['w']} -{s['l']} ={s['d']}, score {s['score']*100:.1f}%")
+            f"{s['games']}g +{s.get('w', '?')} -{s.get('l', '?')} ={s.get('d', '?')}, score {s['score']*100:.1f}%")
 
 
 def markdown(rep, meta):
@@ -395,12 +398,17 @@ def main():
     reps, aa, sf, bench, rel, meta = load_dir(a.dir, a.reps)
     verdict, rep = evaluate(reps, aa, sf, bench, rel, a)
     rep["meta"] = meta
-    md = markdown(rep, meta)
+    # The verdict is the product. Write it FIRST so a rendering bug can never hide it.
+    if a.json:
+        json.dump(rep, open(a.json, "w"), indent=2, default=str)
+    print(f"VERDICT {verdict}")
+    try:
+        md = markdown(rep, meta)
+    except Exception as e:  # pragma: no cover
+        md = f"## Ship gate: **{verdict}**\n\n(markdown rendering failed: {e!r}; see ship_gate.json)\n"
     print(md)
     if a.md:
         open(a.md, "w").write(md)
-    if a.json:
-        json.dump(rep, open(a.json, "w"), indent=2, default=str)
     return EXIT[verdict]
 
 
@@ -430,7 +438,9 @@ def selftest():
         sfd = None
         if sf:
             sfd = {"test": stats_of(_mk(*sf[0])), "base": stats_of(_mk(*sf[1]))}
-        return evaluate(reps, aa, sfd, bench, rel, a)
+        v, rep = evaluate(reps, aa, sfd, bench, rel, a)
+        markdown(rep, {})          # rendering must never crash (it did, once, on a real run)
+        return v, rep
 
     ok = True
 
