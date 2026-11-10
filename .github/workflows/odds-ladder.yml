@@ -9,6 +9,9 @@ name: SF19 MAX odds ladder (fixed nodes, no limiter)
 #
 # Our engine plays at a real clock (default 10+0.1, repo floor is 5+0.05, never
 # 100 ms). Set `our_nodes` to also fix OUR node count => fully hardware-free.
+# Rung history: the first run (1k..256k) showed SF19@1k nodes already beats us 86-7-7 and
+# every higher rung is 0-100, so defaults start at 100 nodes. Raise them as we improve.
+# Note: our side is wall-clock, so runner CPU model (logged) matters; use our_nodes to remove it.
 # Not training data: these games are a measurement instrument.
 
 on:
@@ -16,7 +19,7 @@ on:
     inputs:
       rungs:
         description: "SF19 nodes per move, comma list"
-        default: "1000,4000,16000,64000,256000"
+        default: "100,200,400,800,1600"
       games:
         description: "Games per rung (even)"
         default: "100"
@@ -47,7 +50,7 @@ jobs:
     steps:
       - id: m
         env:
-          RUNGS: ${{ inputs.rungs || '1000,4000,16000,64000,256000' }}
+          RUNGS: ${{ inputs.rungs || '100,200,400,800,1600' }}
         run: |
           python3 - <<'PY' >> "$GITHUB_OUTPUT"
           import json, os
