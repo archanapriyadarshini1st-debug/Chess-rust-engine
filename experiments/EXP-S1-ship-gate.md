@@ -69,7 +69,7 @@ Exit code: green only for SHIP.
 
 Pushing `agentS/gate-canary-block` runs `7793ad7` (TEST) vs `451d933` (BASE): expected **BLOCK**.
 Pushing `agentS/gate-canary-ship` runs `a0c6786` (TEST) vs `7793ad7` (BASE): expected **SHIP**.
-20 rounds per rep and 20 SF19 games per engine; `min_games` 30. Results are appended below by link, whatever they are.
+40 rounds per rep (20 per A/A half), 30 SF19 games per engine; `min_games` 60. Results are appended below by link, whatever they are.
 
 ## Results
 
