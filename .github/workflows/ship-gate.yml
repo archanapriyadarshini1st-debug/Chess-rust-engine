@@ -260,7 +260,7 @@ jobs:
 
   sf19:
     name: sf19-downside
-    if: ${{ inputs.sf_elo != '0' }}
+    if: ${{ inputs.sf_elo != '0' || github.event_name == 'push' }}
     runs-on: ubuntu-latest
     timeout-minutes: 340
     steps:
