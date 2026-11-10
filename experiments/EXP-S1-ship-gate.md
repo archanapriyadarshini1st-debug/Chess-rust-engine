@@ -71,13 +71,57 @@ Pushing `agentS/gate-canary-block` runs `7793ad7` (TEST) vs `451d933` (BASE): ex
 Pushing `agentS/gate-canary-ship` runs `a0c6786` (TEST) vs `7793ad7` (BASE): expected **SHIP**.
 40 rounds per rep (20 per A/A half), 30 SF19 games per engine; `min_games` 60. Results are appended below by link, whatever they are.
 
-## Results
+## Results (canary runs on GitHub Actions, preliminary: 40 rounds/rep, 30 SF19 games/engine)
 
-_(pending; filled in from the run summaries, negative or unexpected outcomes included)_
+Both final runs use the same code as this branch (`tools/ship_gate.py` + `ship-gate.yml`), 10+0.1, 1 thread,
+16 MB hash, 595-position book `f1d9e142...`, fastchess 1.8.3-alpha, SF19 `UCI_Elo 2400`.
+
+| canary | run | verdict | reps | pooled | A/A | SF19 TEST vs BASE | bench |
+|---|---|---|---|---|---|---|---|
+| `7793ad7` (PR #5 corrhist) vs `451d933` | `42820807288` | **BLOCK** (expected) | 0/5 positive, all 5 significantly negative | +4 -389 =7 (1.9%) | 46.2%, OK | 25.0% vs 88.3%, z = -7.80 | nodes 469049 vs 356715 |
+| `a0c6786` (A's revert) vs `7793ad7` | `42820841782` | **SHIP** (expected) | 5/5 positive | +391 -5 =4 (98.2%) | 54.4%, OK | 81.7% vs 23.3%, z = +6.63 | NPS ratio 0.883 (warning) |
+
+So the gate blocks the exact regression that bench could not see (bench nodes at d10 differ, but d8 were identical
+and the strength loss was ~58 points of score), and it accepts the exact fix.
+
+### Bugs this experiment found in the gate itself (fixed, in this order, all visible in the git history)
+1. **Markdown renderer crashed** on the pooled row (`KeyError: 'w'`). The selftest never rendered markdown; the real run
+   did (run `42816892339`). Fix: pooled W/D/L, tolerant `fmt`, verdict JSON written *before* markdown, selftest now
+   renders every case.
+2. **SF19 job skipped on push triggers**: on `push`, `inputs.sf_elo` is null and `null != '0'` is false in Actions
+   expressions. Fix: `|| github.event_name == 'push'`. Without that fix the gate was silently running without its
+   downside check.
+3. **Heterogeneity test fired on same-direction sweeps** (+759 vs +3600 Elo). Elo saturates near 0%/100% scores, so Cochran Q on
+   the Elo scale is meaningless there. The question heterogeneity asks (is the *sign* reproducible?) is already answered
+   when every rep is individually significant in the same direction. Rule changed *because of a diagnosed flaw, with the
+   canary data in hand*. That is a disclosed post-hoc change; it only turns INVESTIGATE into a note when all reps are
+   decisive in the same direction and never relaxes BLOCK/INVALID.
+
+### An unresolved harness question (not claimed either way)
+Four A/A (BASE vs BASE, first-listed engine always `test`) samples on GHA scored 46.2%, 38.8%, 31.2%, 50.0% for the first engine
+(160 games, 41.6%, z about -2.9), and a local A/A (direct vs direct, 80 games, and direct vs `sh`-wrapper, 80 games)
+scored 46.9% and 46.9%. Agent S3 independently saw 37.5% over 12 games. The wrapper is **not** the cause (local test).
+These samples are small and I started looking *because* one failed, so selection inflates the apparent effect. It might be
+a small first-listed-engine penalty (order of ~-25..-40 Elo) or luck. I cannot tell. Consequence for the design: the
+gate now **alternates engine order** across replications and between the two A/A halves, so a first-engine effect cancels in
+the pooled estimate. After this change the two A/A samples read 46.2% and 54.4% (160 games, 50.3%).
+**Other agents' single-order SPRTs (`sprt.yml`: `test` always first) would carry any such bias.** Worth a dedicated
+larger A/A (>= 1000 games, both orders) before trusting small SPRT verdicts.
+
+### Limits of this evidence
+- Both canaries are *huge* effects (about -700 / +700 Elo). They show the gate catches a catastrophic regression and recognises a
+  large fix. They say **nothing** about its ability to separate +5 Elo from 0; that needs ~10x more games (see Power).
+- 40 rounds/rep is preliminary; A/A at 80 games has a +-45 Elo error bar.
+- Bench `nodes ratio` warning (x1.31) fired on the blocked pair as intended; NPS 0.883 on the fix is the cost of singular
+  extensions (+18% nodes at d10) which A's SF19 results suggest is paid for. That is a hypothesis, not a measurement.
 
 ## Decision
 
-_pending_
+**Keep (as a promotion gate), label preliminary.** It reproduced the known-bad and known-good verdicts, and the process of
+running it found three real defects in itself plus one open question about the shared harness. It does **not** replace
+`sprt.yml`; it adds replication, an A/A control, order balancing and an external-opponent downside check.
+Overlap: Agent S3's `agentS3/ship-gate` (PR #32) implements the same idea with disjoint opening slices and bench
+determinism but had not been run on Actions when this was written; see issue #1 for the reconciliation.
 
 ## Possible regressions / limits
 
