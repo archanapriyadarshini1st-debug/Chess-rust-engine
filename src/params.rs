@@ -74,6 +74,9 @@ tunables! {
     lmr_hist_div,       "LmrHistDiv",       6000,   2000, 16000,  600;
     // --- aspiration windows ---
     asp_window,         "AspWindow",          25,      8,    80,    3;
+    // --- evaluation experiments (structural switch, not an SPSA target) ---
+    // XThreats: percent of the nominal HCE threat term (0 = off = main).
+    x_threats,          "XThreats",           0,      0,   300,   10;
 }
 
 /// Set a tunable by its UCI name. Returns `false` if the name is unknown.
