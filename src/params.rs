@@ -60,6 +60,9 @@ tunables! {
     nmp_base,           "NmpBase",             3,      1,     6,    1;
     nmp_depth_div,      "NmpDepthDiv",         4,      2,    10,    1;
     nmp_eval_div,       "NmpEvalDiv",        200,     60,   500,   20;
+    // --- EXP-NP1 structural toggle (NOT SPSA targets; defaults == current main) ---
+    // XCheckExt: in-check extension. 0 = never, 1 = PV nodes only, 2 = every node (main).
+    x_check_ext,        "XCheckExt",           2,      0,     2,    1;
     // --- move-count / history / SEE / futility pruning ---
     lmp_base,           "LmpBase",             4,      2,    10,    1;
     hist_prune,         "HistPrune",        2500,    500,  6000,  250;

@@ -403,8 +403,12 @@ fn search(
 
     let in_check = pos.in_check();
     // Do not stack check-ext on a singular-excluded re-entry (same ply).
+    // EXP-NP1: XCheckExt 2 (default) = main's behaviour, 1 = PV only, 0 = off.
     if in_check && excluded.is_none() {
-        depth += 1;
+        let ce = params::x_check_ext();
+        if ce == 2 || (ce == 1 && is_pv) {
+            depth += 1;
+        }
     }
 
     if depth <= 0 {
