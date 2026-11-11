@@ -74,6 +74,8 @@ tunables! {
     lmr_hist_div,       "LmrHistDiv",       6000,   2000, 16000,  600;
     // --- aspiration windows ---
     asp_window,         "AspWindow",          25,      8,    80,    3;
+    // --- move ordering (EXP-BC1): 1 = losing captures (SEE<0) are tried after quiets ---
+    bad_cap_late,       "XBadCapLate",         0,      0,     1,    1;
 }
 
 /// Set a tunable by its UCI name. Returns `false` if the name is unknown.
