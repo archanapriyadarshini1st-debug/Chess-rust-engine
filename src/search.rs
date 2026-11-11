@@ -612,7 +612,9 @@ fn search(
 
         let mut score;
         if legal == 1 {
-            score = -search(&np, td, -beta, -alpha, new_depth, ply + 1, is_pv, false, Move::NONE);
+            // First move: PV child stays a PV node; otherwise the child of an
+            // expected cut node is an all node and vice versa.
+            score = -search(&np, td, -beta, -alpha, new_depth, ply + 1, is_pv, !is_pv && !cut_node, Move::NONE);
         } else {
             // LMR
             let mut r = 0;
@@ -641,7 +643,7 @@ fn search(
                 new_depth - r,
                 ply + 1,
                 false,
-                true,
+                !cut_node,
                 Move::NONE,
             );
             if r > 0 && score > alpha {
@@ -705,6 +707,11 @@ fn search(
     }
 
     if legal == 0 {
+        // Singular search whose excluded move was the only legal move: nothing
+        // else reaches the margin, so fail low (not a draw / mate score).
+        if !excluded.is_none() {
+            return alpha;
+        }
         return if in_check { mated_in(ply) } else { DRAW };
     }
 
