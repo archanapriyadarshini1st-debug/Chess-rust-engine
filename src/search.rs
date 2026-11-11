@@ -167,10 +167,18 @@ fn score_move(td: &ThreadData, pos: &Position, mv: Move, tt_move: Move, ply: usi
             }
         };
         let attacker = pos.piece_on(mv.from()).ty();
-        let see_bonus = if see_ge(pos, mv, 0) { 1_000_000 } else { -500_000 };
+        let good = see_ge(pos, mv, 0);
         let pc = pos.piece_on(mv.from()).index();
         let ch = if pc < 12 { td.cap_hist[cap_idx(pc, mv.to().index(), victim.index())] as i32 / 8 } else { 0 };
-        return 2_000_000 + see_bonus + MVV_LVA[attacker.index()][victim.index()] + ch;
+        let mvv = MVV_LVA[attacker.index()][victim.index()] + ch;
+        if !good && params::bad_cap_late() != 0 {
+            // EXP-BC1: a losing capture goes *behind* killers, counter-move and every
+            // quiet (|quiet history| < 3 * HIST_MAX), as in Stockfish / Reckless. The
+            // old value (+1.5M) ranked it above all of them.
+            return -1_000_000 + mvv;
+        }
+        let see_bonus = if good { 1_000_000 } else { -500_000 };
+        return 2_000_000 + see_bonus + mvv;
     }
     if mv == td.killers[ply][0] {
         return 900_000;
