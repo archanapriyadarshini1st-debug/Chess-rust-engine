@@ -3,6 +3,7 @@ pub mod bitboard;
 pub mod board;
 pub mod book;
 pub mod datagen;
+pub mod endgame;
 pub mod eval;
 pub mod nnue;
 pub mod params;
