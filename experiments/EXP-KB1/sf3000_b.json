@@ -1,0 +1,19 @@
+{
+  "games": 60,
+  "wins": 3,
+  "draws": 12,
+  "losses": 45,
+  "score": 0.15,
+  "elo_diff": -301.3,
+  "elo_diff_lo": -425.3,
+  "elo_diff_hi": -219.4,
+  "loss_terminations": {
+    "adjudication": 44,
+    "normal": 1
+  },
+  "reliable": false,
+  "opp_elo": 3000.0,
+  "est_elo": 2699,
+  "est_elo_lo": 2575,
+  "est_elo_hi": 2781
+}
