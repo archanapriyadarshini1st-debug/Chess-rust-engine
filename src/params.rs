@@ -74,6 +74,11 @@ tunables! {
     lmr_hist_div,       "LmrHistDiv",       6000,   2000, 16000,  600;
     // --- aspiration windows ---
     asp_window,         "AspWindow",          25,      8,    80,    3;
+    // --- Agent Q experiments (EXP-Q1). 0 = off = bench-node-identical to main ---
+    x_cap_lmr,          "XCapLmr",             0,      0,     1,    1;
+    x_lmr_fut,          "XLmrFut",             0,      0,     1,    1;
+    x_deeper,           "XDeeper",             0,      0,     1,    1;
+    x_fail_high_red,    "XFailHighRed",        0,      0,     1,    1;
 }
 
 /// Set a tunable by its UCI name. Returns `false` if the name is unknown.
