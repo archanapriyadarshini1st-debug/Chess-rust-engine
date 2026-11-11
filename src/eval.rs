@@ -232,7 +232,84 @@ pub fn evaluate(pos: &Position) -> i32 {
 /// and as the teacher for the first net.
 #[inline(always)]
 pub fn evaluate_hce(pos: &Position) -> i32 {
-    evaluate_hce_with(pos, &DEFAULT_PARAMS)
+    let pct = crate::params::x_threats();
+    if pct == 0 {
+        return evaluate_hce_with(pos, &DEFAULT_PARAMS);
+    }
+    let mut maps = [[0u64; 3]; 2];
+    let base = evaluate_hce_core(pos, &DEFAULT_PARAMS, &mut maps);
+    base + threat_score(pos, &maps) * pct / 100
+}
+
+// ---------------------------------------------------------------------------
+// Threat term (EXP-TR1, Agent TR).
+//
+// Static bonus for tactical pressure the mobility / king-zone terms do not see:
+//   * an enemy minor / rook / queen attacked by one of our pawns,
+//   * an enemy rook / queen attacked by one of our minors,
+//   * an enemy queen attacked by one of our rooks,
+//   * an enemy piece that we attack and nothing of theirs defends ("hanging").
+// Each victim counts once, in the strongest category that applies.
+// Weights are (mg, eg) in this engine's centipawn scale (pawn ~ 82/94) and are
+// a first guess, not tuned: EXP-TR1 only asks whether the *shape* of the term
+// helps. Side-to-move perspective, tapered with the same phase as the main eval.
+// Used only when the `XThreats` option is non-zero (percent of nominal weight).
+// ---------------------------------------------------------------------------
+const THREAT_PAWN_MINOR: (i32, i32) = (38, 26);
+const THREAT_PAWN_ROOK: (i32, i32) = (48, 28);
+const THREAT_PAWN_QUEEN: (i32, i32) = (44, 24);
+const THREAT_MINOR_ROOK: (i32, i32) = (30, 24);
+const THREAT_MINOR_QUEEN: (i32, i32) = (28, 20);
+const THREAT_ROOK_QUEEN: (i32, i32) = (26, 18);
+const THREAT_HANGING: (i32, i32) = (22, 16);
+
+/// Threat score, side-to-move perspective, already tapered, not scaled by the
+/// `XThreats` percentage. `maps` comes from `evaluate_hce_core`.
+pub fn threat_score(pos: &Position, maps: &[[u64; 3]; 2]) -> i32 {
+    let us = pos.side;
+    // [pawn, minor, rook, queen, king] attack sets by colour index.
+    let full = |c: Color| {
+        let m = &maps[c.index()];
+        let pawn = pawn_attacks_bb(c, pos.bb(c, PieceType::Pawn));
+        let king = king_attacks(pos.king_sq(c));
+        [pawn, m[0], m[1], m[2], king]
+    };
+    let sets = [full(us), full(us.flip())];
+    let all = |m: &[u64; 5]| m[0] | m[1] | m[2] | m[3] | m[4];
+    let defended = [all(&sets[0]), all(&sets[1])];
+
+    let mut mg = 0i32;
+    let mut eg = 0i32;
+    for (ci, sign) in [(0usize, 1i32), (1usize, -1i32)] {
+        let enemy = if ci == 0 { us.flip() } else { us };
+        let m = &sets[ci];
+        let minors = pos.bb(enemy, PieceType::Knight) | pos.bb(enemy, PieceType::Bishop);
+        let er = pos.bb(enemy, PieceType::Rook);
+        let eq = pos.bb(enemy, PieceType::Queen);
+
+        let mut counted = 0u64;
+        let mut add = |hits: u64, w: (i32, i32)| {
+            let k = (hits & !counted).count_ones() as i32;
+            counted |= hits;
+            mg += sign * k * w.0;
+            eg += sign * k * w.1;
+        };
+        add(m[0] & minors, THREAT_PAWN_MINOR);
+        add(m[0] & er, THREAT_PAWN_ROOK);
+        add(m[0] & eq, THREAT_PAWN_QUEEN);
+        add(m[1] & er, THREAT_MINOR_ROOK);
+        add(m[1] & eq, THREAT_MINOR_QUEEN);
+        add(m[2] & eq, THREAT_ROOK_QUEEN);
+        let attacked = all(m) & (minors | er | eq);
+        add(attacked & !defended[1 - ci], THREAT_HANGING);
+    }
+
+    let phase = (pos.pieces[PieceType::Knight.index()].count_ones()
+        + pos.pieces[PieceType::Bishop.index()].count_ones()
+        + 2 * pos.pieces[PieceType::Rook.index()].count_ones()
+        + 4 * pos.pieces[PieceType::Queen.index()].count_ones())
+    .min(24) as i32;
+    (mg * phase + eg * (24 - phase)) / 24
 }
 
 /// Set of files (bits 0..7) that contain at least one pawn.
@@ -254,6 +331,16 @@ fn pawn_file_set(pawns: u64) -> u64 {
 ///   mobility, outpost and king-safety terms (previously computed twice)
 #[inline(always)]
 pub fn evaluate_hce_with(pos: &Position, prm: &Params) -> i32 {
+    // `maps` is write-only here; after inlining the stores are dead code, so the
+    // tuner / default path costs what it did before EXP-TR1.
+    let mut maps = [[0u64; 3]; 2];
+    evaluate_hce_core(pos, prm, &mut maps)
+}
+
+/// Body of the HCE. `maps[color][0..3]` receives the union of that colour's
+/// knight+bishop, rook and queen attack sets (reused by `threat_score`).
+#[inline(always)]
+fn evaluate_hce_core(pos: &Position, prm: &Params, maps: &mut [[u64; 3]; 2]) -> i32 {
     let mut mg = [0i32; 2];
     let mut eg = [0i32; 2];
     let mut phase = 0i32;
@@ -340,6 +427,7 @@ pub fn evaluate_hce_with(pos: &Position, prm: &Params) -> i32 {
             let sq = Square(kn.trailing_zeros() as u8);
             kn &= kn - 1;
             let att = knight_attacks(sq);
+            maps[color_i][0] |= att;
             let mob = (att & !us_occ).count_ones() as i32;
             mg[color_i] += (mob - 4) * prm[P_MOB_MG];
             eg[color_i] += (mob - 4) * prm[P_MOB_EG];
@@ -368,6 +456,7 @@ pub fn evaluate_hce_with(pos: &Position, prm: &Params) -> i32 {
             let sq = Square(b.trailing_zeros() as u8);
             b &= b - 1;
             let att = bishop_attacks(sq, occ);
+            maps[color_i][0] |= att;
             let mob = (att & !us_occ).count_ones() as i32;
             mg[color_i] += (mob - 5) * prm[P_MOB_MG + 1];
             eg[color_i] += (mob - 5) * prm[P_MOB_EG + 1];
@@ -398,6 +487,7 @@ pub fn evaluate_hce_with(pos: &Position, prm: &Params) -> i32 {
                 eg[color_i] += prm[P_ROOK_SEVENTH_EG];
             }
             let att = rook_attacks(sq, occ);
+            maps[color_i][1] |= att;
             let mob = (att & !us_occ).count_ones() as i32;
             mg[color_i] += (mob - 5) * prm[P_MOB_MG + 2];
             eg[color_i] += (mob - 5) * prm[P_MOB_EG + 2];
@@ -413,6 +503,7 @@ pub fn evaluate_hce_with(pos: &Position, prm: &Params) -> i32 {
             let sq = Square(q.trailing_zeros() as u8);
             q &= q - 1;
             let att = queen_attacks(sq, occ);
+            maps[color_i][2] |= att;
             let mob = (att & !us_occ).count_ones() as i32;
             mg[color_i] += (mob - 8) * prm[P_MOB_MG + 3];
             eg[color_i] += (mob - 8) * prm[P_MOB_EG + 3];
