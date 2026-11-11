@@ -1,0 +1,100 @@
+name: nntrain A/B (sparse Rust trainer vs train.py)
+
+# Agent NT, EXP-NT1. workflow_dispatch only. Nothing here changes the engine or any default.
+#
+# One runner, one data set, both trainers, one evaluator:
+#   1. nntrain selftest (finite-difference gradient check + CRN1 round trip)
+#   2. convert a slice of one Lichess shard with tools/nnue/lichess_to_records.py (R's tool, unchanged)
+#   3. train tools/nnue/train.py   (time budget `torch_minutes`, reports epochs reached)
+#   4. train nntrain               (same data, `epochs`, same batch / lr / lam / val split)
+#   5. score BOTH exported nets with `nntrain eval` (same validation positions, quantised weights)
+# Both nets are uploaded so the existing gate (tools/gate_net.sh) can play them. A lower loss is NOT
+# a strength claim: promotion still needs the 5-replicate gate vs HCE and vs last-known-good.
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branch/SHA to build (engine + tools)"
+        default: ""
+      shard:
+        description: "Lichess data_NNNN shard index 0..19"
+        default: "0"
+      max_out:
+        description: "Max records converted from the shard"
+        default: "4000000"
+      epochs:
+        description: "Epochs for nntrain"
+        default: "10"
+      torch_minutes:
+        description: "Wall-clock minutes for train.py (it is ~15x slower; give it a comparable sample count)"
+        default: "12"
+      seeds:
+        description: "nntrain seeds, comma separated (each gives one net + one throughput sample)"
+        default: "1,2,3"
+
+env:
+  HF_BASE: https://huggingface.co/datasets/Lichess/chess-position-evaluations/resolve/main/data
+
+jobs:
+  ab:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install deps
+        run: |
+          pip install pyarrow python-chess numpy
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+      - name: Build nntrain (native)
+        run: RUSTFLAGS="-C target-cpu=native" cargo build --release --bin nntrain
+      - name: Hardware
+        run: |
+          lscpu | grep -E "Model name|^CPU\(s\)|Flags" | cut -c1-160 | tee hw.txt
+          rustc --version | tee -a hw.txt
+          python3 -c "import torch; print('torch', torch.__version__)" | tee -a hw.txt
+      - name: nntrain selftest
+        run: ./target/release/nntrain selftest
+      - name: Download + convert shard
+        run: |
+          N=$(printf '%04d' ${{ inputs.shard }})
+          curl -fL --retry 6 --retry-delay 10 -o /tmp/shard.parquet "$HF_BASE/data_$N.parquet"
+          python3 tools/nnue/lichess_pov_check.py /tmp/shard.parquet 100000 | tee /tmp/pov.txt && grep -q "WHITE-POV" /tmp/pov.txt
+          mkdir -p data out
+          python3 tools/nnue/lichess_to_records.py --in /tmp/shard.parquet --out data/lichess_$N.bin \
+            --min-depth 20 --max-out ${{ inputs.max_out }} --seed ${{ inputs.shard }} | tail -30
+          rm -f /tmp/shard.parquet
+          ls -la data
+          sha256sum data/*.bin | tee out/data.sha256
+      - name: train.py baseline (same data, --lam 1.0)
+        run: |
+          python3 tools/nnue/train.py --data "data/*.bin" --out out/net_trainpy.bin \
+            --minutes ${{ inputs.torch_minutes }} --lam 1.0 2>&1 | tee out/trainpy.log | grep -E "files=|== epoch|^final|pos/s" | tail -40
+      - name: nntrain (each seed)
+        run: |
+          for s in $(echo "${{ inputs.seeds }}" | tr ',' ' '); do
+            ./target/release/nntrain train --data "data/*.bin" --out out/net_nntrain_s$s.bin \
+              --epochs ${{ inputs.epochs }} --lam 1.0 --seed $s 2>&1 | tee out/nntrain_s$s.log | grep -E "files=|== epoch|^final|^quantized|^throughput"
+          done
+      - name: Common evaluator (quantised weights, identical validation split)
+        run: |
+          {
+            echo "| net | val_loss (quantised, nntrain eval) |"; echo "|---|---|"
+            for f in out/net_*.bin; do echo "| $(basename $f) | $(./target/release/nntrain eval --net $f --data 'data/*.bin' --lam 1.0 | sed 's/.*val_loss //') |"; done
+          } | tee out/ruler.md >> "$GITHUB_STEP_SUMMARY"
+          grep -h -E "^throughput" out/nntrain_s*.log | tee out/throughput.txt
+          grep -h -E "pos/s" out/trainpy.log | tail -1 | tee -a out/throughput.txt
+          sha256sum out/net_*.bin | tee out/nets.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nntrain-ab
+          path: |
+            out/
+            hw.txt
+          retention-days: 14
