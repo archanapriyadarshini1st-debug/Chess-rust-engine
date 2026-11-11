@@ -1,0 +1,194 @@
+name: NNUE volume (EXP-NV1)
+
+# Agent NV. Question: does ~20x more engine self-play data (with real game outcomes, whole-shard
+# held-out validation) produce a net that is not worse than HCE at EQUAL NODES?
+# Config comes from experiments/nv1.config (push-triggered because a new workflow cannot be
+# dispatched from a non-default branch). Datagen uses PR #22 (datagen-bin), merged at build time;
+# its head SHA is recorded in every shard's provenance file. Stockfish is NOT used here.
+on:
+  push:
+    branches: ["agentNV/**"]
+    paths:
+      - ".github/workflows/nnue-volume.yml"
+      - "experiments/nv1.config"
+  workflow_dispatch: {}
+
+env:
+  FASTCHESS_URL: https://github.com/Disservin/fastchess/releases/download/v1.8.3-alpha/fastchess-linux-x86-64.tar
+  RUSTFLAGS: "-C target-cpu=native"
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      shards: ${{ steps.p.outputs.shards }}
+      val_shard: ${{ steps.p.outputs.val_shard }}
+      cfg: ${{ steps.p.outputs.cfg }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: p
+        run: |
+          set -e
+          source experiments/nv1.config
+          V=$((SHARDS_TRAIN + 1))
+          python3 -c "import json;print('shards='+json.dumps(list(range(1,$V+1))))" >> "$GITHUB_OUTPUT"
+          echo "val_shard=$V" >> "$GITHUB_OUTPUT"
+          echo "cfg=$(grep -v '^#' experiments/nv1.config | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
+          cat experiments/nv1.config
+
+  datagen:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 200
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON(needs.plan.outputs.shards) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Merge PR 22 (datagen-bin) at build time
+        run: |
+          git config user.email nv@users.noreply.github.com; git config user.name agentNV
+          git fetch origin refs/pull/22/head
+          echo "PR22_SHA=$(git rev-parse FETCH_HEAD)" | tee -a "$GITHUB_ENV"
+          git merge --no-edit FETCH_HEAD
+      - run: cargo build --release
+      - name: Generate self-play shard (HCE, no Stockfish)
+        run: |
+          source experiments/nv1.config
+          if [ "${{ matrix.shard }}" = "${{ needs.plan.outputs.val_shard }}" ]; then N=$N_VAL; else N=$N_TRAIN; fi
+          mkdir -p data
+          CRE_DATAGEN_SEED=$((7000 + ${{ matrix.shard }})) ./target/release/chess-rust-engine datagen-bin $N $DEPTH data/shard-${{ matrix.shard }}.bin 4 | tail -3
+          echo "pr22_sha=$PR22_SHA main_sha=$(git rev-parse HEAD^1) shard=${{ matrix.shard }} val=$([ ${{ matrix.shard }} = ${{ needs.plan.outputs.val_shard }} ] && echo 1 || echo 0)" > data/shard-${{ matrix.shard }}.provenance
+          sha256sum data/shard-${{ matrix.shard }}.bin | tee -a data/shard-${{ matrix.shard }}.provenance
+          cat data/shard-${{ matrix.shard }}.bin.meta.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: shard-${{ matrix.shard }}
+          path: |
+            data/shard-${{ matrix.shard }}.bin
+            data/shard-${{ matrix.shard }}.bin.meta.json
+            data/shard-${{ matrix.shard }}.provenance
+          retention-days: 7
+          compression-level: 6
+
+  train:
+    needs: [plan, datagen]
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      matrix:
+        lam: ["1.0", "0.6"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: shard-*
+          path: shards
+      - name: Arrange shards (train vs held-out validation shard)
+        run: |
+          mkdir -p data/train data/val
+          V=${{ needs.plan.outputs.val_shard }}
+          for d in shards/shard-*; do
+            n=${d##*/shard-}
+            if [ "$n" = "$V" ]; then cp $d/shard-$n.bin data/val/; else cp $d/shard-$n.bin data/train/; fi
+          done
+          ls -la data/train data/val
+          echo "--- shard identity check (identical parallel shards must be rejected)"
+          sha256sum data/train/*.bin data/val/*.bin | awk '{print $1}' | sort | uniq -d | grep . && { echo "IDENTICAL SHARDS"; exit 1; } || echo "all shards distinct"
+          cat shards/*/*.provenance | grep pr22_sha | sort -u
+      - run: |
+          pip install numpy chess
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+      - name: Train (lam=${{ matrix.lam }}), validate on held-out shard
+        run: |
+          source experiments/nv1.config
+          python3 tools/nnue/train.py --data 'data/train/*.bin' --val-data 'data/val/*.bin' --lam ${{ matrix.lam }} \
+            --minutes $TRAIN_MINUTES --out net.bin 2>&1 | tee train.log | grep -E "files|val-data|decoded|==|final|exported" | tail -40
+          sha256sum net.bin | tee net.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: net-lam${{ matrix.lam }}
+          path: |
+            net.bin
+            net.sha256
+            train.log
+          retention-days: 30
+
+  gate:
+    needs: [plan, train]
+    if: ${{ always() && needs.plan.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      matrix:
+        cand: [aa, stage0, lam1.0, lam0.6]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build engine (this branch's src == main, HCE + NNUE inference)
+        run: cargo build --release && cp target/release/chess-rust-engine /tmp/eng
+      - name: Fastchess
+        run: |
+          mkdir -p /tmp/fc && curl -fsSL --retry 3 "$FASTCHESS_URL" | tar x -C /tmp/fc
+          F=$(find /tmp/fc -type f -name fastchess | head -1); chmod +x "$F"; ln -sf "$F" /tmp/fastchess
+      - uses: actions/download-artifact@v4
+        if: ${{ startsWith(matrix.cand, 'lam') }}
+        with:
+          name: net-${{ matrix.cand }}
+          path: netdl
+      - name: 5 independent replicates at fixed nodes (disjoint opening slices, colours swapped)
+        run: |
+          source experiments/nv1.config
+          case "${{ matrix.cand }}" in
+            aa)     NETOPT="option.UseNNUE=false"; NET="" ;;
+            stage0) NETOPT="option.UseNNUE=true";  NET="$PWD/nets/candidates/stage0-selfd7.nnue" ;;
+            *)      NETOPT="option.UseNNUE=true";  NET="$PWD/netdl/net.bin" ;;
+          esac
+          printf '#!/bin/bash\n[ -n "%s" ] && export CRE_NNUE_FILE="%s"\nexec /tmp/eng "$@"\n' "$NET" "$NET" > /tmp/net.sh; chmod +x /tmp/net.sh
+          [ -n "$NET" ] && sha256sum "$NET"
+          sha256sum /tmp/eng
+          mkdir -p out/${{ matrix.cand }}
+          for r in 1 2 3 4 5; do
+            START=$(( 1 + (r-1)*GATE_ROUNDS ))
+            /tmp/fastchess \
+              -engine name=NET cmd=/tmp/net.sh $NETOPT option.Hash=64 \
+              -engine name=HCE cmd=/tmp/eng option.UseNNUE=false option.Hash=64 \
+              -each tc=inf nodes=$NODES \
+              -openings file=tools/openings_book.epd format=epd order=sequential start=$START \
+              -rounds $GATE_ROUNDS -games 2 -repeat -concurrency 4 -srand $((r*17)) \
+              -pgnout file=out/${{ matrix.cand }}/rep$r.pgn 2>&1 | tee out/${{ matrix.cand }}/rep$r.log | tail -6
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gate-${{ matrix.cand }}
+          path: out
+          retention-days: 30
+
+  report:
+    needs: gate
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: gate-*
+          path: gate_all
+      - name: Recompute stats from raw logs + pre-registered verdict
+        run: |
+          # artifacts unpack as gate_all/gate-<cand>/<cand>/rep*.log -> flatten to gate_all/<cand>/
+          for d in gate_all/gate-*; do c=${d#gate_all/gate-}; mkdir -p gate_all/$c; cp $d/$c/*.log gate_all/$c/ 2>/dev/null || cp $d/*.log gate_all/$c/; done
+          python3 tools/nnue/nv_report.py gate_all | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nv1-results
+          path: |
+            gate_all/results.json
+            gate_all/results.md
