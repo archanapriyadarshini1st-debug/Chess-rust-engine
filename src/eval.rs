@@ -220,12 +220,16 @@ fn pst_index(color: Color, sq: Square) -> usize {
 /// `UseNNUE` is on, otherwise the hand-crafted evaluation below.
 #[inline]
 pub fn evaluate(pos: &Position) -> i32 {
-    if crate::nnue::enabled() {
-        if let Some(v) = crate::nnue::evaluate(pos) {
-            return v;
+    let raw = if crate::nnue::enabled() {
+        match crate::nnue::evaluate(pos) {
+            Some(v) => v,
+            None => evaluate_hce(pos),
         }
-    }
-    evaluate_hce(pos)
+    } else {
+        evaluate_hce(pos)
+    };
+    // EXP-EG1: endgame draw scaling + fifty-move damping (see endgame.rs).
+    crate::endgame::apply(pos, raw)
 }
 
 /// Hand-crafted eval (PeSTO + structure). Used when no NNUE net is loaded
