@@ -12,6 +12,11 @@ name: nntrain A/B (sparse Rust trainer vs train.py)
 # a strength claim: promotion still needs the 5-replicate gate vs HCE and vs last-known-good.
 
 on:
+  # push trigger only on the agentNT/nntrain branch and only when this file changes, so the run can start
+  # before the workflow exists on main. Inputs fall back to the defaults below.
+  push:
+    branches: ["agentNT/nntrain"]
+    paths: [".github/workflows/nntrain-ab.yml"]
   workflow_dispatch:
     inputs:
       ref:
@@ -63,24 +68,24 @@ jobs:
         run: ./target/release/nntrain selftest
       - name: Download + convert shard
         run: |
-          N=$(printf '%04d' ${{ inputs.shard }})
+          N=$(printf '%04d' ${{ inputs.shard || '0' }})
           curl -fL --retry 6 --retry-delay 10 -o /tmp/shard.parquet "$HF_BASE/data_$N.parquet"
           python3 tools/nnue/lichess_pov_check.py /tmp/shard.parquet 100000 | tee /tmp/pov.txt && grep -q "WHITE-POV" /tmp/pov.txt
           mkdir -p data out
           python3 tools/nnue/lichess_to_records.py --in /tmp/shard.parquet --out data/lichess_$N.bin \
-            --min-depth 20 --max-out ${{ inputs.max_out }} --seed ${{ inputs.shard }} | tail -30
+            --min-depth 20 --max-out ${{ inputs.max_out || '4000000' }} --seed ${{ inputs.shard || '0' }} | tail -30
           rm -f /tmp/shard.parquet
           ls -la data
           sha256sum data/*.bin | tee out/data.sha256
       - name: train.py baseline (same data, --lam 1.0)
         run: |
           python3 tools/nnue/train.py --data "data/*.bin" --out out/net_trainpy.bin \
-            --minutes ${{ inputs.torch_minutes }} --lam 1.0 2>&1 | tee out/trainpy.log | grep -E "files=|== epoch|^final|pos/s" | tail -40
+            --minutes ${{ inputs.torch_minutes || '12' }} --lam 1.0 2>&1 | tee out/trainpy.log | grep -E "files=|== epoch|^final|pos/s" | tail -40
       - name: nntrain (each seed)
         run: |
-          for s in $(echo "${{ inputs.seeds }}" | tr ',' ' '); do
+          for s in $(echo "${{ inputs.seeds || '1,2,3' }}" | tr ',' ' '); do
             ./target/release/nntrain train --data "data/*.bin" --out out/net_nntrain_s$s.bin \
-              --epochs ${{ inputs.epochs }} --lam 1.0 --seed $s 2>&1 | tee out/nntrain_s$s.log | grep -E "files=|== epoch|^final|^quantized|^throughput"
+              --epochs ${{ inputs.epochs || '10' }} --lam 1.0 --seed $s 2>&1 | tee out/nntrain_s$s.log | grep -E "files=|== epoch|^final|^quantized|^throughput"
           done
       - name: Common evaluator (quantised weights, identical validation split)
         run: |
