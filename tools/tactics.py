@@ -21,7 +21,7 @@ def build(a):
     if a.movetime_ms < 1000:
         sys.exit("refusing movetime < 1000 ms for labels (no shallow teacher labels)")
     eng = chess.engine.SimpleEngine.popen_uci(a.stockfish)
-    eng.configure({"Threads": a.threads, "Hash": a.hash, "MultiPV": 2})
+    eng.configure({"Threads": a.threads, "Hash": a.hash})  # MultiPV is passed via analyse(multipv=2); python-chess >=1.10 rejects configuring it
     ident = eng.id.get("name", "?")
     kept = seen = 0
     with open(a.out, "w") as out:
