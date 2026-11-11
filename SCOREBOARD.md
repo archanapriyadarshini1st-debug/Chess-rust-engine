@@ -31,7 +31,7 @@ SPRT-stopped runs are biased upward; a positive row means "replicate", not "merg
 | time: root-share + score-drop scaling | #43 | 5+0.05 | 342-830-262 | 1434 | +19 [+8, +31] | positive; inherits stability bug fixed in #47 |
 | cut_node propagation | #40 | 5+0.05 | 393-1107-448 | 1948 | -10 [-20, 0] | not better |
 | negative ext. non-singular TT move | #42 | 5+0.05 | 454-1404-502 | 2360 | -7 [-16, +2] | not better |
-| capture ProbCut + razoring | #18 | 10+0.1 | 286-312-202 | 800 | -11 [-32, +10] | not better |
+| capture ProbCut + razoring | #18 | 10+0.1 | 286-202-312 | 800 | -11 [-32, +10] | not better |
 | Texel-tuned HCE (5 replicas, `texel-1a-r1..r5`) | TX | 10+0.1 | 927-1010-1063 | 3000 | **-15.8 [-25.9, -5.6]**, chi2 2.61 (df 4) | **reject** (replicas agree) |
 | A/A control (identical engines) | TX | 10+0.1 | 114-361-125 | 600 | -6 [-24, +11] | shows the noise floor of one 600-game run |
 | Q toggles XCapLmr / XLmrFut / XDeeper / XFailHighRed (2x300 each) | #46 | 10+0.1 | pooled | 600 each | +5 / -5 / +2 / +3, all CI +-17 | indistinguishable from 0 |
