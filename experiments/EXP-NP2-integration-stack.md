@@ -50,3 +50,17 @@ score, 95 % CI, chi^2 heterogeneity (df 4).
 
 ## Results
 _(appended as replicas finish)_
+
+### Status at handoff (2026-11-11 ~14:00Z) - NO RESULTS YET, rule above is unchanged
+Five `sprt.yml` runs (400 rounds = 800 games each, 10+0.1), TEST = `5b5b58c`, BASE = `agentNP/main-N` (= main 581b8ee):
+43030972309, 43030979998, 43030987500, 43030995296, 43031003561 (the last three were queued behind the 20-job limit at
+handoff). Expected ~2-2.5 h after they start.
+
+How to finish: final `Games: N, Wins: W, Losses: L, Draws: D` line of each run's `SPRT` step log -> pool W/D/L -> score,
+95 % CI, chi^2 (df 4) -> apply the rule above. Append to **Results**; do not edit the rule. A run that was cancelled must be
+re-dispatched with a fresh `agentNP/main-N` alias, not dropped.
+If PROMISING: (a) check forfeits/illegal/crashes in the PGN artifact, (b) 5x `sf19-match.yml` UCI_Elo downside check,
+(c) a second agent reviews the integrated diff, (d) merge **#43+#47 first, re-measure, then #41, re-measure** (no batch merge).
+NP's read-only reviews of #41 and #47 found no defect (comments on those PRs). Unverified downside: time use rises when the best
+move is unstable; time-loss counts are not in the filtered job log.
+Prediction made before seeing data: the stack beats main, but by less than +31 (the single-run figures are SPRT-stopped, biased upward).
