@@ -58,8 +58,10 @@ pub struct TranspositionTable {
 impl TranspositionTable {
     pub fn new(mb: usize) -> TranspositionTable {
         let bytes = mb.max(1) * 1024 * 1024;
+        // Largest power-of-two entry count that fits in `Hash` MB. (This used to
+        // reserve 2x, so `Hash=64` really gave 32 MB.)
         let mut n = 1usize;
-        while n * std::mem::size_of::<Entry>() * 2 < bytes {
+        while n * 2 * std::mem::size_of::<Entry>() <= bytes {
             n *= 2;
         }
         n = n.max(1024);
@@ -86,7 +88,12 @@ impl TranspositionTable {
     }
 
     pub fn new_search(&self) {
-        self.age.fetch_add(1, Ordering::Relaxed);
+        // Age lives in 6 bits of the packed entry; keep the counter in the same
+        // range, otherwise `old_age != age` is true for every entry once the
+        // counter passes 63 (i.e. after ~63 searches of a game) and the
+        // depth-preferred check below is silently disabled.
+        let a = self.age.load(Ordering::Relaxed);
+        self.age.store((a + 1) & (PACK_AGE as u8), Ordering::Relaxed);
     }
 
     #[inline]
@@ -128,13 +135,17 @@ impl TranspositionTable {
         let old_data = e.data.load(Ordering::Relaxed);
         let old_key = e.key.load(Ordering::Relaxed);
         let age = self.age.load(Ordering::Relaxed);
-        let replace = if old_key ^ old_data == hash {
-            let (_, _, old_depth, _, old_age) = unpack(old_data);
+        let same = old_key ^ old_data == hash;
+        let (old_mv, _, old_depth, _, old_age) = unpack(old_data);
+        let replace = if same {
             depth + 2 >= old_depth || old_age != age
         } else {
             true
         };
         if replace {
+            // Keep the previous best move when this store has none (fail-low
+            // node or a quiescence store) and it is the same position.
+            let mv = if mv.is_none() && same { old_mv } else { mv };
             let data = pack(mv, score, depth, bound, age);
             e.data.store(data, Ordering::Relaxed);
             e.key.store(hash ^ data, Ordering::Relaxed);
@@ -160,5 +171,63 @@ pub fn from_tt(score: i32, ply: i32) -> i32 {
         score + ply
     } else {
         score
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn table_uses_the_full_hash_budget() {
+        for mb in [1usize, 16, 64] {
+            let t = TranspositionTable::new(mb);
+            let bytes = t.table.len() * std::mem::size_of::<Entry>();
+            let budget = mb * 1024 * 1024;
+            assert!(bytes <= budget, "{mb} MB: table {bytes} exceeds budget");
+            assert!(bytes * 2 > budget, "{mb} MB: table {bytes} wastes more than half");
+        }
+    }
+
+    #[test]
+    fn same_position_store_without_move_keeps_old_move() {
+        let t = TranspositionTable::new(1);
+        let h = 0xDEAD_BEEF_1234_5678u64;
+        let mv = Move(0x1234);
+        t.store(h, mv, 50, 6, BOUND_LOWER);
+        // fail-low / qsearch style store: no move
+        t.store(h, Move::NONE, -20, 7, BOUND_UPPER);
+        let (m, s, d, b) = t.probe(h).unwrap();
+        assert_eq!(m, mv);
+        assert_eq!((s, d, b), (-20, 7, BOUND_UPPER));
+    }
+
+    #[test]
+    fn different_position_does_not_inherit_move() {
+        let t = TranspositionTable::new(1);
+        let h1 = 0x1111u64;
+        let h2 = h1 + (t.mask + 1); // same slot, different key
+        t.store(h1, Move(0x4321), 10, 5, BOUND_EXACT);
+        t.store(h2, Move::NONE, 0, 1, BOUND_UPPER);
+        let (m, ..) = t.probe(h2).unwrap();
+        assert!(m.is_none());
+    }
+
+    #[test]
+    fn age_never_leaves_its_six_bit_field() {
+        let t = TranspositionTable::new(1);
+        let h = 0xABCDEFu64;
+        t.store(h, Move(7), 1, 20, BOUND_EXACT);
+        for _ in 0..300 {
+            t.new_search();
+            assert!(t.age.load(Ordering::Relaxed) as u64 <= PACK_AGE);
+        }
+        // An entry stored this search with a much shallower depth must not
+        // evict a same-age deeper entry of the same position.
+        t.store(h, Move(9), 2, 20, BOUND_EXACT);
+        t.store(h, Move::NONE, 3, 2, BOUND_UPPER);
+        let (m, _, d, _) = t.probe(h).unwrap();
+        assert_eq!(d, 20);
+        assert_eq!(m, Move(9));
     }
 }
