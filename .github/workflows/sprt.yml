@@ -48,6 +48,9 @@ on:
       base_opts:
         description: "Extra UCI options for BASE, e.g. 'option.UseNNUE=false'"
         default: ""
+      tag:
+        description: "Free-text replication tag; keeps parallel replications of the same test/base/opts from cancelling each other"
+        default: ""
       test_net:
         description: "Optional repo path of an .nnue file to load into TEST via CRE_NNUE_FILE"
         default: ""
@@ -56,7 +59,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: sprt-${{ inputs.test }}-${{ inputs.base }}
+  group: sprt-${{ inputs.test }}-${{ inputs.base }}-${{ inputs.test_opts }}-${{ inputs.base_opts }}-${{ inputs.tag }}
   cancel-in-progress: true
 
 env:
