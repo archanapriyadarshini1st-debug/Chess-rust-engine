@@ -738,6 +738,20 @@ pub struct SearchResult {
     pub pv: Vec<Move>,
 }
 
+/// Root best-move stability counter used by time management.
+/// `prev` is the best move of the *previous completed iteration*. Comparing
+/// against the value just written by this iteration (the old code did) is
+/// always equal, so `stable` grew forever and the "unstable -> think longer"
+/// branch of the time manager was unreachable (EXP-CX1).
+#[inline]
+pub fn next_stability(prev: Move, best: Move, stable: i32) -> i32 {
+    if !prev.is_none() && prev == best {
+        stable + 1
+    } else {
+        0
+    }
+}
+
 pub fn iterative_deepening(pos: &Position, td: &mut ThreadData, use_book: bool) -> SearchResult {
     td.tt.new_search();
     td.nodes = 0;
@@ -765,6 +779,7 @@ pub fn iterative_deepening(pos: &Position, td: &mut ThreadData, use_book: bool) 
     let mut last_pv: Vec<Move> = Vec::new();
     let mut last_depth = 0;
     let mut stable = 0;
+    let mut prev_best = Move::NONE;
     let mut prev_score = 0;
 
     let mut root_moves = [Move::NONE; MAX_MOVES];
@@ -855,11 +870,8 @@ pub fn iterative_deepening(pos: &Position, td: &mut ThreadData, use_book: bool) 
             );
         }
 
-        if last_pv.first().copied() == Some(td.best) {
-            stable += 1;
-        } else {
-            stable = 0;
-        }
+        stable = next_stability(prev_best, td.best, stable);
+        prev_best = td.best;
         // Time scaling (Stockfish / Reckless idea): spend less when one root
         // move absorbs nearly all the nodes and stays best, more when the best
         // move keeps changing or the score is falling.
@@ -942,4 +954,23 @@ pub fn bench(depth: i32) -> (u64, u64) {
     let nps = total_nodes as u128 * 1000 / ms as u128;
     println!("{} nodes {} nps", total_nodes, nps);
     (total_nodes, nps as u64)
+}
+
+#[cfg(test)]
+mod stability_tests {
+    use super::*;
+
+    #[test]
+    fn stability_resets_when_best_move_changes() {
+        let m1 = Move::new(crate::types::Square(12), crate::types::Square(28), 0);
+        let m2 = Move::new(crate::types::Square(11), crate::types::Square(27), 0);
+        // first iteration: no previous best -> not stable
+        assert_eq!(next_stability(Move::NONE, m1, 0), 0);
+        // same move twice -> counts up
+        let s = next_stability(m1, m1, 0);
+        assert_eq!(s, 1);
+        assert_eq!(next_stability(m1, m1, s), 2);
+        // change of mind -> resets to 0 (old code would have returned 3)
+        assert_eq!(next_stability(m1, m2, 2), 0);
+    }
 }
