@@ -453,19 +453,37 @@ fn search(
         evaluate(pos)
     };
     td.eval_stack[ply as usize] = static_eval;
+    // `eval_stack` holds -INF for in-check plies. Comparing against it made
+    // every node look "improving" two plies after a check, so require a real
+    // ancestor eval.
     let improving = ply >= 2
         && !in_check
-        && static_eval > td.eval_stack[(ply as usize).saturating_sub(2)];
+        && td.eval_stack[(ply as usize) - 2] > -INF
+        && static_eval > td.eval_stack[(ply as usize) - 2];
+    // A TT score of sufficient depth is a better estimate of the node value
+    // than the raw static eval when its bound points the right way. Used for
+    // pruning decisions only; `eval_stack` keeps the raw eval.
+    let eval = if tt_hit
+        && !in_check
+        && tt_score.abs() < MATE_IN_MAX_LOCAL
+        && (tt_bound == BOUND_EXACT
+            || (tt_bound == BOUND_LOWER && tt_score > static_eval)
+            || (tt_bound == BOUND_UPPER && tt_score < static_eval))
+    {
+        tt_score
+    } else {
+        static_eval
+    };
 
     // Reverse futility pruning
     if excluded.is_none()
         && !is_pv
         && !in_check
         && depth <= params::rfp_depth()
-        && static_eval - params::rfp_margin() * depth + (if improving { params::rfp_improving() } else { 0 }) >= beta
-        && static_eval.abs() < MATE_IN_MAX_LOCAL
+        && eval - params::rfp_margin() * depth + (if improving { params::rfp_improving() } else { 0 }) >= beta
+        && eval.abs() < MATE_IN_MAX_LOCAL
     {
-        return static_eval;
+        return eval;
     }
 
     // Null move pruning
@@ -473,11 +491,11 @@ fn search(
         && !is_pv
         && !in_check
         && depth >= 3
-        && static_eval >= beta
+        && eval >= beta
         && pos.bb(pos.side, PieceType::Pawn) != pos.colors[pos.side.index()] ^ pos.bb(pos.side, PieceType::King)
         && !(tt_hit && tt_bound == BOUND_UPPER && tt_score < beta)
     {
-        let r = params::nmp_base() + depth / params::nmp_depth_div() + ((static_eval - beta) / params::nmp_eval_div()).clamp(0, 3);
+        let r = params::nmp_base() + depth / params::nmp_depth_div() + ((eval - beta) / params::nmp_eval_div()).clamp(0, 3);
         let mut np = *pos;
         // make null
         if let Some(ep) = np.ep {
@@ -584,7 +602,7 @@ fn search(
             && !in_check
             && is_quiet
             && depth <= params::futility_depth()
-            && static_eval + params::futility_margin() * depth < alpha
+            && eval + params::futility_margin() * depth < alpha
             && legal > 0
         {
             continue;
