@@ -28,12 +28,14 @@ use std::sync::atomic::{AtomicI32, Ordering};
 /// Bit 0: fifty-move damping. Bit 1: material-based draw scaling.
 pub const FIFTY: i32 = 1;
 pub const MATERIAL: i32 = 2;
+/// Bit 2 (EXP-EG2, Agent EG2): K+B+N vs K corner-driving term. NOT in the default mask.
+pub const KBNK: i32 = 4;
 pub const DEFAULT_MASK: i32 = FIFTY | MATERIAL;
 
 static MASK: AtomicI32 = AtomicI32::new(DEFAULT_MASK);
 
 pub fn set_mask(m: i32) {
-    MASK.store(m.clamp(0, 3), Ordering::Relaxed);
+    MASK.store(m.clamp(0, 7), Ordering::Relaxed);
 }
 
 #[inline(always)]
@@ -59,10 +61,16 @@ pub fn apply(pos: &Position, v: i32) -> i32 {
 /// Scale `v` with an explicit mask (used by tests / ablations).
 #[inline]
 pub fn scale(pos: &Position, v: i32, mask: i32) -> i32 {
-    if mask == 0 || v == 0 {
+    if mask == 0 {
         return v;
     }
     let mut v = v;
+    if mask & KBNK != 0 {
+        v += kbnk_bonus(pos);
+    }
+    if v == 0 {
+        return v;
+    }
     if mask & MATERIAL != 0 {
         v = material_scale(pos, v);
     }
@@ -147,6 +155,37 @@ fn material_scale(pos: &Position, v: i32) -> i32 {
         }
     }
     v
+}
+
+/// Corner-driving bonus for K+B+N vs bare K, from the side to move's point of view
+/// (EXP-EG2). Exactly four men on the board, otherwise 0. The mop-up in
+/// `evaluate_hce_with` only knows majors, so without this the search cannot make
+/// progress in KBNK inside the 50-move limit (measured: 24% conversion).
+pub fn kbnk_bonus(pos: &Position) -> i32 {
+    if pos.occ().count_ones() != 4 {
+        return 0;
+    }
+    for strong in [Color::White, Color::Black] {
+        let weak = strong.flip();
+        if cnt(pos, strong, PieceType::Bishop) != 1
+            || cnt(pos, strong, PieceType::Knight) != 1
+            || cnt(pos, strong, PieceType::Pawn) != 0
+            || cnt(pos, strong, PieceType::Rook) + cnt(pos, strong, PieceType::Queen) != 0
+        {
+            continue;
+        }
+        let bishop_light = pos.bb(strong, PieceType::Bishop) & LIGHT_SQUARES != 0;
+        // Dark-squared bishop mates in a1/h8; light-squared in h1/a8.
+        let corners: [(i32, i32); 2] = if bishop_light { [(7, 0), (0, 7)] } else { [(0, 0), (7, 7)] };
+        let wk = pos.king_sq(weak);
+        let (wf, wr) = (wk.file() as i32, wk.rank() as i32);
+        let d = corners.iter().map(|&(cf, cr)| (wf - cf).abs() + (wr - cr).abs()).min().unwrap();
+        let sk = pos.king_sq(strong);
+        let kd = (sk.file() as i32 - wf).abs().max((sk.rank() as i32 - wr).abs());
+        let bonus = (14 - d) * 12 + (7 - kd) * 10;
+        return if strong == pos.side { bonus } else { -bonus };
+    }
+    0
 }
 
 #[cfg(test)]
@@ -280,5 +319,27 @@ mod tests {
         }
         assert!(checked > 10_000);
         eprintln!("checked {} scalings, {} material-scaled", checked, scaled_material);
+    }
+
+    #[test]
+    fn kbnk_bonus_prefers_the_mating_corner_and_is_inert_elsewhere() {
+        // Dark-squared bishop (c1): mating corners are a1 and h8.
+        let right = p("8/8/8/8/8/2N5/2K5/k1B5 w - - 0 1"); // black king on a1
+        let wrong = p("8/8/8/8/8/2N5/2K5/2B4k w - - 0 1"); // black king on h1
+        assert!(kbnk_bonus(&right) > kbnk_bonus(&wrong));
+        let right_b = p("8/8/8/8/8/2N5/2K5/k1B5 b - - 0 1");
+        assert_eq!(kbnk_bonus(&right_b), -kbnk_bonus(&right));
+        // Light-squared bishop (f1): corners are h1/a8, so h1 beats a1.
+        let l_right = p("8/8/8/8/8/2N5/2K5/5B1k w - - 0 1");
+        let l_wrong = p("8/8/8/8/8/2N5/2K5/k4B2 w - - 0 1");
+        assert!(kbnk_bonus(&l_right) > kbnk_bonus(&l_wrong));
+        // Every other material signature gets exactly zero, mask 3 never touches KBNK.
+        for fen in ["8/8/4k3/8/8/3K4/8/R7 w - - 0 1", "8/8/4k3/8/8/3K4/8/2BB4 w - - 0 1", "8/8/4k3/8/P7/3K4/8/2BN4 w - - 0 1"] {
+            assert_eq!(kbnk_bonus(&p(fen)), 0, "{fen}");
+        }
+        let kbnk = p("8/8/4k3/8/8/3K4/8/2BN4 w - - 0 1");
+        assert_eq!(scale(&kbnk, 650, DEFAULT_MASK), 650);
+        assert_eq!(scale(&kbnk, 650, KBNK), 650 + kbnk_bonus(&kbnk));
+        assert!(kbnk_bonus(&kbnk) > 0);
     }
 }

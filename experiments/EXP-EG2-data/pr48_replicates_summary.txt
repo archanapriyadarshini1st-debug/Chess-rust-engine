@@ -1,0 +1,7 @@
+R1: 300 games W-D-L 80-124-96 score 47.3%
+R2: 300 games W-D-L 90-129-81 score 51.5%
+R3: 300 games W-D-L 85-137-78 score 51.2%
+R4: 300 games W-D-L 87-125-88 score 49.8%
+R5: 300 games W-D-L 85-134-81 score 50.7%
+POOLED 1500 games W-D-L 427-649-424 score 50.10% CI95 [48.19,52.01] Elo 0.7 [-12.6,13.9]
+NPS ratio mask3/mask0 (8 interleaved bench 12): mean 0.989 median 0.992 min 0.879 max 1.080
