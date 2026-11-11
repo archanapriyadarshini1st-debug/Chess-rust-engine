@@ -137,6 +137,10 @@ def main():
     ap.add_argument("--lr", type=float, default=2e-3)
     ap.add_argument("--lam", type=float, default=0.75, help="weight of SF score vs game result")
     ap.add_argument("--val-mod", type=int, default=50, help="validation = positions with hash %% N == 0 (~2%%), never trained on")
+    ap.add_argument("--val-data", default=None, help="glob of files used ONLY for validation (whole held-out shards = game-disjoint, "
+                    "see Chess-rust-engine#1 EXP-I2). Positions that also occur in training data are dropped from it. "
+                    "Replaces the position-hash split. Capped at --val-max.")
+    ap.add_argument("--val-max", type=int, default=400000)
     ap.add_argument("--no-dedupe", action="store_true")
     ap.add_argument("--min-lr-frac", type=float, default=0.02)
     ap.add_argument("--threads", type=int, default=os.cpu_count() or 2)
@@ -151,8 +155,22 @@ def main():
         _, first = np.unique(h, return_index=True)
         first.sort()
         recs, h = recs[first], h[first]
-    is_val = (h % np.uint64(a.val_mod)) == 0
-    val, tr = recs[is_val], recs[~is_val]
+    if a.val_data:
+        # Shard-disjoint validation: nothing from these files is ever trained on.
+        vfiles, vrecs = load_records(a.val_data)
+        vh = pos_hash(vrecs)
+        _, vfirst = np.unique(vh, return_index=True)
+        vfirst.sort()
+        vrecs, vh = vrecs[vfirst], vh[vfirst]
+        keep = ~np.isin(vh, h)  # drop validation positions that also appear in training data
+        print(f"val-data files={len(vfiles)} unique={len(vrecs)} overlap-with-train dropped={int((~keep).sum())}", flush=True)
+        vrecs = vrecs[keep]
+        if len(vrecs) > a.val_max:
+            vrecs = vrecs[np.random.default_rng(2).choice(len(vrecs), a.val_max, replace=False)]
+        val, tr = vrecs, recs
+    else:
+        is_val = (h % np.uint64(a.val_mod)) == 0
+        val, tr = recs[is_val], recs[~is_val]
     rng = np.random.default_rng(1)
     rng.shuffle(tr)
     if len(val) < 1000:
