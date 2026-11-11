@@ -39,3 +39,11 @@ this experiment is the *replicate with outcomes* and the two should be pooled, n
 - Self-play from HCE teaches HCE's opinion plus outcomes; it cannot exceed "HCE with search folded in" by itself.
   Beating HCE needs outcome signal (lam < 1) or later net-vs-net iteration.
 - `config smoke` runs (tiny data) are pipeline checks and are labelled as such.
+
+## Amendments (made after the SMOKE stage, before any evidence game)
+- Smoke run `42991827803` (150k positions, 60 games/candidate) only proved the pipeline: all jobs green, A/A 50.0%, nets junk as expected
+  (lam1.0 24%, lam0.6 2.5%). **Not evidence.** It measured `datagen-bin` at ~600 pos/s on a GHA runner (Z's local figure was higher),
+  so the full stage is 6 train shards x 2M = ~12M positions (not 20M) to keep the run to ~2 h.
+- Added a **dose-response arm** `lam0.6-1shard` (same recipe, 1 of the 6 shards, ~2M positions). If `lam0.6` (12M) beats it clearly the
+  net path is *starved*; if both sit at the same low score it is *not a volume problem*. This arm has no verdict of its own.
+- Full-stage gate: 5 replicates x 120 games = 600 games per candidate at 25k nodes. Verdict rules above are unchanged.
