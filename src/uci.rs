@@ -85,6 +85,7 @@ pub fn run() {
                 println!("option name MoveOverhead type spin default 20 min 0 max 5000");
                 println!("option name Clear Hash type button");
                 println!("option name UseNNUE type check default true");
+                println!("option name EndgameScale type spin default 3 min 0 max 3");
                 for line in crate::params::uci_options() {
                     println!("{}", line);
                 }
@@ -128,6 +129,12 @@ pub fn run() {
                         "UseNNUE" => {
                             if let Some(v) = value {
                                 crate::nnue::set_enabled(v.eq_ignore_ascii_case("true"));
+                            }
+                        }
+                        "EndgameScale" => {
+                            // EXP-EG1: 0 off, 1 fifty-move damping, 2 material draw scaling, 3 both.
+                            if let Some(v) = value.and_then(|s| s.trim().parse::<i32>().ok()) {
+                                crate::endgame::set_mask(v);
                             }
                         }
                         other => {
