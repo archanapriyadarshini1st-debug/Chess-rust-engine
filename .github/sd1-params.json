@@ -1,2 +1,2 @@
-{"datagen_sha": "ad45119aedc46c5ffba8161e13fd3cf89cdf0230", "shards": "1", "gen_minutes": "3", "depth": "7", "seed": "1",
- "max_records": "2000000", "lam": "0.75", "train_minutes": "3", "gate_games": "4", "gate_tc": "10+0.1"}
+{"datagen_sha": "ad45119aedc46c5ffba8161e13fd3cf89cdf0230", "shards": "5", "gen_minutes": "70", "depth": "7", "seed": "2",
+ "max_records": "20000000", "lam": "0.75", "train_minutes": "230", "gate_games": "100", "gate_tc": "10+0.1"}
