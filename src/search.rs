@@ -528,6 +528,10 @@ fn search(
             se_ext = 1;
         } else if !is_pv && s >= beta {
             return s;
+        } else if !is_pv && tt_score >= beta {
+            // Not singular and the TT already says fail-high: the TT move is
+            // one of several good moves, search it a ply shallower.
+            se_ext = -1;
         }
     }
 
