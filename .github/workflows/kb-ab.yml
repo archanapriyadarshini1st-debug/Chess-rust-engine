@@ -8,6 +8,10 @@ name: KB A/B (EXP-KB1)
 # Decision rule is pre-registered in experiments/EXP-KB1-king-buckets.md. Val loss is never the verdict.
 
 on:
+  # A workflow that exists only on a feature branch cannot be dispatched through the API, so a push to
+  # the run branch below starts the same pipeline with the input defaults (all inputs fall back).
+  push:
+    branches: ["agentKB/run-kb-ab"]
   workflow_dispatch:
     inputs:
       ref:
@@ -54,7 +58,7 @@ jobs:
           pattern: lichess-[0-9]*
           path: data
           merge-multiple: true
-          run-id: ${{ inputs.source_run }}
+          run-id: ${{ inputs.source_run || '43007306133' }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
       - run: |
           pip install numpy chess
@@ -70,7 +74,7 @@ jobs:
       - name: Train (${{ matrix.arm }})
         run: |
           python3 tools/nnue/train.py --data 'data/*.bin' --out net_${{ matrix.arm }}.bin --lam 1.0 \
-            --steps ${{ inputs.steps }} --minutes ${{ inputs.max_minutes }} \
+            --steps ${{ inputs.steps || '80000' }} --minutes ${{ inputs.max_minutes || '300' }} \
             ${{ matrix.arm == 'kb' && '--kb' || '' }} 2>&1 | tee train_${{ matrix.arm }}.log | grep -E "files|decoded|==|final|exported|!!" | tail -80
       - uses: actions/upload-artifact@v4
         with:
@@ -112,10 +116,10 @@ jobs:
       - name: "KB vs PLAIN (same binary, only the net differs), colours reversed"
         run: |
           FASTCHESS=/tmp/fastchess bash tools/gate_two_nets.sh ./engine nets/net_kb.bin nets/net_plain.bin \
-            ${{ inputs.gate_games }} "${{ inputs.gate_tc }}" 3 out/kb_vs_plain ${{ matrix.seed }}
+            ${{ inputs.gate_games || '200' }} "${{ inputs.gate_tc || '10+0.1' }}" 3 out/kb_vs_plain ${{ matrix.seed }}
       - name: "KB vs HCE (same binary)"
         run: |
-          FASTCHESS=/tmp/fastchess bash tools/gate_net.sh ./engine nets/net_kb.bin ${{ inputs.hce_games }} "${{ inputs.gate_tc }}" 3 out/kb_vs_hce
+          FASTCHESS=/tmp/fastchess bash tools/gate_net.sh ./engine nets/net_kb.bin ${{ inputs.hce_games || '100' }} "${{ inputs.gate_tc || '10+0.1' }}" 3 out/kb_vs_hce
       - uses: actions/upload-artifact@v4
         with:
           name: gate-${{ matrix.seed }}
