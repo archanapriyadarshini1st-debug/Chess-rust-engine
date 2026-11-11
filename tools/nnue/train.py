@@ -7,7 +7,21 @@ import argparse, glob, math, os, struct, sys, time
 import numpy as np
 import torch
 
-H, FEATS, BUCKETS = 128, 768, 8
+H, BASE_FEATS, BUCKETS = 128, 768, 8
+KB_BUCKETS = 8
+# Indexed by rank*4 + mirrored file of the perspective-relative king. Keep identical to
+# KB_TABLE in src/nnue.rs and tools/nnue/parity_check.py.
+KB_TABLE = np.array([0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 4, 4, 5, 5,
+                     6, 6, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 7, 7, 7], np.int64)
+KB = False  # set by --kb: CRN2 king-bucketed + mirrored inputs
+FEATS = BASE_FEATS
+
+
+def set_kb(on: bool):
+    """Switch the module between CRN1 (768 inputs) and CRN2 (768 * KB_BUCKETS, king-bucketed)."""
+    global KB, FEATS
+    KB = on
+    FEATS = BASE_FEATS * (KB_BUCKETS if on else 1)
 QA, QB, SCALE = 255, 64, 400
 REC = np.dtype([("occ", "<u8"), ("pcs", "u1", (16,)), ("stm", "u1"), ("score", "<i2"), ("wdl", "u1")])
 assert REC.itemsize == 28
@@ -32,7 +46,7 @@ def pos_hash(recs: np.ndarray) -> np.ndarray:
 def load_net(net, path: str):
     """Load a quantised CRN1 file back into float parameters (stage-2 fine-tune / rollback)."""
     raw = open(path, "rb").read()
-    assert raw[:4] == b"CRN1", "not a CRN1 net"
+    assert raw[:4] == (b"CRN2" if KB else b"CRN1"), f"not a {'CRN2' if KB else 'CRN1'} net (pass --kb for CRN2)"
     ver, h, b, f = struct.unpack("<IIII", raw[4:20])
     assert (h, b, f) == (H, BUCKETS, FEATS), f"net shape {f}x{h} b{b} does not match trainer {FEATS}x{H} b{BUCKETS}"
     o = 20
@@ -80,9 +94,23 @@ def decode(recs: np.ndarray):
     slot = np.arange(len(rows)) - off[rows]
     stm = recs["stm"].astype(np.int64)[rows]
     c, t = p // 6, p % 6
-    f_us = ((c != stm) * 6 + t) * 64 + (cols ^ (56 * stm))
     them = 1 - stm
-    f_th = ((c != them) * 6 + t) * 64 + (cols ^ (56 * them))
+    if KB:
+        # king square (a1=0) of each colour per position; every position has exactly one of each
+        ksq = np.zeros((n, 2), np.int64)
+        isk = t == 5
+        ksq[rows[isk], c[isk]] = cols[isk]
+        def ctx(persp):  # persp: (len(rows),) perspective colour per piece entry
+            k = ksq[rows, persp] ^ (56 * persp)
+            mask = np.where((k & 7) >= 4, 7, 0)
+            f = (k & 7) ^ mask
+            return KB_TABLE[(k >> 3) * 4 + f] * BASE_FEATS, mask
+        off_u, m_u = ctx(stm)
+        off_t, m_t = ctx(them)
+    else:
+        off_u = off_t = m_u = m_t = 0
+    f_us = off_u + ((c != stm) * 6 + t) * 64 + ((cols ^ (56 * stm)) ^ m_u)
+    f_th = off_t + ((c != them) * 6 + t) * 64 + ((cols ^ (56 * them)) ^ m_t)
     A = np.full((n, 32), FEATS, np.int16)
     B = np.full((n, 32), FEATS, np.int16)
     A[rows, slot] = f_us
@@ -123,7 +151,7 @@ def export(net: Net, path: str):
     out_w = q(net.out_w, QB, 32767)
     out_b = np.round(net.out_b.detach().numpy() * QA * QB).astype("<i4")
     with open(path, "wb") as f:
-        f.write(b"CRN1" + struct.pack("<IIII", 1, H, BUCKETS, FEATS))
+        f.write((b"CRN2" if KB else b"CRN1") + struct.pack("<IIII", 1, H, BUCKETS, FEATS))
         f.write(ft_w.tobytes() + ft_b.tobytes() + out_w.tobytes() + out_b.tobytes())
     print(f"exported {path} ({os.path.getsize(path)} bytes)")
 
@@ -141,7 +169,12 @@ def main():
     ap.add_argument("--min-lr-frac", type=float, default=0.02)
     ap.add_argument("--threads", type=int, default=os.cpu_count() or 2)
     ap.add_argument("--resume", default=None)
+    ap.add_argument("--steps", type=int, default=0,
+                    help="optimiser steps; >0 makes the LR schedule step-based (equal-sample A/B). "
+                         "--minutes then acts only as a safety cap. 0 = legacy time-based schedule")
+    ap.add_argument("--kb", action="store_true", help="CRN2: king-bucketed + file-mirrored inputs (EXP-KB1)")
     a = ap.parse_args()
+    set_kb(a.kb)
     torch.set_num_threads(a.threads)
     torch.manual_seed(1)
     files, recs = load_records(a.data)
@@ -213,7 +246,11 @@ def main():
         run = 0.0
         for bi in range(steps_per_epoch):
             frac = (time.time() - t_start) / budget
+            if a.steps > 0:
+                frac = max(frac, step / a.steps)
             if frac >= 1.0:
+                if a.steps > 0 and step < a.steps:
+                    print(f"!! time cap hit at step {step} < --steps {a.steps}: arms are NOT sample-equal", flush=True)
                 done = True
                 break
             lr = a.lr * (0.5 * (1 + math.cos(math.pi * frac)) * (1 - a.min_lr_frac) + a.min_lr_frac)

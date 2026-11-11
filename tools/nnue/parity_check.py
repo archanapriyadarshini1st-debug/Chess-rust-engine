@@ -25,16 +25,22 @@ import chess
 
 H, FEATS, BUCKETS = 128, 768, 8
 QA, QB, SCALE = 255, 64, 400
+KB_BUCKETS = 8
+# Independent restatement of KB_TABLE (src/nnue.rs, tools/nnue/train.py): rank*4 + mirrored file.
+KB_TABLE = [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 4, 4, 5, 5,
+            6, 6, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 7, 7, 7]
+KB = False  # --kb: CRN2 (king-bucketed + file-mirrored inputs)
 
 
 def write_random_net(path, seed):
     rng = np.random.default_rng(seed)
-    ft_w = np.clip(np.round(rng.normal(0, 0.10, (FEATS, H)) * QA), -505, 505).astype("<i2")
+    rows = FEATS * (KB_BUCKETS if KB else 1)
+    ft_w = np.clip(np.round(rng.normal(0, 0.10, (rows, H)) * QA), -505, 505).astype("<i2")
     ft_b = np.clip(np.round(rng.normal(0.1, 0.30, H) * QA), -505, 505).astype("<i2")
     out_w = np.clip(np.round(rng.normal(0, 0.12, (BUCKETS, 2 * H)) * QB), -127, 127).astype("<i2")
     out_b = np.round(rng.normal(0, 0.05, BUCKETS) * QA * QB).astype("<i4")
     with open(path, "wb") as f:
-        f.write(b"CRN1" + struct.pack("<IIII", 1, H, BUCKETS, FEATS))
+        f.write((b"CRN2" if KB else b"CRN1") + struct.pack("<IIII", 1, H, BUCKETS, rows))
         f.write(ft_w.tobytes() + ft_b.tobytes() + out_w.tobytes() + out_b.tobytes())
     return ft_w, ft_b, out_w, out_b
 
@@ -42,10 +48,15 @@ def write_random_net(path, seed):
 def features(board, persp):
     """Documented convention (src/nnue.rs header): ((piece_color != persp)*6 + type)*64 + (sq ^ 56*persp);
     white = 0, black = 1; P,N,B,R,Q,K = 0..5; a1 = 0."""
+    off, mask = 0, 0
+    if KB:
+        k = board.king(persp == 0) ^ (56 * persp)  # python-chess: True = white
+        mask = 7 if (k & 7) >= 4 else 0
+        off = KB_TABLE[(k >> 3) * 4 + ((k & 7) ^ mask)] * FEATS
     idx = []
     for sq, p in board.piece_map().items():
         c = 0 if p.color else 1
-        idx.append(((c != persp) * 6 + (p.piece_type - 1)) * 64 + (sq ^ (56 * persp)))
+        idx.append(off + ((c != persp) * 6 + (p.piece_type - 1)) * 64 + ((sq ^ (56 * persp)) ^ mask))
     return idx
 
 
@@ -111,6 +122,7 @@ def engine_cps(engine, net_path, boards):
 def trainer_cps(net_path, boards):
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     import torch, train  # noqa: E402
+    train.set_kb(KB)
 
     recs = np.zeros(len(boards), train.REC)
     for i, b in enumerate(boards):
@@ -143,14 +155,13 @@ def trainer_decode_cps(net, boards):
     tree = ast.parse(src)
     keep = []
     for node in tree.body:
-        if isinstance(node, ast.FunctionDef) and node.name == "decode":
+        if isinstance(node, ast.FunctionDef) and node.name in ("decode", "set_kb"):
             keep.append(node)
-        elif isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id in ("REC",) for t in node.targets):
-            keep.append(node)
-        elif isinstance(node, ast.Assign) and any(isinstance(t, ast.Tuple) for t in node.targets):
-            keep.append(node)  # H, FEATS, BUCKETS = ... / QA, QB, SCALE = ...
+        elif isinstance(node, ast.Assign):
+            keep.append(node)  # constants only: H.., KB_TABLE, KB, FEATS, QA.., REC
     ns = {"np": np}
     exec(compile(ast.Module(body=keep, type_ignores=[]), "train.py", "exec"), ns)
+    ns["set_kb"](KB)
     REC = ns["REC"]
     recs = np.zeros(len(boards), REC)
     for i, b in enumerate(boards):
@@ -166,7 +177,7 @@ def trainer_decode_cps(net, boards):
         recs[i]["stm"] = 0 if b.turn else 1
     A, B, K, _, _ = ns["decode"](recs)
     ft_w, ft_b, out_w, out_b = net
-    ft = np.vstack([ft_w.astype(np.float64) / QA, np.zeros((1, H))])  # row FEATS = padding
+    ft = np.vstack([ft_w.astype(np.float64) / QA, np.zeros((1, H))])  # last row = padding
     fb, ow, ob = ft_b / QA, out_w / QB, out_b / (QA * QB)
     res = []
     for i in range(len(boards)):
@@ -184,7 +195,10 @@ def main():
     ap.add_argument("--seed", type=int, default=7)
     ap.add_argument("--tol", type=float, default=3.0, help="max |engine - reference| in cp (integer rounding only)")
     ap.add_argument("--trainer", action="store_true", help="also compare tools/nnue/train.py forward (needs torch)")
+    ap.add_argument("--kb", action="store_true", help="test CRN2 (king-bucketed + mirrored inputs)")
     a = ap.parse_args()
+    global KB
+    KB = a.kb
 
     with tempfile.TemporaryDirectory() as d:
         path = os.path.join(d, "random.nnue")

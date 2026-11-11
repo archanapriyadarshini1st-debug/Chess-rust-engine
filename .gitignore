@@ -12,3 +12,4 @@ datasets/*.jsonl
 nets/*.bin
 !nets/.gitkeep
 !nets/default.nnue
+__pycache__/

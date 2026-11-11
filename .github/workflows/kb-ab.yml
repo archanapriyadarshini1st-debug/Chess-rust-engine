@@ -1,0 +1,149 @@
+name: KB A/B (EXP-KB1)
+
+# Agent KB. One variable: NNUE input feature set.
+#   plain = CRN1 (768 inputs)            kb = CRN2 (king-bucketed + file-mirrored, 8 x 768)
+# Same trainer, same Lichess shards (re-used byte-for-byte from Agent R's run), same --steps (equal
+# samples, not equal minutes), same seed, same H=128 / 8 output buckets. Then 5 independent gate
+# replicates (different -srand) of KB-vs-PLAIN and KB-vs-HCE, pooled with a heterogeneity test.
+# Decision rule is pre-registered in experiments/EXP-KB1-king-buckets.md. Val loss is never the verdict.
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branch/SHA to build (engine + tools)"
+        default: ""
+      source_run:
+        description: "Run id whose lichess-0 / lichess-1 artifacts hold the converted shards (R: 43007306133)"
+        default: "43007306133"
+      steps:
+        description: "Optimiser steps per arm (R's run was ~90k at batch 16384)"
+        default: "80000"
+      max_minutes:
+        description: "Safety cap per arm (arms are only sample-equal if neither hits it)"
+        default: "300"
+      gate_games:
+        description: "Games per replicate for KB-vs-PLAIN (5 replicates)"
+        default: "200"
+      hce_games:
+        description: "Games per replicate for KB-vs-HCE (5 replicates)"
+        default: "100"
+      gate_tc:
+        default: "10+0.1"
+
+env:
+  FASTCHESS_URL: https://github.com/Disservin/fastchess/releases/download/v1.8.3-alpha/fastchess-linux-x86-64.tar
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    strategy:
+      fail-fast: false
+      matrix:
+        arm: [plain, kb]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: lichess-[0-9]*
+          path: data
+          merge-multiple: true
+          run-id: ${{ inputs.source_run }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - run: |
+          pip install numpy chess
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+      - name: Trainer/engine parity for this arm (random net, 400 positions) - must pass before training
+        run: |
+          cargo build --release
+          python3 tools/nnue/parity_check.py --engine target/release/chess-rust-engine --n 400 ${{ matrix.arm == 'kb' && '--kb' || '' }} --trainer
+      - name: Data fingerprint (both arms must print the same line)
+        run: |
+          ls -la data
+          sha256sum data/*.bin | tee data_sha.txt
+      - name: Train (${{ matrix.arm }})
+        run: |
+          python3 tools/nnue/train.py --data 'data/*.bin' --out net_${{ matrix.arm }}.bin --lam 1.0 \
+            --steps ${{ inputs.steps }} --minutes ${{ inputs.max_minutes }} \
+            ${{ matrix.arm == 'kb' && '--kb' || '' }} 2>&1 | tee train_${{ matrix.arm }}.log | grep -E "files|decoded|==|final|exported|!!" | tail -80
+      - uses: actions/upload-artifact@v4
+        with:
+          name: net-${{ matrix.arm }}
+          path: |
+            net_${{ matrix.arm }}.bin
+            net_${{ matrix.arm }}.bin.parity.txt
+            train_${{ matrix.arm }}.log
+            data_sha.txt
+          retention-days: 30
+
+  gate:
+    needs: train
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      matrix:
+        seed: [101, 202, 303, 404, 505]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: net-*
+          path: nets
+          merge-multiple: true
+      - name: Build engine + fastchess
+        run: |
+          cargo build --release
+          cp target/release/chess-rust-engine ./engine
+          echo "bench: $(timeout 180 ./engine bench 8 | tail -1)"
+          mkdir -p /tmp/fc
+          curl -fsSL --retry 3 "$FASTCHESS_URL" -o /tmp/fc.tar && tar xf /tmp/fc.tar -C /tmp/fc
+          FC=$(find /tmp/fc -type f -name fastchess | head -1); chmod +x "$FC"; ln -sf "$FC" /tmp/fastchess
+          ls -la nets
+      - name: "KB vs PLAIN (same binary, only the net differs), colours reversed"
+        run: |
+          FASTCHESS=/tmp/fastchess bash tools/gate_two_nets.sh ./engine nets/net_kb.bin nets/net_plain.bin \
+            ${{ inputs.gate_games }} "${{ inputs.gate_tc }}" 3 out/kb_vs_plain ${{ matrix.seed }}
+      - name: "KB vs HCE (same binary)"
+        run: |
+          FASTCHESS=/tmp/fastchess bash tools/gate_net.sh ./engine nets/net_kb.bin ${{ inputs.hce_games }} "${{ inputs.gate_tc }}" 3 out/kb_vs_hce
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gate-${{ matrix.seed }}
+          path: out/
+          retention-days: 30
+
+  pool:
+    needs: gate
+    if: ${{ always() && needs.gate.result != 'skipped' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: gate-*
+          path: g
+      - name: Pool replicates
+        run: |
+          {
+            echo "## EXP-KB1 pooled results (run ${{ github.run_id }})"
+            echo '```'
+            echo "--- KB (A) vs PLAIN (B), 5 replicates"
+            python3 tools/pool_gates.py g/*/kb_vs_plain/gate.log
+            echo
+            echo "--- KB (NET) vs HCE, 5 replicates"
+            python3 tools/pool_gates.py g/*/kb_vs_hce/gate.log
+            echo '```'
+            echo "Verdict rule: experiments/EXP-KB1-king-buckets.md. Preliminary until it is applied."
+          } | tee -a "$GITHUB_STEP_SUMMARY"

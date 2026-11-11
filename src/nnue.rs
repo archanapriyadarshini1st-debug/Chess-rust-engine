@@ -11,6 +11,16 @@
 //! Net file (little endian): `"CRN1" | version u32 | hidden u32 | buckets u32 | features u32`
 //! then `ft_w i16[768*H] | ft_b i16[H] | out_w i16[B*2H] | out_b i32[B]`.
 //! An empty / invalid net => HCE fallback. `CRE_NNUE_FILE` overrides the embedded net.
+//!
+//! ## CRN2: king-bucketed, file-mirrored inputs (EXP-KB1)
+//! Magic `CRN2`, same header, `features = 768 * KB_BUCKETS`. Per perspective the feature row is
+//! `bucket * 768 + <CRN1 index with the square xor-ed by the mirror mask>`, where the bucket and mask
+//! come from that perspective's own king: `ksq = king_sq ^ (56 * persp)`; if `file(ksq) >= 4` every
+//! square of that perspective is mirrored (`^ 7`) and so is the king; `bucket = KB_TABLE[rank*4 + file]`
+//! on the mirrored king. CRN1 nets keep bucket 0 / mask 0, i.e. bit-identical legacy indexing.
+//! Left-right mirrored positions therefore evaluate identically (tested). Reference material: the
+//! public descriptions of king-bucketed NNUE inputs in Stockfish / Viridithas / Reckless docs; no
+//! third-party code is used.
 
 use crate::board::Position;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -19,6 +29,20 @@ use std::sync::OnceLock;
 pub const HIDDEN: usize = 128;
 pub const FEATURES: usize = 768;
 pub const BUCKETS: usize = 8;
+/// Number of king buckets in a CRN2 net (rows of the feature table = `FEATURES * KB_BUCKETS`).
+pub const KB_BUCKETS: usize = 8;
+/// Indexed by `rank * 4 + mirrored_file` of the perspective-relative king (a1 = rank 0, file 0..3).
+/// Must stay identical to `KB_TABLE` in `tools/nnue/train.py` and `tools/nnue/parity_check.py`.
+pub const KB_TABLE: [u8; 32] = [
+    0, 0, 1, 1, // rank 1
+    2, 2, 3, 3, // rank 2
+    4, 4, 5, 5, // rank 3
+    4, 4, 5, 5, // rank 4
+    6, 6, 6, 6, // rank 5
+    6, 6, 6, 6, // rank 6
+    7, 7, 7, 7, // rank 7
+    7, 7, 7, 7, // rank 8
+];
 pub const QA: i32 = 255;
 pub const QB: i32 = 64;
 pub const SCALE: i32 = 400;
@@ -35,6 +59,8 @@ pub struct Network {
     out_w: Vec<i16>,
     out_b: Vec<i32>,
     avx2: bool,
+    /// true for CRN2 (king-bucketed + mirrored inputs).
+    kb: bool,
 }
 
 fn rd_u32(b: &[u8], at: usize) -> u32 {
@@ -43,18 +69,20 @@ fn rd_u32(b: &[u8], at: usize) -> u32 {
 
 impl Network {
     pub fn parse(bytes: &[u8]) -> Result<Network, String> {
-        if bytes.len() < HEADER || &bytes[0..4] != b"CRN1" {
+        if bytes.len() < HEADER || (&bytes[0..4] != b"CRN1" && &bytes[0..4] != b"CRN2") {
             return Err("no net (bad magic / empty)".into());
         }
+        let kb = &bytes[0..4] == b"CRN2";
         let (h, b, f) = (
             rd_u32(bytes, 8) as usize,
             rd_u32(bytes, 12) as usize,
             rd_u32(bytes, 16) as usize,
         );
-        if h != HIDDEN || b != BUCKETS || f != FEATURES {
-            return Err(format!("net shape {f}x{h} b{b} != built-in {FEATURES}x{HIDDEN} b{BUCKETS}"));
+        let want_f = if kb { FEATURES * KB_BUCKETS } else { FEATURES };
+        if h != HIDDEN || b != BUCKETS || f != want_f {
+            return Err(format!("net shape {f}x{h} b{b} != built-in {want_f}x{HIDDEN} b{BUCKETS}"));
         }
-        let n_ft = FEATURES * HIDDEN;
+        let n_ft = want_f * HIDDEN;
         let n_ow = BUCKETS * 2 * HIDDEN;
         let want = HEADER + 2 * (n_ft + HIDDEN + n_ow) + 4 * BUCKETS;
         if bytes.len() != want {
@@ -76,7 +104,20 @@ impl Network {
         let avx2 = is_x86_feature_detected!("avx2");
         #[cfg(not(target_arch = "x86_64"))]
         let avx2 = false;
-        Ok(Network { ft_w, ft_b, out_w, out_b, avx2 })
+        Ok(Network { ft_w, ft_b, out_w, out_b, avx2, kb })
+    }
+
+    /// (feature-row offset, square xor mask) of one perspective. `(0, 0)` for CRN1 nets.
+    #[inline(always)]
+    fn king_ctx(&self, pos: &Position, persp: usize) -> (usize, usize) {
+        if !self.kb {
+            return (0, 0);
+        }
+        let kbb = pos.pieces[5] & pos.colors[persp];
+        let ksq = (if kbb == 0 { 0 } else { kbb.trailing_zeros() as usize }) ^ (56 * persp);
+        let mask = if ksq & 7 >= 4 { 7 } else { 0 };
+        let f = (ksq & 7) ^ mask;
+        (KB_TABLE[(ksq >> 3) * 4 + f] as usize * FEATURES, mask)
     }
 
     #[inline(always)]
@@ -89,14 +130,16 @@ impl Network {
             acc_us[i] = self.ft_b[i] as i32;
             acc_th[i] = self.ft_b[i] as i32;
         }
+        let (off_us, mask_us) = self.king_ctx(pos, us);
+        let (off_th, mask_th) = self.king_ctx(pos, them);
         for color in 0..2usize {
             for ty in 0..6usize {
                 let mut bb = pos.pieces[ty] & pos.colors[color];
                 while bb != 0 {
                     let s = bb.trailing_zeros() as usize;
                     bb &= bb - 1;
-                    let f_us = ((((color != us) as usize) * 6 + ty) * 64 + (s ^ (56 * us))) * HIDDEN;
-                    let f_th = ((((color != them) as usize) * 6 + ty) * 64 + (s ^ (56 * them))) * HIDDEN;
+                    let f_us = (off_us + ((color != us) as usize * 6 + ty) * 64 + ((s ^ (56 * us)) ^ mask_us)) * HIDDEN;
+                    let f_th = (off_th + ((color != them) as usize * 6 + ty) * 64 + ((s ^ (56 * them)) ^ mask_th)) * HIDDEN;
                     let ru = &self.ft_w[f_us..f_us + HIDDEN];
                     let rt = &self.ft_w[f_th..f_th + HIDDEN];
                     for i in 0..HIDDEN {
@@ -196,6 +239,107 @@ mod tests {
             v.extend_from_slice(&out_b.to_le_bytes());
         }
         v
+    }
+
+    /// Deterministic pseudo-random CRN1/CRN2 net (LCG), moderate weights so SCReLU is not saturated.
+    fn random_net(magic: &[u8; 4], seed: u64) -> Vec<u8> {
+        let rows = if magic == b"CRN2" { FEATURES * KB_BUCKETS } else { FEATURES };
+        let mut st = seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        let mut next = move |range: i64| -> i64 {
+            st = st.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            ((st >> 33) as i64 % (2 * range + 1)) - range
+        };
+        let mut v = magic.to_vec();
+        for x in [1u32, HIDDEN as u32, BUCKETS as u32, rows as u32] {
+            v.extend_from_slice(&x.to_le_bytes());
+        }
+        for _ in 0..rows * HIDDEN {
+            v.extend_from_slice(&(next(40) as i16).to_le_bytes());
+        }
+        for _ in 0..HIDDEN {
+            v.extend_from_slice(&(next(60) as i16).to_le_bytes());
+        }
+        for _ in 0..BUCKETS * 2 * HIDDEN {
+            v.extend_from_slice(&(next(30) as i16).to_le_bytes());
+        }
+        for _ in 0..BUCKETS {
+            v.extend_from_slice(&(next(2000) as i32).to_le_bytes());
+        }
+        v
+    }
+
+    fn mirror_fen(fen: &str) -> String {
+        let mut it = fen.split(' ');
+        let board: Vec<String> = it.next().unwrap().split('/').map(|r| r.chars().rev().collect()).collect();
+        let rest: Vec<&str> = it.collect();
+        // castling / ep fields do not enter the net; keep them unchanged (the eval ignores them).
+        format!("{} {}", board.join("/"), rest.join(" "))
+    }
+
+    const FENS: &[&str] = &[
+        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        "r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 2 2",
+        "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w - - 0 1",
+        "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1",
+        "4k3/8/8/8/8/8/4P3/4K3 w - - 0 1",
+        "6k1/5ppp/8/8/8/8/5PPP/3R2K1 b - - 0 1",
+        "2r3k1/1b3pp1/p3p2p/1p2P3/3P4/1B3N2/P4PPP/4R1K1 w - - 0 1",
+    ];
+
+    #[test]
+    fn crn2_constant_net_equals_crn1_constant_net() {
+        // With identical rows everywhere the king bucket cannot matter.
+        let a = Network::parse(&blank(7, 3, 11)).unwrap();
+        let mut b2 = blank(7, 3, 11);
+        b2[0..4].copy_from_slice(b"CRN2");
+        // widen the feature table to KB_BUCKETS copies of the same constant rows
+        let head = 20;
+        let ft_bytes = FEATURES * HIDDEN * 2;
+        let rest = b2[head + ft_bytes..].to_vec();
+        let mut wide = b2[..head].to_vec();
+        wide[16..20].copy_from_slice(&((FEATURES * KB_BUCKETS) as u32).to_le_bytes());
+        for _ in 0..KB_BUCKETS {
+            wide.extend_from_slice(&b2[head..head + ft_bytes]);
+        }
+        wide.extend_from_slice(&rest);
+        let b = Network::parse(&wide).unwrap();
+        for f in FENS {
+            let pos = Position::from_fen(f).unwrap();
+            assert_eq!(a.eval(&pos), b.eval(&pos), "{f}");
+        }
+    }
+
+    #[test]
+    fn crn2_is_left_right_mirror_invariant() {
+        let net = Network::parse(&random_net(b"CRN2", 7)).unwrap();
+        for f in FENS {
+            let a = Position::from_fen(f).unwrap();
+            let m = Position::from_fen(&mirror_fen(f)).unwrap();
+            assert_eq!(net.eval(&a), net.eval(&m), "mirror changed eval: {f}");
+        }
+    }
+
+    #[test]
+    fn crn2_actually_uses_king_buckets() {
+        // Table sanity (every entry is a valid bucket) plus: moving the white king into another
+        // bucket changes a random CRN2 net's output.
+        let net = Network::parse(&random_net(b"CRN2", 3)).unwrap();
+        let a = Position::from_fen("4k3/8/8/8/8/8/4P3/4K3 w - - 0 1").unwrap();
+        let c = Position::from_fen("4k3/8/8/8/8/8/4P3/K7 w - - 0 1").unwrap();
+        assert_ne!(net.eval(&a), net.eval(&c));
+        for f in 0..32 {
+            assert!((KB_TABLE[f] as usize) < KB_BUCKETS);
+        }
+    }
+
+    #[test]
+    fn crn1_indexing_unchanged() {
+        // CRN1 must keep (offset 0, mask 0): a CRN1 net is NOT mirror invariant in general.
+        let net = Network::parse(&random_net(b"CRN1", 5)).unwrap();
+        assert!(!net.kb);
+        let a = Position::from_fen("r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 2 2").unwrap();
+        let m = Position::from_fen(&mirror_fen("r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 2 2")).unwrap();
+        assert_ne!(net.eval(&a), net.eval(&m));
     }
 
     #[test]
