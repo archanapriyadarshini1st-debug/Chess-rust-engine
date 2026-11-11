@@ -13,6 +13,10 @@ on:
       - "experiments/nv1.config"
   workflow_dispatch: {}
 
+concurrency:
+  group: nv1-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   FASTCHESS_URL: https://github.com/Disservin/fastchess/releases/download/v1.8.3-alpha/fastchess-linux-x86-64.tar
   RUSTFLAGS: "-C target-cpu=native"
@@ -81,7 +85,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        lam: ["1.0", "0.6"]
+        include:
+          - name: lam1.0
+            lam: "1.0"
+            glob: "data/train/*.bin"
+          - name: lam0.6
+            lam: "0.6"
+            glob: "data/train/*.bin"
+          - name: lam0.6-1shard
+            lam: "0.6"
+            glob: "data/train/shard-1.bin"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -106,15 +119,15 @@ jobs:
       - run: |
           pip install numpy chess
           pip install torch --index-url https://download.pytorch.org/whl/cpu
-      - name: Train (lam=${{ matrix.lam }}), validate on held-out shard
+      - name: Train ${{ matrix.name }} (lam=${{ matrix.lam }}), validate on held-out shard
         run: |
           source experiments/nv1.config
-          python3 tools/nnue/train.py --data 'data/train/*.bin' --val-data 'data/val/*.bin' --lam ${{ matrix.lam }} \
+          python3 tools/nnue/train.py --data '${{ matrix.glob }}' --val-data 'data/val/*.bin' --lam ${{ matrix.lam }} \
             --minutes $TRAIN_MINUTES --out net.bin 2>&1 | tee train.log | grep -E "files|val-data|decoded|==|final|exported" | tail -40
           sha256sum net.bin | tee net.sha256
       - uses: actions/upload-artifact@v4
         with:
-          name: net-lam${{ matrix.lam }}
+          name: net-${{ matrix.name }}
           path: |
             net.bin
             net.sha256
@@ -129,7 +142,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        cand: [aa, stage0, lam1.0, lam0.6]
+        cand: [aa, stage0, lam1.0, lam0.6, lam0.6-1shard]
     steps:
       - uses: actions/checkout@v4
       - name: Build engine (this branch's src == main, HCE + NNUE inference)
