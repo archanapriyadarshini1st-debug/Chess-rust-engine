@@ -538,6 +538,10 @@ fn search(
     }
     sort_moves(td, pos, &mut moves, n, tt_move, ply as usize);
 
+    // Depth that the TT entry is stored with. `depth` may be lowered inside the
+    // loop by XFailHighRed; the entry must still describe the full-depth search
+    // of the first (best-ordered) moves, so it keeps the depth at loop entry.
+    let store_depth = depth;
     let mut best = -INF;
     let mut best_move = Move::NONE;
     let mut legal = 0;
@@ -580,14 +584,20 @@ fn search(
         }
 
         // Futility pruning
-        if !is_pv
-            && !in_check
-            && is_quiet
-            && depth <= params::futility_depth()
-            && static_eval + params::futility_margin() * depth < alpha
-            && legal > 0
-        {
-            continue;
+        if !is_pv && !in_check && is_quiet && legal > 0 {
+            let pruned = if params::x_lmr_fut() != 0 {
+                // XLmrFut: judge the move at the depth it would actually be
+                // searched at (after its expected LMR), plus a half margin.
+                let fd = (depth - lmr_reduction(depth, legal + 1)).max(0);
+                fd <= params::futility_depth()
+                    && static_eval + params::futility_margin() / 2 + params::futility_margin() * fd < alpha
+            } else {
+                depth <= params::futility_depth()
+                    && static_eval + params::futility_margin() * depth < alpha
+            };
+            if pruned {
+                continue;
+            }
         }
 
         let mut np = *pos;
@@ -616,6 +626,19 @@ fn search(
         } else {
             // LMR
             let mut r = 0;
+            if params::x_cap_lmr() != 0
+                && !is_quiet
+                && mv.is_capture()
+                && !mv.is_promo()
+                && !in_check
+                && !gives_check
+                && depth >= 3
+                && legal >= 4
+            {
+                // XCapLmr: half of the quiet reduction, one more off the PV.
+                r = lmr_reduction(depth, legal) / 2 + if is_pv { 0 } else { 1 };
+                r = r.clamp(0, new_depth - 1);
+            }
             if is_quiet && depth >= 3 && legal >= 4 {
                 r = lmr_reduction(depth, legal);
                 if !is_pv {
@@ -645,7 +668,17 @@ fn search(
                 Move::NONE,
             );
             if r > 0 && score > alpha {
-                score = -search(&np, td, -alpha - 1, -alpha, new_depth, ply + 1, false, !cut_node, Move::NONE);
+                let mut rd = new_depth;
+                if params::x_deeper() != 0 {
+                    // XDeeper: trust a clearly-better reduced result with one
+                    // more ply, doubt a marginal one.
+                    if score > best + 50 + 2 * new_depth {
+                        rd += 1;
+                    } else if score < best + new_depth {
+                        rd = (rd - 1).max(1);
+                    }
+                }
+                score = -search(&np, td, -alpha - 1, -alpha, rd, ply + 1, false, !cut_node, Move::NONE);
             }
             if is_pv && score > alpha && score < beta {
                 score = -search(&np, td, -beta, -alpha, new_depth, ply + 1, true, false, Move::NONE);
@@ -663,6 +696,16 @@ fn search(
             if score > alpha {
                 alpha = score;
                 bound = BOUND_EXACT;
+                if params::x_fail_high_red() != 0
+                    && score < beta
+                    && depth > 2
+                    && depth < 12
+                    && !is_mate_score(score)
+                {
+                    // XFailHighRed: a move already raised alpha, so the rest
+                    // only need to prove they are not better, cheaper.
+                    depth -= 1;
+                }
                 td.pv[ply as usize][0] = mv;
                 let child = (ply as usize) + 1;
                 let len = td.pv_len[child];
@@ -709,7 +752,7 @@ fn search(
     }
 
     if excluded.is_none() {
-        td.tt.store(pos.hash, best_move, to_tt(best, ply), depth, bound);
+        td.tt.store(pos.hash, best_move, to_tt(best, ply), store_depth, bound);
     }
     best
 }
