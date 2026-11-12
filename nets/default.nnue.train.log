@@ -1,0 +1,2029 @@
+files=2 raw=698566 unique=687601 (dedupe removed 10965) train=673807 val=13794 loss/draw/win=90778/507900/88923
+decoded in 1s
+== start val_loss 0.02993 (a resumed net that cannot improve on this is rolled back)
+== epoch 1 val_loss 0.01977 best 0.02993 elapsed 0.1m
+exported net.bin (201012 bytes)
+== epoch 2 val_loss 0.01291 best 0.01977 elapsed 0.1m
+exported net.bin (201012 bytes)
+ep 2 step 100 loss 0.01130 lr 2.00e-03 163,692 pos/s elapsed 0.2m
+== epoch 3 val_loss 0.00923 best 0.01291 elapsed 0.2m
+exported net.bin (201012 bytes)
+== epoch 4 val_loss 0.00780 best 0.00923 elapsed 0.3m
+exported net.bin (201012 bytes)
+ep 4 step 200 loss 0.00688 lr 2.00e-03 165,305 pos/s elapsed 0.3m
+== epoch 5 val_loss 0.00699 best 0.00780 elapsed 0.3m
+exported net.bin (201012 bytes)
+== epoch 6 val_loss 0.00645 best 0.00699 elapsed 0.4m
+exported net.bin (201012 bytes)
+== epoch 7 val_loss 0.00607 best 0.00645 elapsed 0.5m
+exported net.bin (201012 bytes)
+ep 7 step 300 loss 0.00520 lr 2.00e-03 166,093 pos/s elapsed 0.5m
+== epoch 8 val_loss 0.00578 best 0.00607 elapsed 0.5m
+exported net.bin (201012 bytes)
+== epoch 9 val_loss 0.00554 best 0.00578 elapsed 0.6m
+exported net.bin (201012 bytes)
+ep 9 step 400 loss 0.00461 lr 2.00e-03 167,906 pos/s elapsed 0.7m
+== epoch 10 val_loss 0.00532 best 0.00554 elapsed 0.7m
+exported net.bin (201012 bytes)
+== epoch 11 val_loss 0.00518 best 0.00532 elapsed 0.7m
+exported net.bin (201012 bytes)
+== epoch 12 val_loss 0.00505 best 0.00518 elapsed 0.8m
+exported net.bin (201012 bytes)
+ep 12 step 500 loss 0.00401 lr 2.00e-03 166,992 pos/s elapsed 0.8m
+== epoch 13 val_loss 0.00491 best 0.00505 elapsed 0.9m
+exported net.bin (201012 bytes)
+== epoch 14 val_loss 0.00483 best 0.00491 elapsed 0.9m
+exported net.bin (201012 bytes)
+ep 14 step 600 loss 0.00376 lr 2.00e-03 167,958 pos/s elapsed 1.0m
+== epoch 15 val_loss 0.00472 best 0.00483 elapsed 1.0m
+exported net.bin (201012 bytes)
+== epoch 16 val_loss 0.00466 best 0.00472 elapsed 1.1m
+exported net.bin (201012 bytes)
+== epoch 17 val_loss 0.00458 best 0.00466 elapsed 1.1m
+exported net.bin (201012 bytes)
+ep 17 step 700 loss 0.00349 lr 2.00e-03 168,383 pos/s elapsed 1.1m
+== epoch 18 val_loss 0.00452 best 0.00458 elapsed 1.2m
+exported net.bin (201012 bytes)
+== epoch 19 val_loss 0.00447 best 0.00452 elapsed 1.3m
+exported net.bin (201012 bytes)
+ep 19 step 800 loss 0.00335 lr 2.00e-03 169,031 pos/s elapsed 1.3m
+== epoch 20 val_loss 0.00444 best 0.00447 elapsed 1.3m
+exported net.bin (201012 bytes)
+== epoch 21 val_loss 0.00437 best 0.00444 elapsed 1.4m
+exported net.bin (201012 bytes)
+ep 21 step 900 loss 0.00326 lr 2.00e-03 169,644 pos/s elapsed 1.4m
+== epoch 22 val_loss 0.00437 best 0.00437 elapsed 1.5m
+exported net.bin (201012 bytes)
+== epoch 23 val_loss 0.00432 best 0.00437 elapsed 1.5m
+exported net.bin (201012 bytes)
+== epoch 24 val_loss 0.00427 best 0.00432 elapsed 1.6m
+exported net.bin (201012 bytes)
+ep 24 step 1000 loss 0.00307 lr 2.00e-03 170,000 pos/s elapsed 1.6m
+== epoch 25 val_loss 0.00424 best 0.00427 elapsed 1.6m
+exported net.bin (201012 bytes)
+== epoch 26 val_loss 0.00421 best 0.00424 elapsed 1.7m
+exported net.bin (201012 bytes)
+ep 26 step 1100 loss 0.00303 lr 2.00e-03 170,334 pos/s elapsed 1.8m
+== epoch 27 val_loss 0.00422 best 0.00421 elapsed 1.8m
+== epoch 28 val_loss 0.00418 best 0.00421 elapsed 1.8m
+exported net.bin (201012 bytes)
+== epoch 29 val_loss 0.00412 best 0.00418 elapsed 1.9m
+exported net.bin (201012 bytes)
+ep 29 step 1200 loss 0.00289 lr 2.00e-03 170,325 pos/s elapsed 1.9m
+== epoch 30 val_loss 0.00414 best 0.00412 elapsed 2.0m
+== epoch 31 val_loss 0.00412 best 0.00412 elapsed 2.0m
+exported net.bin (201012 bytes)
+ep 31 step 1300 loss 0.00286 lr 2.00e-03 170,549 pos/s elapsed 2.1m
+== epoch 32 val_loss 0.00410 best 0.00412 elapsed 2.1m
+exported net.bin (201012 bytes)
+== epoch 33 val_loss 0.00409 best 0.00410 elapsed 2.2m
+exported net.bin (201012 bytes)
+== epoch 34 val_loss 0.00409 best 0.00409 elapsed 2.2m
+ep 34 step 1400 loss 0.00272 lr 2.00e-03 170,543 pos/s elapsed 2.2m
+== epoch 35 val_loss 0.00407 best 0.00409 elapsed 2.3m
+exported net.bin (201012 bytes)
+== epoch 36 val_loss 0.00405 best 0.00407 elapsed 2.4m
+exported net.bin (201012 bytes)
+ep 36 step 1500 loss 0.00273 lr 2.00e-03 170,361 pos/s elapsed 2.4m
+== epoch 37 val_loss 0.00406 best 0.00405 elapsed 2.4m
+== epoch 38 val_loss 0.00405 best 0.00405 elapsed 2.5m
+== epoch 39 val_loss 0.00402 best 0.00405 elapsed 2.6m
+exported net.bin (201012 bytes)
+ep 39 step 1600 loss 0.00269 lr 2.00e-03 170,763 pos/s elapsed 2.6m
+== epoch 40 val_loss 0.00402 best 0.00402 elapsed 2.6m
+exported net.bin (201012 bytes)
+== epoch 41 val_loss 0.00402 best 0.00402 elapsed 2.7m
+exported net.bin (201012 bytes)
+ep 41 step 1700 loss 0.00264 lr 2.00e-03 171,134 pos/s elapsed 2.7m
+== epoch 42 val_loss 0.00401 best 0.00402 elapsed 2.7m
+exported net.bin (201012 bytes)
+== epoch 43 val_loss 0.00399 best 0.00401 elapsed 2.8m
+exported net.bin (201012 bytes)
+ep 43 step 1800 loss 0.00263 lr 2.00e-03 171,166 pos/s elapsed 2.9m
+== epoch 44 val_loss 0.00398 best 0.00399 elapsed 2.9m
+exported net.bin (201012 bytes)
+== epoch 45 val_loss 0.00399 best 0.00398 elapsed 2.9m
+== epoch 46 val_loss 0.00396 best 0.00398 elapsed 3.0m
+exported net.bin (201012 bytes)
+ep 46 step 1900 loss 0.00255 lr 1.99e-03 171,217 pos/s elapsed 3.0m
+== epoch 47 val_loss 0.00397 best 0.00396 elapsed 3.1m
+== epoch 48 val_loss 0.00398 best 0.00396 elapsed 3.1m
+ep 48 step 2000 loss 0.00256 lr 1.99e-03 171,508 pos/s elapsed 3.2m
+== epoch 49 val_loss 0.00398 best 0.00396 elapsed 3.2m
+== epoch 50 val_loss 0.00397 best 0.00396 elapsed 3.3m
+== epoch 51 val_loss 0.00393 best 0.00396 elapsed 3.3m
+exported net.bin (201012 bytes)
+ep 51 step 2100 loss 0.00246 lr 1.99e-03 171,787 pos/s elapsed 3.3m
+== epoch 52 val_loss 0.00393 best 0.00393 elapsed 3.4m
+== epoch 53 val_loss 0.00394 best 0.00393 elapsed 3.5m
+ep 53 step 2200 loss 0.00248 lr 1.99e-03 171,843 pos/s elapsed 3.5m
+== epoch 54 val_loss 0.00396 best 0.00393 elapsed 3.5m
+== epoch 55 val_loss 0.00393 best 0.00393 elapsed 3.6m
+exported net.bin (201012 bytes)
+== epoch 56 val_loss 0.00393 best 0.00393 elapsed 3.6m
+ep 56 step 2300 loss 0.00239 lr 1.99e-03 171,956 pos/s elapsed 3.7m
+== epoch 57 val_loss 0.00392 best 0.00393 elapsed 3.7m
+exported net.bin (201012 bytes)
+== epoch 58 val_loss 0.00391 best 0.00392 elapsed 3.8m
+exported net.bin (201012 bytes)
+ep 58 step 2400 loss 0.00242 lr 1.99e-03 172,054 pos/s elapsed 3.8m
+== epoch 59 val_loss 0.00392 best 0.00391 elapsed 3.8m
+== epoch 60 val_loss 0.00389 best 0.00391 elapsed 3.9m
+exported net.bin (201012 bytes)
+ep 60 step 2500 loss 0.00244 lr 1.99e-03 172,147 pos/s elapsed 4.0m
+== epoch 61 val_loss 0.00388 best 0.00389 elapsed 4.0m
+exported net.bin (201012 bytes)
+== epoch 62 val_loss 0.00389 best 0.00388 elapsed 4.0m
+== epoch 63 val_loss 0.00388 best 0.00388 elapsed 4.1m
+exported net.bin (201012 bytes)
+ep 63 step 2600 loss 0.00237 lr 1.99e-03 171,766 pos/s elapsed 4.1m
+== epoch 64 val_loss 0.00386 best 0.00388 elapsed 4.2m
+exported net.bin (201012 bytes)
+== epoch 65 val_loss 0.00388 best 0.00386 elapsed 4.2m
+ep 65 step 2700 loss 0.00239 lr 1.99e-03 171,822 pos/s elapsed 4.3m
+== epoch 66 val_loss 0.00388 best 0.00386 elapsed 4.3m
+== epoch 67 val_loss 0.00389 best 0.00386 elapsed 4.4m
+== epoch 68 val_loss 0.00388 best 0.00386 elapsed 4.4m
+ep 68 step 2800 loss 0.00233 lr 1.99e-03 171,641 pos/s elapsed 4.5m
+== epoch 69 val_loss 0.00386 best 0.00386 elapsed 4.5m
+== epoch 70 val_loss 0.00386 best 0.00386 elapsed 4.6m
+exported net.bin (201012 bytes)
+ep 70 step 2900 loss 0.00235 lr 1.99e-03 171,679 pos/s elapsed 4.6m
+== epoch 71 val_loss 0.00387 best 0.00386 elapsed 4.6m
+== epoch 72 val_loss 0.00386 best 0.00386 elapsed 4.7m
+exported net.bin (201012 bytes)
+== epoch 73 val_loss 0.00388 best 0.00386 elapsed 4.8m
+ep 73 step 3000 loss 0.00228 lr 1.99e-03 171,813 pos/s elapsed 4.8m
+== epoch 74 val_loss 0.00385 best 0.00386 elapsed 4.8m
+exported net.bin (201012 bytes)
+== epoch 75 val_loss 0.00385 best 0.00385 elapsed 4.9m
+exported net.bin (201012 bytes)
+ep 75 step 3100 loss 0.00230 lr 1.99e-03 171,867 pos/s elapsed 4.9m
+== epoch 76 val_loss 0.00386 best 0.00385 elapsed 5.0m
+== epoch 77 val_loss 0.00387 best 0.00385 elapsed 5.0m
+== epoch 78 val_loss 0.00386 best 0.00385 elapsed 5.1m
+ep 78 step 3200 loss 0.00222 lr 1.98e-03 171,980 pos/s elapsed 5.1m
+== epoch 79 val_loss 0.00385 best 0.00385 elapsed 5.1m
+== epoch 80 val_loss 0.00385 best 0.00385 elapsed 5.2m
+ep 80 step 3300 loss 0.00227 lr 1.98e-03 172,100 pos/s elapsed 5.2m
+== epoch 81 val_loss 0.00384 best 0.00385 elapsed 5.3m
+exported net.bin (201012 bytes)
+== epoch 82 val_loss 0.00386 best 0.00384 elapsed 5.3m
+ep 82 step 3400 loss 0.00230 lr 1.98e-03 172,183 pos/s elapsed 5.4m
+== epoch 83 val_loss 0.00384 best 0.00384 elapsed 5.4m
+== epoch 84 val_loss 0.00384 best 0.00384 elapsed 5.5m
+== epoch 85 val_loss 0.00385 best 0.00384 elapsed 5.5m
+ep 85 step 3500 loss 0.00223 lr 1.98e-03 172,126 pos/s elapsed 5.6m
+== epoch 86 val_loss 0.00385 best 0.00384 elapsed 5.6m
+== epoch 87 val_loss 0.00384 best 0.00384 elapsed 5.7m
+ep 87 step 3600 loss 0.00226 lr 1.98e-03 171,999 pos/s elapsed 5.7m
+== epoch 88 val_loss 0.00385 best 0.00384 elapsed 5.7m
+== epoch 89 val_loss 0.00384 best 0.00384 elapsed 5.8m
+== epoch 90 val_loss 0.00384 best 0.00384 elapsed 5.9m
+ep 90 step 3700 loss 0.00222 lr 1.98e-03 172,078 pos/s elapsed 5.9m
+== epoch 91 val_loss 0.00383 best 0.00384 elapsed 5.9m
+exported net.bin (201012 bytes)
+== epoch 92 val_loss 0.00384 best 0.00383 elapsed 6.0m
+ep 92 step 3800 loss 0.00222 lr 1.98e-03 171,985 pos/s elapsed 6.0m
+== epoch 93 val_loss 0.00386 best 0.00383 elapsed 6.1m
+== epoch 94 val_loss 0.00383 best 0.00383 elapsed 6.1m
+exported net.bin (201012 bytes)
+== epoch 95 val_loss 0.00383 best 0.00383 elapsed 6.2m
+ep 95 step 3900 loss 0.00218 lr 1.98e-03 172,103 pos/s elapsed 6.2m
+== epoch 96 val_loss 0.00382 best 0.00383 elapsed 6.2m
+exported net.bin (201012 bytes)
+== epoch 97 val_loss 0.00384 best 0.00382 elapsed 6.3m
+ep 97 step 4000 loss 0.00219 lr 1.98e-03 172,160 pos/s elapsed 6.3m
+== epoch 98 val_loss 0.00383 best 0.00382 elapsed 6.4m
+== epoch 99 val_loss 0.00382 best 0.00382 elapsed 6.4m
+ep 99 step 4100 loss 0.00223 lr 1.97e-03 172,164 pos/s elapsed 6.5m
+== epoch 100 val_loss 0.00384 best 0.00382 elapsed 6.5m
+== epoch 101 val_loss 0.00386 best 0.00382 elapsed 6.6m
+== epoch 102 val_loss 0.00384 best 0.00382 elapsed 6.6m
+ep 102 step 4200 loss 0.00217 lr 1.97e-03 172,259 pos/s elapsed 6.7m
+== epoch 103 val_loss 0.00386 best 0.00382 elapsed 6.7m
+== epoch 104 val_loss 0.00384 best 0.00382 elapsed 6.8m
+ep 104 step 4300 loss 0.00220 lr 1.97e-03 172,348 pos/s elapsed 6.8m
+== epoch 105 val_loss 0.00385 best 0.00382 elapsed 6.8m
+== epoch 106 val_loss 0.00384 best 0.00382 elapsed 6.9m
+== epoch 107 val_loss 0.00383 best 0.00382 elapsed 7.0m
+ep 107 step 4400 loss 0.00213 lr 1.97e-03 172,322 pos/s elapsed 7.0m
+== epoch 108 val_loss 0.00382 best 0.00382 elapsed 7.0m
+exported net.bin (201012 bytes)
+== epoch 109 val_loss 0.00383 best 0.00382 elapsed 7.1m
+ep 109 step 4500 loss 0.00217 lr 1.97e-03 172,419 pos/s elapsed 7.1m
+== epoch 110 val_loss 0.00385 best 0.00382 elapsed 7.1m
+== epoch 111 val_loss 0.00383 best 0.00382 elapsed 7.2m
+== epoch 112 val_loss 0.00384 best 0.00382 elapsed 7.3m
+ep 112 step 4600 loss 0.00213 lr 1.97e-03 172,522 pos/s elapsed 7.3m
+== epoch 113 val_loss 0.00384 best 0.00382 elapsed 7.3m
+== epoch 114 val_loss 0.00383 best 0.00382 elapsed 7.4m
+ep 114 step 4700 loss 0.00215 lr 1.97e-03 172,619 pos/s elapsed 7.4m
+== epoch 115 val_loss 0.00385 best 0.00382 elapsed 7.5m
+== epoch 116 val_loss 0.00384 best 0.00382 elapsed 7.5m
+== epoch 117 val_loss 0.00384 best 0.00382 elapsed 7.6m
+ep 117 step 4800 loss 0.00209 lr 1.97e-03 172,704 pos/s elapsed 7.6m
+== epoch 118 val_loss 0.00383 best 0.00382 elapsed 7.6m
+== epoch 119 val_loss 0.00385 best 0.00382 elapsed 7.7m
+ep 119 step 4900 loss 0.00212 lr 1.96e-03 172,771 pos/s elapsed 7.7m
+== epoch 120 val_loss 0.00382 best 0.00382 elapsed 7.8m
+== epoch 121 val_loss 0.00383 best 0.00382 elapsed 7.8m
+ep 121 step 5000 loss 0.00215 lr 1.96e-03 172,798 pos/s elapsed 7.9m
+== epoch 122 val_loss 0.00386 best 0.00382 elapsed 7.9m
+== epoch 123 val_loss 0.00384 best 0.00382 elapsed 8.0m
+== epoch 124 val_loss 0.00382 best 0.00382 elapsed 8.0m
+ep 124 step 5100 loss 0.00210 lr 1.96e-03 172,855 pos/s elapsed 8.1m
+== epoch 125 val_loss 0.00383 best 0.00382 elapsed 8.1m
+== epoch 126 val_loss 0.00382 best 0.00382 elapsed 8.2m
+exported net.bin (201012 bytes)
+ep 126 step 5200 loss 0.00212 lr 1.96e-03 172,894 pos/s elapsed 8.2m
+== epoch 127 val_loss 0.00385 best 0.00382 elapsed 8.2m
+== epoch 128 val_loss 0.00383 best 0.00382 elapsed 8.3m
+== epoch 129 val_loss 0.00383 best 0.00382 elapsed 8.4m
+ep 129 step 5300 loss 0.00207 lr 1.96e-03 172,844 pos/s elapsed 8.4m
+== epoch 130 val_loss 0.00383 best 0.00382 elapsed 8.4m
+== epoch 131 val_loss 0.00383 best 0.00382 elapsed 8.5m
+ep 131 step 5400 loss 0.00211 lr 1.96e-03 172,808 pos/s elapsed 8.5m
+== epoch 132 val_loss 0.00380 best 0.00382 elapsed 8.6m
+exported net.bin (201012 bytes)
+== epoch 133 val_loss 0.00384 best 0.00380 elapsed 8.6m
+== epoch 134 val_loss 0.00382 best 0.00380 elapsed 8.7m
+ep 134 step 5500 loss 0.00204 lr 1.96e-03 172,884 pos/s elapsed 8.7m
+== epoch 135 val_loss 0.00383 best 0.00380 elapsed 8.7m
+== epoch 136 val_loss 0.00384 best 0.00380 elapsed 8.8m
+ep 136 step 5600 loss 0.00208 lr 1.95e-03 172,938 pos/s elapsed 8.8m
+== epoch 137 val_loss 0.00384 best 0.00380 elapsed 8.9m
+== epoch 138 val_loss 0.00386 best 0.00380 elapsed 8.9m
+== epoch 139 val_loss 0.00381 best 0.00380 elapsed 9.0m
+ep 139 step 5700 loss 0.00201 lr 1.95e-03 172,978 pos/s elapsed 9.0m
+== epoch 140 val_loss 0.00384 best 0.00380 elapsed 9.1m
+== epoch 141 val_loss 0.00385 best 0.00380 elapsed 9.1m
+ep 141 step 5800 loss 0.00206 lr 1.95e-03 173,005 pos/s elapsed 9.2m
+== epoch 142 val_loss 0.00383 best 0.00380 elapsed 9.2m
+== epoch 143 val_loss 0.00383 best 0.00380 elapsed 9.3m
+ep 143 step 5900 loss 0.00209 lr 1.95e-03 173,038 pos/s elapsed 9.3m
+== epoch 144 val_loss 0.00383 best 0.00380 elapsed 9.3m
+== epoch 145 val_loss 0.00383 best 0.00380 elapsed 9.4m
+== epoch 146 val_loss 0.00382 best 0.00380 elapsed 9.4m
+ep 146 step 6000 loss 0.00205 lr 1.95e-03 173,024 pos/s elapsed 9.5m
+== epoch 147 val_loss 0.00382 best 0.00380 elapsed 9.5m
+== epoch 148 val_loss 0.00382 best 0.00380 elapsed 9.6m
+ep 148 step 6100 loss 0.00207 lr 1.95e-03 172,991 pos/s elapsed 9.6m
+== epoch 149 val_loss 0.00382 best 0.00380 elapsed 9.6m
+== epoch 150 val_loss 0.00381 best 0.00380 elapsed 9.7m
+== epoch 151 val_loss 0.00382 best 0.00380 elapsed 9.8m
+ep 151 step 6200 loss 0.00201 lr 1.94e-03 173,009 pos/s elapsed 9.8m
+== epoch 152 val_loss 0.00382 best 0.00380 elapsed 9.8m
+== epoch 153 val_loss 0.00381 best 0.00380 elapsed 9.9m
+ep 153 step 6300 loss 0.00205 lr 1.94e-03 173,017 pos/s elapsed 9.9m
+== epoch 154 val_loss 0.00383 best 0.00380 elapsed 10.0m
+== epoch 155 val_loss 0.00385 best 0.00380 elapsed 10.0m
+== epoch 156 val_loss 0.00384 best 0.00380 elapsed 10.1m
+ep 156 step 6400 loss 0.00200 lr 1.94e-03 173,032 pos/s elapsed 10.1m
+== epoch 157 val_loss 0.00381 best 0.00380 elapsed 10.2m
+== epoch 158 val_loss 0.00381 best 0.00380 elapsed 10.2m
+ep 158 step 6500 loss 0.00204 lr 1.94e-03 173,048 pos/s elapsed 10.3m
+== epoch 159 val_loss 0.00381 best 0.00380 elapsed 10.3m
+== epoch 160 val_loss 0.00382 best 0.00380 elapsed 10.4m
+ep 160 step 6600 loss 0.00207 lr 1.94e-03 173,051 pos/s elapsed 10.4m
+== epoch 161 val_loss 0.00382 best 0.00380 elapsed 10.4m
+== epoch 162 val_loss 0.00382 best 0.00380 elapsed 10.5m
+== epoch 163 val_loss 0.00382 best 0.00380 elapsed 10.5m
+ep 163 step 6700 loss 0.00200 lr 1.93e-03 173,045 pos/s elapsed 10.6m
+== epoch 164 val_loss 0.00381 best 0.00380 elapsed 10.6m
+== epoch 165 val_loss 0.00384 best 0.00380 elapsed 10.7m
+ep 165 step 6800 loss 0.00205 lr 1.93e-03 173,073 pos/s elapsed 10.7m
+== epoch 166 val_loss 0.00381 best 0.00380 elapsed 10.7m
+== epoch 167 val_loss 0.00382 best 0.00380 elapsed 10.8m
+== epoch 168 val_loss 0.00381 best 0.00380 elapsed 10.9m
+ep 168 step 6900 loss 0.00199 lr 1.93e-03 173,061 pos/s elapsed 10.9m
+== epoch 169 val_loss 0.00382 best 0.00380 elapsed 10.9m
+== epoch 170 val_loss 0.00380 best 0.00380 elapsed 11.0m
+exported net.bin (201012 bytes)
+ep 170 step 7000 loss 0.00203 lr 1.93e-03 173,057 pos/s elapsed 11.0m
+== epoch 171 val_loss 0.00382 best 0.00380 elapsed 11.1m
+== epoch 172 val_loss 0.00382 best 0.00380 elapsed 11.1m
+== epoch 173 val_loss 0.00382 best 0.00380 elapsed 11.2m
+ep 173 step 7100 loss 0.00196 lr 1.93e-03 173,102 pos/s elapsed 11.2m
+== epoch 174 val_loss 0.00381 best 0.00380 elapsed 11.3m
+== epoch 175 val_loss 0.00380 best 0.00380 elapsed 11.3m
+ep 175 step 7200 loss 0.00201 lr 1.92e-03 173,135 pos/s elapsed 11.4m
+== epoch 176 val_loss 0.00382 best 0.00380 elapsed 11.4m
+== epoch 177 val_loss 0.00380 best 0.00380 elapsed 11.4m
+== epoch 178 val_loss 0.00382 best 0.00380 elapsed 11.5m
+ep 178 step 7300 loss 0.00195 lr 1.92e-03 173,151 pos/s elapsed 11.5m
+== epoch 179 val_loss 0.00380 best 0.00380 elapsed 11.6m
+== epoch 180 val_loss 0.00383 best 0.00380 elapsed 11.6m
+ep 180 step 7400 loss 0.00200 lr 1.92e-03 173,175 pos/s elapsed 11.7m
+== epoch 181 val_loss 0.00382 best 0.00380 elapsed 11.7m
+== epoch 182 val_loss 0.00381 best 0.00380 elapsed 11.8m
+ep 182 step 7500 loss 0.00203 lr 1.92e-03 173,202 pos/s elapsed 11.8m
+== epoch 183 val_loss 0.00383 best 0.00380 elapsed 11.8m
+== epoch 184 val_loss 0.00381 best 0.00380 elapsed 11.9m
+== epoch 185 val_loss 0.00381 best 0.00380 elapsed 12.0m
+ep 185 step 7600 loss 0.00197 lr 1.92e-03 173,223 pos/s elapsed 12.0m
+== epoch 186 val_loss 0.00380 best 0.00380 elapsed 12.0m
+== epoch 187 val_loss 0.00382 best 0.00380 elapsed 12.1m
+ep 187 step 7700 loss 0.00201 lr 1.91e-03 173,209 pos/s elapsed 12.1m
+== epoch 188 val_loss 0.00382 best 0.00380 elapsed 12.2m
+== epoch 189 val_loss 0.00380 best 0.00380 elapsed 12.2m
+== epoch 190 val_loss 0.00383 best 0.00380 elapsed 12.3m
+ep 190 step 7800 loss 0.00195 lr 1.91e-03 173,210 pos/s elapsed 12.3m
+== epoch 191 val_loss 0.00380 best 0.00380 elapsed 12.3m
+== epoch 192 val_loss 0.00381 best 0.00380 elapsed 12.4m
+ep 192 step 7900 loss 0.00199 lr 1.91e-03 173,267 pos/s elapsed 12.5m
+== epoch 193 val_loss 0.00380 best 0.00380 elapsed 12.5m
+exported net.bin (201012 bytes)
+== epoch 194 val_loss 0.00380 best 0.00380 elapsed 12.5m
+exported net.bin (201012 bytes)
+== epoch 195 val_loss 0.00379 best 0.00380 elapsed 12.6m
+exported net.bin (201012 bytes)
+ep 195 step 8000 loss 0.00193 lr 1.91e-03 173,245 pos/s elapsed 12.6m
+== epoch 196 val_loss 0.00378 best 0.00379 elapsed 12.7m
+exported net.bin (201012 bytes)
+== epoch 197 val_loss 0.00380 best 0.00378 elapsed 12.7m
+ep 197 step 8100 loss 0.00197 lr 1.90e-03 173,218 pos/s elapsed 12.8m
+== epoch 198 val_loss 0.00378 best 0.00378 elapsed 12.8m
+== epoch 199 val_loss 0.00380 best 0.00378 elapsed 12.9m
+ep 199 step 8200 loss 0.00201 lr 1.90e-03 173,182 pos/s elapsed 12.9m
+== epoch 200 val_loss 0.00379 best 0.00378 elapsed 12.9m
+== epoch 201 val_loss 0.00379 best 0.00378 elapsed 13.0m
+== epoch 202 val_loss 0.00381 best 0.00378 elapsed 13.1m
+ep 202 step 8300 loss 0.00197 lr 1.90e-03 173,172 pos/s elapsed 13.1m
+== epoch 203 val_loss 0.00379 best 0.00378 elapsed 13.1m
+== epoch 204 val_loss 0.00380 best 0.00378 elapsed 13.2m
+ep 204 step 8400 loss 0.00199 lr 1.90e-03 173,125 pos/s elapsed 13.2m
+== epoch 205 val_loss 0.00379 best 0.00378 elapsed 13.3m
+== epoch 206 val_loss 0.00380 best 0.00378 elapsed 13.3m
+== epoch 207 val_loss 0.00377 best 0.00378 elapsed 13.4m
+exported net.bin (201012 bytes)
+ep 207 step 8500 loss 0.00194 lr 1.89e-03 173,079 pos/s elapsed 13.4m
+== epoch 208 val_loss 0.00380 best 0.00377 elapsed 13.5m
+== epoch 209 val_loss 0.00378 best 0.00377 elapsed 13.5m
+ep 209 step 8600 loss 0.00198 lr 1.89e-03 173,109 pos/s elapsed 13.6m
+== epoch 210 val_loss 0.00379 best 0.00377 elapsed 13.6m
+== epoch 211 val_loss 0.00377 best 0.00377 elapsed 13.6m
+exported net.bin (201012 bytes)
+== epoch 212 val_loss 0.00377 best 0.00377 elapsed 13.7m
+exported net.bin (201012 bytes)
+ep 212 step 8700 loss 0.00192 lr 1.89e-03 173,125 pos/s elapsed 13.7m
+== epoch 213 val_loss 0.00378 best 0.00377 elapsed 13.8m
+== epoch 214 val_loss 0.00378 best 0.00377 elapsed 13.8m
+ep 214 step 8800 loss 0.00195 lr 1.89e-03 173,104 pos/s elapsed 13.9m
+== epoch 215 val_loss 0.00376 best 0.00377 elapsed 13.9m
+exported net.bin (201012 bytes)
+== epoch 216 val_loss 0.00378 best 0.00376 elapsed 14.0m
+== epoch 217 val_loss 0.00376 best 0.00376 elapsed 14.0m
+ep 217 step 8900 loss 0.00190 lr 1.88e-03 173,101 pos/s elapsed 14.0m
+== epoch 218 val_loss 0.00378 best 0.00376 elapsed 14.1m
+== epoch 219 val_loss 0.00379 best 0.00376 elapsed 14.2m
+ep 219 step 9000 loss 0.00194 lr 1.88e-03 172,960 pos/s elapsed 14.2m
+== epoch 220 val_loss 0.00379 best 0.00376 elapsed 14.2m
+== epoch 221 val_loss 0.00379 best 0.00376 elapsed 14.3m
+ep 221 step 9100 loss 0.00197 lr 1.88e-03 172,873 pos/s elapsed 14.4m
+== epoch 222 val_loss 0.00379 best 0.00376 elapsed 14.4m
+== epoch 223 val_loss 0.00379 best 0.00376 elapsed 14.4m
+== epoch 224 val_loss 0.00379 best 0.00376 elapsed 14.5m
+ep 224 step 9200 loss 0.00192 lr 1.88e-03 172,857 pos/s elapsed 14.5m
+== epoch 225 val_loss 0.00379 best 0.00376 elapsed 14.6m
+== epoch 226 val_loss 0.00380 best 0.00376 elapsed 14.6m
+ep 226 step 9300 loss 0.00196 lr 1.87e-03 172,776 pos/s elapsed 14.7m
+== epoch 227 val_loss 0.00379 best 0.00376 elapsed 14.7m
+== epoch 228 val_loss 0.00379 best 0.00376 elapsed 14.8m
+== epoch 229 val_loss 0.00379 best 0.00376 elapsed 14.8m
+ep 229 step 9400 loss 0.00191 lr 1.87e-03 172,694 pos/s elapsed 14.9m
+== epoch 230 val_loss 0.00377 best 0.00376 elapsed 14.9m
+== epoch 231 val_loss 0.00379 best 0.00376 elapsed 15.0m
+ep 231 step 9500 loss 0.00195 lr 1.87e-03 172,604 pos/s elapsed 15.0m
+== epoch 232 val_loss 0.00380 best 0.00376 elapsed 15.0m
+== epoch 233 val_loss 0.00379 best 0.00376 elapsed 15.1m
+== epoch 234 val_loss 0.00378 best 0.00376 elapsed 15.2m
+ep 234 step 9600 loss 0.00189 lr 1.87e-03 172,416 pos/s elapsed 15.2m
+== epoch 235 val_loss 0.00380 best 0.00376 elapsed 15.3m
+== epoch 236 val_loss 0.00379 best 0.00376 elapsed 15.3m
+ep 236 step 9700 loss 0.00192 lr 1.86e-03 172,364 pos/s elapsed 15.4m
+== epoch 237 val_loss 0.00379 best 0.00376 elapsed 15.4m
+== epoch 238 val_loss 0.00379 best 0.00376 elapsed 15.5m
+== epoch 239 val_loss 0.00379 best 0.00376 elapsed 15.5m
+ep 239 step 9800 loss 0.00192 lr 1.86e-03 172,259 pos/s elapsed 15.5m
+== epoch 240 val_loss 0.00379 best 0.00376 elapsed 15.6m
+== epoch 241 val_loss 0.00378 best 0.00376 elapsed 15.7m
+ep 241 step 9900 loss 0.00190 lr 1.86e-03 172,207 pos/s elapsed 15.7m
+== epoch 242 val_loss 0.00378 best 0.00376 elapsed 15.7m
+== epoch 243 val_loss 0.00378 best 0.00376 elapsed 15.8m
+ep 243 step 10000 loss 0.00195 lr 1.85e-03 172,142 pos/s elapsed 15.9m
+== epoch 244 val_loss 0.00380 best 0.00376 elapsed 15.9m
+== epoch 245 val_loss 0.00380 best 0.00376 elapsed 15.9m
+== epoch 246 val_loss 0.00378 best 0.00376 elapsed 16.0m
+ep 246 step 10100 loss 0.00190 lr 1.85e-03 172,088 pos/s elapsed 16.0m
+== epoch 247 val_loss 0.00379 best 0.00376 elapsed 16.1m
+== epoch 248 val_loss 0.00379 best 0.00376 elapsed 16.1m
+ep 248 step 10200 loss 0.00193 lr 1.85e-03 171,996 pos/s elapsed 16.2m
+== epoch 249 val_loss 0.00379 best 0.00376 elapsed 16.2m
+== epoch 250 val_loss 0.00381 best 0.00376 elapsed 16.3m
+== epoch 251 val_loss 0.00379 best 0.00376 elapsed 16.3m
+ep 251 step 10300 loss 0.00191 lr 1.84e-03 171,995 pos/s elapsed 16.4m
+== epoch 252 val_loss 0.00379 best 0.00376 elapsed 16.4m
+== epoch 253 val_loss 0.00380 best 0.00376 elapsed 16.5m
+ep 253 step 10400 loss 0.00192 lr 1.84e-03 171,971 pos/s elapsed 16.5m
+== epoch 254 val_loss 0.00379 best 0.00376 elapsed 16.5m
+== epoch 255 val_loss 0.00381 best 0.00376 elapsed 16.6m
+== epoch 256 val_loss 0.00380 best 0.00376 elapsed 16.7m
+ep 256 step 10500 loss 0.00189 lr 1.84e-03 171,863 pos/s elapsed 16.7m
+== epoch 257 val_loss 0.00379 best 0.00376 elapsed 16.7m
+== epoch 258 val_loss 0.00379 best 0.00376 elapsed 16.8m
+ep 258 step 10600 loss 0.00190 lr 1.84e-03 171,794 pos/s elapsed 16.8m
+== epoch 259 val_loss 0.00380 best 0.00376 elapsed 16.9m
+== epoch 260 val_loss 0.00381 best 0.00376 elapsed 16.9m
+ep 260 step 10700 loss 0.00193 lr 1.83e-03 171,704 pos/s elapsed 17.0m
+== epoch 261 val_loss 0.00380 best 0.00376 elapsed 17.0m
+== epoch 262 val_loss 0.00381 best 0.00376 elapsed 17.1m
+== epoch 263 val_loss 0.00380 best 0.00376 elapsed 17.2m
+ep 263 step 10800 loss 0.00188 lr 1.83e-03 171,629 pos/s elapsed 17.2m
+== epoch 264 val_loss 0.00379 best 0.00376 elapsed 17.2m
+== epoch 265 val_loss 0.00380 best 0.00376 elapsed 17.3m
+ep 265 step 10900 loss 0.00192 lr 1.83e-03 171,550 pos/s elapsed 17.4m
+== epoch 266 val_loss 0.00380 best 0.00376 elapsed 17.4m
+== epoch 267 val_loss 0.00383 best 0.00376 elapsed 17.4m
+== epoch 268 val_loss 0.00379 best 0.00376 elapsed 17.5m
+ep 268 step 11000 loss 0.00187 lr 1.82e-03 171,412 pos/s elapsed 17.5m
+== epoch 269 val_loss 0.00381 best 0.00376 elapsed 17.6m
+== epoch 270 val_loss 0.00379 best 0.00376 elapsed 17.6m
+ep 270 step 11100 loss 0.00191 lr 1.82e-03 171,285 pos/s elapsed 17.7m
+== epoch 271 val_loss 0.00379 best 0.00376 elapsed 17.7m
+== epoch 272 val_loss 0.00380 best 0.00376 elapsed 17.8m
+== epoch 273 val_loss 0.00381 best 0.00376 elapsed 17.9m
+ep 273 step 11200 loss 0.00186 lr 1.82e-03 171,181 pos/s elapsed 17.9m
+== epoch 274 val_loss 0.00379 best 0.00376 elapsed 17.9m
+== epoch 275 val_loss 0.00379 best 0.00376 elapsed 18.0m
+ep 275 step 11300 loss 0.00189 lr 1.81e-03 171,038 pos/s elapsed 18.0m
+== epoch 276 val_loss 0.00379 best 0.00376 elapsed 18.1m
+== epoch 277 val_loss 0.00379 best 0.00376 elapsed 18.1m
+== epoch 278 val_loss 0.00382 best 0.00376 elapsed 18.2m
+ep 278 step 11400 loss 0.00183 lr 1.81e-03 170,895 pos/s elapsed 18.2m
+== epoch 279 val_loss 0.00380 best 0.00376 elapsed 18.3m
+== epoch 280 val_loss 0.00380 best 0.00376 elapsed 18.3m
+ep 280 step 11500 loss 0.00187 lr 1.81e-03 170,860 pos/s elapsed 18.4m
+== epoch 281 val_loss 0.00380 best 0.00376 elapsed 18.4m
+== epoch 282 val_loss 0.00381 best 0.00376 elapsed 18.5m
+ep 282 step 11600 loss 0.00191 lr 1.80e-03 170,794 pos/s elapsed 18.5m
+== epoch 283 val_loss 0.00380 best 0.00376 elapsed 18.6m
+== epoch 284 val_loss 0.00380 best 0.00376 elapsed 18.6m
+== epoch 285 val_loss 0.00380 best 0.00376 elapsed 18.7m
+ep 285 step 11700 loss 0.00186 lr 1.80e-03 170,715 pos/s elapsed 18.7m
+== epoch 286 val_loss 0.00381 best 0.00376 elapsed 18.8m
+== epoch 287 val_loss 0.00380 best 0.00376 elapsed 18.8m
+ep 287 step 11800 loss 0.00190 lr 1.79e-03 170,608 pos/s elapsed 18.9m
+== epoch 288 val_loss 0.00381 best 0.00376 elapsed 18.9m
+== epoch 289 val_loss 0.00380 best 0.00376 elapsed 19.0m
+== epoch 290 val_loss 0.00382 best 0.00376 elapsed 19.0m
+ep 290 step 11900 loss 0.00184 lr 1.79e-03 170,547 pos/s elapsed 19.1m
+== epoch 291 val_loss 0.00379 best 0.00376 elapsed 19.1m
+== epoch 292 val_loss 0.00381 best 0.00376 elapsed 19.2m
+ep 292 step 12000 loss 0.00188 lr 1.79e-03 170,501 pos/s elapsed 19.2m
+== epoch 293 val_loss 0.00381 best 0.00376 elapsed 19.2m
+== epoch 294 val_loss 0.00379 best 0.00376 elapsed 19.3m
+== epoch 295 val_loss 0.00381 best 0.00376 elapsed 19.4m
+ep 295 step 12100 loss 0.00183 lr 1.78e-03 170,408 pos/s elapsed 19.4m
+== epoch 296 val_loss 0.00380 best 0.00376 elapsed 19.4m
+== epoch 297 val_loss 0.00379 best 0.00376 elapsed 19.5m
+ep 297 step 12200 loss 0.00187 lr 1.78e-03 170,335 pos/s elapsed 19.6m
+== epoch 298 val_loss 0.00380 best 0.00376 elapsed 19.6m
+== epoch 299 val_loss 0.00379 best 0.00376 elapsed 19.7m
+ep 299 step 12300 loss 0.00190 lr 1.78e-03 170,290 pos/s elapsed 19.7m
+== epoch 300 val_loss 0.00381 best 0.00376 elapsed 19.7m
+== epoch 301 val_loss 0.00379 best 0.00376 elapsed 19.8m
+== epoch 302 val_loss 0.00381 best 0.00376 elapsed 19.9m
+ep 302 step 12400 loss 0.00186 lr 1.77e-03 170,231 pos/s elapsed 19.9m
+== epoch 303 val_loss 0.00380 best 0.00376 elapsed 19.9m
+== epoch 304 val_loss 0.00380 best 0.00376 elapsed 20.0m
+ep 304 step 12500 loss 0.00189 lr 1.77e-03 170,171 pos/s elapsed 20.1m
+== epoch 305 val_loss 0.00380 best 0.00376 elapsed 20.1m
+== epoch 306 val_loss 0.00381 best 0.00376 elapsed 20.1m
+== epoch 307 val_loss 0.00379 best 0.00376 elapsed 20.2m
+ep 307 step 12600 loss 0.00184 lr 1.77e-03 170,144 pos/s elapsed 20.2m
+== epoch 308 val_loss 0.00380 best 0.00376 elapsed 20.3m
+== epoch 309 val_loss 0.00379 best 0.00376 elapsed 20.3m
+ep 309 step 12700 loss 0.00188 lr 1.76e-03 170,108 pos/s elapsed 20.4m
+== epoch 310 val_loss 0.00380 best 0.00376 elapsed 20.4m
+== epoch 311 val_loss 0.00379 best 0.00376 elapsed 20.5m
+== epoch 312 val_loss 0.00379 best 0.00376 elapsed 20.5m
+ep 312 step 12800 loss 0.00182 lr 1.76e-03 170,079 pos/s elapsed 20.6m
+== epoch 313 val_loss 0.00378 best 0.00376 elapsed 20.6m
+== epoch 314 val_loss 0.00380 best 0.00376 elapsed 20.7m
+ep 314 step 12900 loss 0.00187 lr 1.75e-03 170,070 pos/s elapsed 20.7m
+== epoch 315 val_loss 0.00379 best 0.00376 elapsed 20.7m
+== epoch 316 val_loss 0.00378 best 0.00376 elapsed 20.8m
+== epoch 317 val_loss 0.00379 best 0.00376 elapsed 20.9m
+ep 317 step 13000 loss 0.00181 lr 1.75e-03 170,020 pos/s elapsed 20.9m
+== epoch 318 val_loss 0.00380 best 0.00376 elapsed 20.9m
+== epoch 319 val_loss 0.00380 best 0.00376 elapsed 21.0m
+ep 319 step 13100 loss 0.00185 lr 1.75e-03 170,022 pos/s elapsed 21.0m
+== epoch 320 val_loss 0.00381 best 0.00376 elapsed 21.1m
+== epoch 321 val_loss 0.00379 best 0.00376 elapsed 21.1m
+ep 321 step 13200 loss 0.00188 lr 1.74e-03 170,017 pos/s elapsed 21.2m
+== epoch 322 val_loss 0.00379 best 0.00376 elapsed 21.2m
+== epoch 323 val_loss 0.00381 best 0.00376 elapsed 21.3m
+== epoch 324 val_loss 0.00380 best 0.00376 elapsed 21.3m
+ep 324 step 13300 loss 0.00183 lr 1.74e-03 170,022 pos/s elapsed 21.4m
+== epoch 325 val_loss 0.00381 best 0.00376 elapsed 21.4m
+== epoch 326 val_loss 0.00380 best 0.00376 elapsed 21.5m
+ep 326 step 13400 loss 0.00187 lr 1.74e-03 170,053 pos/s elapsed 21.5m
+== epoch 327 val_loss 0.00379 best 0.00376 elapsed 21.5m
+== epoch 328 val_loss 0.00380 best 0.00376 elapsed 21.6m
+== epoch 329 val_loss 0.00379 best 0.00376 elapsed 21.7m
+ep 329 step 13500 loss 0.00182 lr 1.73e-03 170,028 pos/s elapsed 21.7m
+== epoch 330 val_loss 0.00379 best 0.00376 elapsed 21.7m
+== epoch 331 val_loss 0.00381 best 0.00376 elapsed 21.8m
+ep 331 step 13600 loss 0.00185 lr 1.73e-03 170,014 pos/s elapsed 21.8m
+== epoch 332 val_loss 0.00379 best 0.00376 elapsed 21.9m
+== epoch 333 val_loss 0.00381 best 0.00376 elapsed 21.9m
+== epoch 334 val_loss 0.00379 best 0.00376 elapsed 22.0m
+ep 334 step 13700 loss 0.00182 lr 1.72e-03 169,965 pos/s elapsed 22.0m
+== epoch 335 val_loss 0.00379 best 0.00376 elapsed 22.1m
+== epoch 336 val_loss 0.00378 best 0.00376 elapsed 22.1m
+ep 336 step 13800 loss 0.00185 lr 1.72e-03 169,987 pos/s elapsed 22.2m
+== epoch 337 val_loss 0.00378 best 0.00376 elapsed 22.2m
+== epoch 338 val_loss 0.00379 best 0.00376 elapsed 22.3m
+== epoch 339 val_loss 0.00380 best 0.00376 elapsed 22.3m
+ep 339 step 13900 loss 0.00182 lr 1.72e-03 170,016 pos/s elapsed 22.3m
+== epoch 340 val_loss 0.00379 best 0.00376 elapsed 22.4m
+== epoch 341 val_loss 0.00379 best 0.00376 elapsed 22.5m
+ep 341 step 14000 loss 0.00183 lr 1.71e-03 170,003 pos/s elapsed 22.5m
+== epoch 342 val_loss 0.00379 best 0.00376 elapsed 22.5m
+== epoch 343 val_loss 0.00379 best 0.00376 elapsed 22.6m
+ep 343 step 14100 loss 0.00186 lr 1.71e-03 170,032 pos/s elapsed 22.6m
+== epoch 344 val_loss 0.00380 best 0.00376 elapsed 22.7m
+== epoch 345 val_loss 0.00378 best 0.00376 elapsed 22.7m
+== epoch 346 val_loss 0.00379 best 0.00376 elapsed 22.8m
+ep 346 step 14200 loss 0.00182 lr 1.71e-03 170,006 pos/s elapsed 22.8m
+== epoch 347 val_loss 0.00378 best 0.00376 elapsed 22.9m
+== epoch 348 val_loss 0.00378 best 0.00376 elapsed 22.9m
+ep 348 step 14300 loss 0.00185 lr 1.70e-03 169,924 pos/s elapsed 23.0m
+== epoch 349 val_loss 0.00379 best 0.00376 elapsed 23.0m
+== epoch 350 val_loss 0.00378 best 0.00376 elapsed 23.1m
+== epoch 351 val_loss 0.00379 best 0.00376 elapsed 23.1m
+ep 351 step 14400 loss 0.00181 lr 1.70e-03 169,875 pos/s elapsed 23.1m
+== epoch 352 val_loss 0.00378 best 0.00376 elapsed 23.2m
+== epoch 353 val_loss 0.00379 best 0.00376 elapsed 23.3m
+ep 353 step 14500 loss 0.00183 lr 1.69e-03 169,866 pos/s elapsed 23.3m
+== epoch 354 val_loss 0.00379 best 0.00376 elapsed 23.3m
+== epoch 355 val_loss 0.00380 best 0.00376 elapsed 23.4m
+== epoch 356 val_loss 0.00378 best 0.00376 elapsed 23.5m
+ep 356 step 14600 loss 0.00180 lr 1.69e-03 169,831 pos/s elapsed 23.5m
+== epoch 357 val_loss 0.00378 best 0.00376 elapsed 23.5m
+== epoch 358 val_loss 0.00379 best 0.00376 elapsed 23.6m
+ep 358 step 14700 loss 0.00183 lr 1.68e-03 169,828 pos/s elapsed 23.6m
+== epoch 359 val_loss 0.00380 best 0.00376 elapsed 23.7m
+== epoch 360 val_loss 0.00380 best 0.00376 elapsed 23.7m
+ep 360 step 14800 loss 0.00186 lr 1.68e-03 169,815 pos/s elapsed 23.8m
+== epoch 361 val_loss 0.00379 best 0.00376 elapsed 23.8m
+== epoch 362 val_loss 0.00380 best 0.00376 elapsed 23.9m
+== epoch 363 val_loss 0.00379 best 0.00376 elapsed 23.9m
+ep 363 step 14900 loss 0.00180 lr 1.68e-03 169,793 pos/s elapsed 24.0m
+== epoch 364 val_loss 0.00380 best 0.00376 elapsed 24.0m
+== epoch 365 val_loss 0.00380 best 0.00376 elapsed 24.1m
+ep 365 step 15000 loss 0.00185 lr 1.67e-03 169,769 pos/s elapsed 24.1m
+== epoch 366 val_loss 0.00380 best 0.00376 elapsed 24.1m
+== epoch 367 val_loss 0.00380 best 0.00376 elapsed 24.2m
+== epoch 368 val_loss 0.00380 best 0.00376 elapsed 24.3m
+ep 368 step 15100 loss 0.00180 lr 1.67e-03 169,751 pos/s elapsed 24.3m
+== epoch 369 val_loss 0.00379 best 0.00376 elapsed 24.3m
+== epoch 370 val_loss 0.00380 best 0.00376 elapsed 24.4m
+ep 370 step 15200 loss 0.00184 lr 1.66e-03 169,736 pos/s elapsed 24.5m
+== epoch 371 val_loss 0.00378 best 0.00376 elapsed 24.5m
+== epoch 372 val_loss 0.00380 best 0.00376 elapsed 24.5m
+== epoch 373 val_loss 0.00379 best 0.00376 elapsed 24.6m
+ep 373 step 15300 loss 0.00180 lr 1.66e-03 169,707 pos/s elapsed 24.6m
+== epoch 374 val_loss 0.00379 best 0.00376 elapsed 24.7m
+== epoch 375 val_loss 0.00379 best 0.00376 elapsed 24.7m
+ep 375 step 15400 loss 0.00182 lr 1.66e-03 169,714 pos/s elapsed 24.8m
+== epoch 376 val_loss 0.00379 best 0.00376 elapsed 24.8m
+== epoch 377 val_loss 0.00380 best 0.00376 elapsed 24.9m
+== epoch 378 val_loss 0.00378 best 0.00376 elapsed 24.9m
+ep 378 step 15500 loss 0.00177 lr 1.65e-03 169,716 pos/s elapsed 24.9m
+== epoch 379 val_loss 0.00379 best 0.00376 elapsed 25.0m
+== epoch 380 val_loss 0.00380 best 0.00376 elapsed 25.1m
+ep 380 step 15600 loss 0.00181 lr 1.65e-03 169,714 pos/s elapsed 25.1m
+== epoch 381 val_loss 0.00378 best 0.00376 elapsed 25.1m
+== epoch 382 val_loss 0.00381 best 0.00376 elapsed 25.2m
+ep 382 step 15700 loss 0.00184 lr 1.64e-03 169,728 pos/s elapsed 25.3m
+== epoch 383 val_loss 0.00379 best 0.00376 elapsed 25.3m
+== epoch 384 val_loss 0.00380 best 0.00376 elapsed 25.3m
+== epoch 385 val_loss 0.00380 best 0.00376 elapsed 25.4m
+ep 385 step 15800 loss 0.00179 lr 1.64e-03 169,718 pos/s elapsed 25.4m
+== epoch 386 val_loss 0.00380 best 0.00376 elapsed 25.5m
+== epoch 387 val_loss 0.00379 best 0.00376 elapsed 25.5m
+ep 387 step 15900 loss 0.00183 lr 1.63e-03 169,709 pos/s elapsed 25.6m
+== epoch 388 val_loss 0.00380 best 0.00376 elapsed 25.6m
+== epoch 389 val_loss 0.00380 best 0.00376 elapsed 25.7m
+== epoch 390 val_loss 0.00379 best 0.00376 elapsed 25.7m
+ep 390 step 16000 loss 0.00178 lr 1.63e-03 169,701 pos/s elapsed 25.7m
+== epoch 391 val_loss 0.00381 best 0.00376 elapsed 25.8m
+== epoch 392 val_loss 0.00380 best 0.00376 elapsed 25.9m
+ep 392 step 16100 loss 0.00182 lr 1.63e-03 169,705 pos/s elapsed 25.9m
+== epoch 393 val_loss 0.00380 best 0.00376 elapsed 25.9m
+== epoch 394 val_loss 0.00380 best 0.00376 elapsed 26.0m
+== epoch 395 val_loss 0.00377 best 0.00376 elapsed 26.1m
+ep 395 step 16200 loss 0.00175 lr 1.62e-03 169,710 pos/s elapsed 26.1m
+== epoch 396 val_loss 0.00380 best 0.00376 elapsed 26.1m
+== epoch 397 val_loss 0.00381 best 0.00376 elapsed 26.2m
+ep 397 step 16300 loss 0.00182 lr 1.62e-03 169,710 pos/s elapsed 26.2m
+== epoch 398 val_loss 0.00379 best 0.00376 elapsed 26.3m
+== epoch 399 val_loss 0.00380 best 0.00376 elapsed 26.3m
+ep 399 step 16400 loss 0.00184 lr 1.61e-03 169,696 pos/s elapsed 26.4m
+== epoch 400 val_loss 0.00379 best 0.00376 elapsed 26.4m
+== epoch 401 val_loss 0.00378 best 0.00376 elapsed 26.5m
+== epoch 402 val_loss 0.00379 best 0.00376 elapsed 26.5m
+ep 402 step 16500 loss 0.00178 lr 1.61e-03 169,685 pos/s elapsed 26.6m
+== epoch 403 val_loss 0.00379 best 0.00376 elapsed 26.6m
+== epoch 404 val_loss 0.00379 best 0.00376 elapsed 26.7m
+ep 404 step 16600 loss 0.00183 lr 1.60e-03 169,675 pos/s elapsed 26.7m
+== epoch 405 val_loss 0.00379 best 0.00376 elapsed 26.7m
+== epoch 406 val_loss 0.00381 best 0.00376 elapsed 26.8m
+== epoch 407 val_loss 0.00379 best 0.00376 elapsed 26.9m
+ep 407 step 16700 loss 0.00179 lr 1.60e-03 169,613 pos/s elapsed 26.9m
+== epoch 408 val_loss 0.00380 best 0.00376 elapsed 26.9m
+== epoch 409 val_loss 0.00381 best 0.00376 elapsed 27.0m
+ep 409 step 16800 loss 0.00182 lr 1.59e-03 169,620 pos/s elapsed 27.0m
+== epoch 410 val_loss 0.00380 best 0.00376 elapsed 27.1m
+== epoch 411 val_loss 0.00381 best 0.00376 elapsed 27.1m
+== epoch 412 val_loss 0.00379 best 0.00376 elapsed 27.2m
+ep 412 step 16900 loss 0.00178 lr 1.59e-03 169,621 pos/s elapsed 27.2m
+== epoch 413 val_loss 0.00379 best 0.00376 elapsed 27.3m
+== epoch 414 val_loss 0.00380 best 0.00376 elapsed 27.3m
+ep 414 step 17000 loss 0.00180 lr 1.59e-03 169,585 pos/s elapsed 27.4m
+== epoch 415 val_loss 0.00379 best 0.00376 elapsed 27.4m
+== epoch 416 val_loss 0.00380 best 0.00376 elapsed 27.5m
+== epoch 417 val_loss 0.00378 best 0.00376 elapsed 27.5m
+ep 417 step 17100 loss 0.00176 lr 1.58e-03 169,554 pos/s elapsed 27.5m
+== epoch 418 val_loss 0.00379 best 0.00376 elapsed 27.6m
+== epoch 419 val_loss 0.00378 best 0.00376 elapsed 27.7m
+ep 419 step 17200 loss 0.00179 lr 1.58e-03 169,551 pos/s elapsed 27.7m
+== epoch 420 val_loss 0.00379 best 0.00376 elapsed 27.7m
+== epoch 421 val_loss 0.00380 best 0.00376 elapsed 27.8m
+ep 421 step 17300 loss 0.00183 lr 1.57e-03 169,554 pos/s elapsed 27.9m
+== epoch 422 val_loss 0.00380 best 0.00376 elapsed 27.9m
+== epoch 423 val_loss 0.00379 best 0.00376 elapsed 27.9m
+== epoch 424 val_loss 0.00379 best 0.00376 elapsed 28.0m
+ep 424 step 17400 loss 0.00178 lr 1.57e-03 169,534 pos/s elapsed 28.0m
+== epoch 425 val_loss 0.00379 best 0.00376 elapsed 28.1m
+== epoch 426 val_loss 0.00380 best 0.00376 elapsed 28.1m
+ep 426 step 17500 loss 0.00181 lr 1.56e-03 169,498 pos/s elapsed 28.2m
+== epoch 427 val_loss 0.00380 best 0.00376 elapsed 28.2m
+== epoch 428 val_loss 0.00381 best 0.00376 elapsed 28.3m
+== epoch 429 val_loss 0.00380 best 0.00376 elapsed 28.3m
+ep 429 step 17600 loss 0.00177 lr 1.56e-03 169,500 pos/s elapsed 28.4m
+== epoch 430 val_loss 0.00378 best 0.00376 elapsed 28.4m
+== epoch 431 val_loss 0.00379 best 0.00376 elapsed 28.5m
+ep 431 step 17700 loss 0.00180 lr 1.55e-03 169,508 pos/s elapsed 28.5m
+== epoch 432 val_loss 0.00377 best 0.00376 elapsed 28.5m
+== epoch 433 val_loss 0.00379 best 0.00376 elapsed 28.6m
+== epoch 434 val_loss 0.00378 best 0.00376 elapsed 28.7m
+ep 434 step 17800 loss 0.00176 lr 1.55e-03 169,502 pos/s elapsed 28.7m
+== epoch 435 val_loss 0.00379 best 0.00376 elapsed 28.7m
+== epoch 436 val_loss 0.00379 best 0.00376 elapsed 28.8m
+ep 436 step 17900 loss 0.00179 lr 1.54e-03 169,495 pos/s elapsed 28.8m
+== epoch 437 val_loss 0.00380 best 0.00376 elapsed 28.9m
+== epoch 438 val_loss 0.00379 best 0.00376 elapsed 28.9m
+== epoch 439 val_loss 0.00378 best 0.00376 elapsed 29.0m
+ep 439 step 18000 loss 0.00176 lr 1.54e-03 169,485 pos/s elapsed 29.0m
+== epoch 440 val_loss 0.00380 best 0.00376 elapsed 29.1m
+== epoch 441 val_loss 0.00378 best 0.00376 elapsed 29.1m
+ep 441 step 18100 loss 0.00178 lr 1.53e-03 169,496 pos/s elapsed 29.2m
+== epoch 442 val_loss 0.00379 best 0.00376 elapsed 29.2m
+== epoch 443 val_loss 0.00378 best 0.00376 elapsed 29.3m
+ep 443 step 18200 loss 0.00181 lr 1.53e-03 169,477 pos/s elapsed 29.3m
+== epoch 444 val_loss 0.00379 best 0.00376 elapsed 29.3m
+== epoch 445 val_loss 0.00380 best 0.00376 elapsed 29.4m
+== epoch 446 val_loss 0.00378 best 0.00376 elapsed 29.5m
+ep 446 step 18300 loss 0.00177 lr 1.53e-03 169,464 pos/s elapsed 29.5m
+== epoch 447 val_loss 0.00378 best 0.00376 elapsed 29.5m
+== epoch 448 val_loss 0.00380 best 0.00376 elapsed 29.6m
+ep 448 step 18400 loss 0.00180 lr 1.52e-03 169,488 pos/s elapsed 29.6m
+== epoch 449 val_loss 0.00378 best 0.00376 elapsed 29.7m
+== epoch 450 val_loss 0.00378 best 0.00376 elapsed 29.7m
+== epoch 451 val_loss 0.00379 best 0.00376 elapsed 29.8m
+ep 451 step 18500 loss 0.00176 lr 1.52e-03 169,482 pos/s elapsed 29.8m
+== epoch 452 val_loss 0.00378 best 0.00376 elapsed 29.9m
+== epoch 453 val_loss 0.00378 best 0.00376 elapsed 29.9m
+ep 453 step 18600 loss 0.00179 lr 1.51e-03 169,482 pos/s elapsed 30.0m
+== epoch 454 val_loss 0.00379 best 0.00376 elapsed 30.0m
+== epoch 455 val_loss 0.00378 best 0.00376 elapsed 30.1m
+== epoch 456 val_loss 0.00380 best 0.00376 elapsed 30.1m
+ep 456 step 18700 loss 0.00177 lr 1.51e-03 169,460 pos/s elapsed 30.1m
+== epoch 457 val_loss 0.00378 best 0.00376 elapsed 30.2m
+== epoch 458 val_loss 0.00379 best 0.00376 elapsed 30.3m
+ep 458 step 18800 loss 0.00178 lr 1.50e-03 169,477 pos/s elapsed 30.3m
+== epoch 459 val_loss 0.00378 best 0.00376 elapsed 30.3m
+== epoch 460 val_loss 0.00379 best 0.00376 elapsed 30.4m
+ep 460 step 18900 loss 0.00181 lr 1.50e-03 169,491 pos/s elapsed 30.4m
+== epoch 461 val_loss 0.00378 best 0.00376 elapsed 30.5m
+== epoch 462 val_loss 0.00379 best 0.00376 elapsed 30.5m
+== epoch 463 val_loss 0.00378 best 0.00376 elapsed 30.6m
+ep 463 step 19000 loss 0.00177 lr 1.49e-03 169,498 pos/s elapsed 30.6m
+== epoch 464 val_loss 0.00378 best 0.00376 elapsed 30.6m
+== epoch 465 val_loss 0.00378 best 0.00376 elapsed 30.7m
+ep 465 step 19100 loss 0.00179 lr 1.49e-03 169,462 pos/s elapsed 30.8m
+== epoch 466 val_loss 0.00378 best 0.00376 elapsed 30.8m
+== epoch 467 val_loss 0.00379 best 0.00376 elapsed 30.9m
+== epoch 468 val_loss 0.00378 best 0.00376 elapsed 30.9m
+ep 468 step 19200 loss 0.00177 lr 1.48e-03 169,408 pos/s elapsed 30.9m
+== epoch 469 val_loss 0.00378 best 0.00376 elapsed 31.0m
+== epoch 470 val_loss 0.00378 best 0.00376 elapsed 31.1m
+ep 470 step 19300 loss 0.00179 lr 1.48e-03 169,414 pos/s elapsed 31.1m
+== epoch 471 val_loss 0.00379 best 0.00376 elapsed 31.1m
+== epoch 472 val_loss 0.00378 best 0.00376 elapsed 31.2m
+== epoch 473 val_loss 0.00378 best 0.00376 elapsed 31.3m
+ep 473 step 19400 loss 0.00176 lr 1.47e-03 169,425 pos/s elapsed 31.3m
+== epoch 474 val_loss 0.00378 best 0.00376 elapsed 31.3m
+== epoch 475 val_loss 0.00379 best 0.00376 elapsed 31.4m
+ep 475 step 19500 loss 0.00178 lr 1.47e-03 169,432 pos/s elapsed 31.4m
+== epoch 476 val_loss 0.00379 best 0.00376 elapsed 31.5m
+== epoch 477 val_loss 0.00377 best 0.00376 elapsed 31.5m
+== epoch 478 val_loss 0.00377 best 0.00376 elapsed 31.6m
+ep 478 step 19600 loss 0.00179 lr 1.46e-03 169,450 pos/s elapsed 31.6m
+== epoch 479 val_loss 0.00378 best 0.00376 elapsed 31.6m
+== epoch 480 val_loss 0.00376 best 0.00376 elapsed 31.7m
+exported net.bin (201012 bytes)
+ep 480 step 19700 loss 0.00177 lr 1.46e-03 169,450 pos/s elapsed 31.7m
+== epoch 481 val_loss 0.00377 best 0.00376 elapsed 31.8m
+== epoch 482 val_loss 0.00378 best 0.00376 elapsed 31.8m
+ep 482 step 19800 loss 0.00179 lr 1.45e-03 169,456 pos/s elapsed 31.9m
+== epoch 483 val_loss 0.00379 best 0.00376 elapsed 31.9m
+== epoch 484 val_loss 0.00378 best 0.00376 elapsed 32.0m
+== epoch 485 val_loss 0.00378 best 0.00376 elapsed 32.0m
+ep 485 step 19900 loss 0.00177 lr 1.45e-03 169,489 pos/s elapsed 32.1m
+== epoch 486 val_loss 0.00378 best 0.00376 elapsed 32.1m
+== epoch 487 val_loss 0.00378 best 0.00376 elapsed 32.2m
+ep 487 step 20000 loss 0.00178 lr 1.44e-03 169,524 pos/s elapsed 32.2m
+== epoch 488 val_loss 0.00378 best 0.00376 elapsed 32.2m
+== epoch 489 val_loss 0.00378 best 0.00376 elapsed 32.3m
+== epoch 490 val_loss 0.00377 best 0.00376 elapsed 32.4m
+ep 490 step 20100 loss 0.00175 lr 1.44e-03 169,560 pos/s elapsed 32.4m
+== epoch 491 val_loss 0.00379 best 0.00376 elapsed 32.4m
+== epoch 492 val_loss 0.00378 best 0.00376 elapsed 32.5m
+ep 492 step 20200 loss 0.00178 lr 1.43e-03 169,600 pos/s elapsed 32.5m
+== epoch 493 val_loss 0.00378 best 0.00376 elapsed 32.5m
+== epoch 494 val_loss 0.00378 best 0.00376 elapsed 32.6m
+== epoch 495 val_loss 0.00377 best 0.00376 elapsed 32.7m
+ep 495 step 20300 loss 0.00174 lr 1.43e-03 169,622 pos/s elapsed 32.7m
+== epoch 496 val_loss 0.00378 best 0.00376 elapsed 32.7m
+== epoch 497 val_loss 0.00378 best 0.00376 elapsed 32.8m
+ep 497 step 20400 loss 0.00176 lr 1.42e-03 169,625 pos/s elapsed 32.8m
+== epoch 498 val_loss 0.00378 best 0.00376 elapsed 32.9m
+== epoch 499 val_loss 0.00378 best 0.00376 elapsed 32.9m
+ep 499 step 20500 loss 0.00179 lr 1.42e-03 169,634 pos/s elapsed 33.0m
+== epoch 500 val_loss 0.00378 best 0.00376 elapsed 33.0m
+== epoch 501 val_loss 0.00380 best 0.00376 elapsed 33.1m
+== epoch 502 val_loss 0.00378 best 0.00376 elapsed 33.1m
+ep 502 step 20600 loss 0.00176 lr 1.41e-03 169,665 pos/s elapsed 33.2m
+== epoch 503 val_loss 0.00377 best 0.00376 elapsed 33.2m
+== epoch 504 val_loss 0.00377 best 0.00376 elapsed 33.3m
+ep 504 step 20700 loss 0.00179 lr 1.41e-03 169,689 pos/s elapsed 33.3m
+== epoch 505 val_loss 0.00377 best 0.00376 elapsed 33.3m
+== epoch 506 val_loss 0.00379 best 0.00376 elapsed 33.4m
+== epoch 507 val_loss 0.00377 best 0.00376 elapsed 33.5m
+ep 507 step 20800 loss 0.00176 lr 1.40e-03 169,694 pos/s elapsed 33.5m
+== epoch 508 val_loss 0.00377 best 0.00376 elapsed 33.5m
+== epoch 509 val_loss 0.00378 best 0.00376 elapsed 33.6m
+ep 509 step 20900 loss 0.00178 lr 1.40e-03 169,714 pos/s elapsed 33.6m
+== epoch 510 val_loss 0.00379 best 0.00376 elapsed 33.6m
+== epoch 511 val_loss 0.00377 best 0.00376 elapsed 33.7m
+== epoch 512 val_loss 0.00379 best 0.00376 elapsed 33.8m
+ep 512 step 21000 loss 0.00174 lr 1.39e-03 169,732 pos/s elapsed 33.8m
+== epoch 513 val_loss 0.00378 best 0.00376 elapsed 33.8m
+== epoch 514 val_loss 0.00379 best 0.00376 elapsed 33.9m
+ep 514 step 21100 loss 0.00177 lr 1.39e-03 169,764 pos/s elapsed 33.9m
+== epoch 515 val_loss 0.00379 best 0.00376 elapsed 34.0m
+== epoch 516 val_loss 0.00378 best 0.00376 elapsed 34.0m
+== epoch 517 val_loss 0.00377 best 0.00376 elapsed 34.1m
+ep 517 step 21200 loss 0.00172 lr 1.38e-03 169,796 pos/s elapsed 34.1m
+== epoch 518 val_loss 0.00377 best 0.00376 elapsed 34.2m
+== epoch 519 val_loss 0.00378 best 0.00376 elapsed 34.2m
+ep 519 step 21300 loss 0.00176 lr 1.38e-03 169,818 pos/s elapsed 34.3m
+== epoch 520 val_loss 0.00378 best 0.00376 elapsed 34.3m
+== epoch 521 val_loss 0.00378 best 0.00376 elapsed 34.3m
+ep 521 step 21400 loss 0.00178 lr 1.37e-03 169,853 pos/s elapsed 34.4m
+== epoch 522 val_loss 0.00379 best 0.00376 elapsed 34.4m
+== epoch 523 val_loss 0.00378 best 0.00376 elapsed 34.5m
+== epoch 524 val_loss 0.00378 best 0.00376 elapsed 34.5m
+ep 524 step 21500 loss 0.00175 lr 1.37e-03 169,884 pos/s elapsed 34.6m
+== epoch 525 val_loss 0.00378 best 0.00376 elapsed 34.6m
+== epoch 526 val_loss 0.00378 best 0.00376 elapsed 34.7m
+ep 526 step 21600 loss 0.00177 lr 1.36e-03 169,902 pos/s elapsed 34.7m
+== epoch 527 val_loss 0.00377 best 0.00376 elapsed 34.7m
+== epoch 528 val_loss 0.00378 best 0.00376 elapsed 34.8m
+== epoch 529 val_loss 0.00379 best 0.00376 elapsed 34.9m
+ep 529 step 21700 loss 0.00174 lr 1.36e-03 169,911 pos/s elapsed 34.9m
+== epoch 530 val_loss 0.00379 best 0.00376 elapsed 34.9m
+== epoch 531 val_loss 0.00378 best 0.00376 elapsed 35.0m
+ep 531 step 21800 loss 0.00176 lr 1.35e-03 169,946 pos/s elapsed 35.0m
+== epoch 532 val_loss 0.00377 best 0.00376 elapsed 35.0m
+== epoch 533 val_loss 0.00377 best 0.00376 elapsed 35.1m
+== epoch 534 val_loss 0.00379 best 0.00376 elapsed 35.2m
+ep 534 step 21900 loss 0.00175 lr 1.35e-03 169,974 pos/s elapsed 35.2m
+== epoch 535 val_loss 0.00378 best 0.00376 elapsed 35.2m
+== epoch 536 val_loss 0.00379 best 0.00376 elapsed 35.3m
+ep 536 step 22000 loss 0.00176 lr 1.34e-03 170,010 pos/s elapsed 35.3m
+== epoch 537 val_loss 0.00377 best 0.00376 elapsed 35.4m
+== epoch 538 val_loss 0.00378 best 0.00376 elapsed 35.4m
+== epoch 539 val_loss 0.00377 best 0.00376 elapsed 35.5m
+ep 539 step 22100 loss 0.00170 lr 1.34e-03 170,033 pos/s elapsed 35.5m
+== epoch 540 val_loss 0.00378 best 0.00376 elapsed 35.6m
+== epoch 541 val_loss 0.00378 best 0.00376 elapsed 35.6m
+ep 541 step 22200 loss 0.00174 lr 1.33e-03 170,046 pos/s elapsed 35.6m
+== epoch 542 val_loss 0.00378 best 0.00376 elapsed 35.7m
+== epoch 543 val_loss 0.00378 best 0.00376 elapsed 35.7m
+ep 543 step 22300 loss 0.00177 lr 1.33e-03 170,071 pos/s elapsed 35.8m
+== epoch 544 val_loss 0.00377 best 0.00376 elapsed 35.8m
+== epoch 545 val_loss 0.00378 best 0.00376 elapsed 35.9m
+== epoch 546 val_loss 0.00379 best 0.00376 elapsed 35.9m
+ep 546 step 22400 loss 0.00174 lr 1.32e-03 170,087 pos/s elapsed 36.0m
+== epoch 547 val_loss 0.00378 best 0.00376 elapsed 36.0m
+== epoch 548 val_loss 0.00377 best 0.00376 elapsed 36.1m
+ep 548 step 22500 loss 0.00176 lr 1.32e-03 170,121 pos/s elapsed 36.1m
+== epoch 549 val_loss 0.00379 best 0.00376 elapsed 36.1m
+== epoch 550 val_loss 0.00378 best 0.00376 elapsed 36.2m
+== epoch 551 val_loss 0.00380 best 0.00376 elapsed 36.3m
+ep 551 step 22600 loss 0.00173 lr 1.31e-03 170,149 pos/s elapsed 36.3m
+== epoch 552 val_loss 0.00378 best 0.00376 elapsed 36.3m
+== epoch 553 val_loss 0.00378 best 0.00376 elapsed 36.4m
+ep 553 step 22700 loss 0.00176 lr 1.31e-03 170,186 pos/s elapsed 36.4m
+== epoch 554 val_loss 0.00379 best 0.00376 elapsed 36.4m
+== epoch 555 val_loss 0.00377 best 0.00376 elapsed 36.5m
+== epoch 556 val_loss 0.00379 best 0.00376 elapsed 36.6m
+ep 556 step 22800 loss 0.00169 lr 1.30e-03 170,214 pos/s elapsed 36.6m
+== epoch 557 val_loss 0.00378 best 0.00376 elapsed 36.6m
+== epoch 558 val_loss 0.00380 best 0.00376 elapsed 36.7m
+ep 558 step 22900 loss 0.00174 lr 1.30e-03 170,239 pos/s elapsed 36.7m
+== epoch 559 val_loss 0.00379 best 0.00376 elapsed 36.8m
+== epoch 560 val_loss 0.00378 best 0.00376 elapsed 36.8m
+ep 560 step 23000 loss 0.00177 lr 1.29e-03 170,258 pos/s elapsed 36.9m
+== epoch 561 val_loss 0.00378 best 0.00376 elapsed 36.9m
+== epoch 562 val_loss 0.00378 best 0.00376 elapsed 37.0m
+== epoch 563 val_loss 0.00378 best 0.00376 elapsed 37.0m
+ep 563 step 23100 loss 0.00173 lr 1.29e-03 170,282 pos/s elapsed 37.0m
+== epoch 564 val_loss 0.00377 best 0.00376 elapsed 37.1m
+== epoch 565 val_loss 0.00378 best 0.00376 elapsed 37.1m
+ep 565 step 23200 loss 0.00176 lr 1.28e-03 170,301 pos/s elapsed 37.2m
+== epoch 566 val_loss 0.00377 best 0.00376 elapsed 37.2m
+== epoch 567 val_loss 0.00377 best 0.00376 elapsed 37.3m
+== epoch 568 val_loss 0.00376 best 0.00376 elapsed 37.3m
+ep 568 step 23300 loss 0.00173 lr 1.28e-03 170,329 pos/s elapsed 37.4m
+== epoch 569 val_loss 0.00378 best 0.00376 elapsed 37.4m
+== epoch 570 val_loss 0.00379 best 0.00376 elapsed 37.5m
+ep 570 step 23400 loss 0.00175 lr 1.27e-03 170,356 pos/s elapsed 37.5m
+== epoch 571 val_loss 0.00379 best 0.00376 elapsed 37.5m
+== epoch 572 val_loss 0.00376 best 0.00376 elapsed 37.6m
+== epoch 573 val_loss 0.00377 best 0.00376 elapsed 37.7m
+ep 573 step 23500 loss 0.00174 lr 1.27e-03 170,380 pos/s elapsed 37.7m
+== epoch 574 val_loss 0.00377 best 0.00376 elapsed 37.7m
+== epoch 575 val_loss 0.00378 best 0.00376 elapsed 37.8m
+ep 575 step 23600 loss 0.00175 lr 1.26e-03 170,386 pos/s elapsed 37.8m
+== epoch 576 val_loss 0.00378 best 0.00376 elapsed 37.8m
+== epoch 577 val_loss 0.00378 best 0.00376 elapsed 37.9m
+== epoch 578 val_loss 0.00378 best 0.00376 elapsed 38.0m
+ep 578 step 23700 loss 0.00173 lr 1.26e-03 170,406 pos/s elapsed 38.0m
+== epoch 579 val_loss 0.00378 best 0.00376 elapsed 38.0m
+== epoch 580 val_loss 0.00380 best 0.00376 elapsed 38.1m
+ep 580 step 23800 loss 0.00174 lr 1.25e-03 170,415 pos/s elapsed 38.1m
+== epoch 581 val_loss 0.00379 best 0.00376 elapsed 38.2m
+== epoch 582 val_loss 0.00377 best 0.00376 elapsed 38.2m
+ep 582 step 23900 loss 0.00176 lr 1.25e-03 170,446 pos/s elapsed 38.3m
+== epoch 583 val_loss 0.00379 best 0.00376 elapsed 38.3m
+== epoch 584 val_loss 0.00379 best 0.00376 elapsed 38.4m
+== epoch 585 val_loss 0.00378 best 0.00376 elapsed 38.4m
+ep 585 step 24000 loss 0.00172 lr 1.24e-03 170,458 pos/s elapsed 38.4m
+== epoch 586 val_loss 0.00377 best 0.00376 elapsed 38.5m
+== epoch 587 val_loss 0.00378 best 0.00376 elapsed 38.6m
+ep 587 step 24100 loss 0.00175 lr 1.24e-03 170,477 pos/s elapsed 38.6m
+== epoch 588 val_loss 0.00378 best 0.00376 elapsed 38.6m
+== epoch 589 val_loss 0.00378 best 0.00376 elapsed 38.7m
+== epoch 590 val_loss 0.00377 best 0.00376 elapsed 38.7m
+ep 590 step 24200 loss 0.00172 lr 1.23e-03 170,482 pos/s elapsed 38.8m
+== epoch 591 val_loss 0.00376 best 0.00376 elapsed 38.8m
+== epoch 592 val_loss 0.00377 best 0.00376 elapsed 38.9m
+ep 592 step 24300 loss 0.00174 lr 1.23e-03 170,480 pos/s elapsed 38.9m
+== epoch 593 val_loss 0.00377 best 0.00376 elapsed 38.9m
+== epoch 594 val_loss 0.00377 best 0.00376 elapsed 39.0m
+== epoch 595 val_loss 0.00378 best 0.00376 elapsed 39.1m
+ep 595 step 24400 loss 0.00172 lr 1.22e-03 170,499 pos/s elapsed 39.1m
+== epoch 596 val_loss 0.00377 best 0.00376 elapsed 39.1m
+== epoch 597 val_loss 0.00378 best 0.00376 elapsed 39.2m
+ep 597 step 24500 loss 0.00173 lr 1.22e-03 170,516 pos/s elapsed 39.2m
+== epoch 598 val_loss 0.00377 best 0.00376 elapsed 39.3m
+== epoch 599 val_loss 0.00378 best 0.00376 elapsed 39.3m
+ep 599 step 24600 loss 0.00176 lr 1.21e-03 170,536 pos/s elapsed 39.4m
+== epoch 600 val_loss 0.00378 best 0.00376 elapsed 39.4m
+== epoch 601 val_loss 0.00377 best 0.00376 elapsed 39.5m
+== epoch 602 val_loss 0.00377 best 0.00376 elapsed 39.5m
+ep 602 step 24700 loss 0.00172 lr 1.21e-03 170,556 pos/s elapsed 39.5m
+== epoch 603 val_loss 0.00377 best 0.00376 elapsed 39.6m
+== epoch 604 val_loss 0.00378 best 0.00376 elapsed 39.7m
+ep 604 step 24800 loss 0.00175 lr 1.20e-03 170,553 pos/s elapsed 39.7m
+== epoch 605 val_loss 0.00377 best 0.00376 elapsed 39.7m
+== epoch 606 val_loss 0.00378 best 0.00376 elapsed 39.8m
+== epoch 607 val_loss 0.00379 best 0.00376 elapsed 39.8m
+ep 607 step 24900 loss 0.00172 lr 1.19e-03 170,561 pos/s elapsed 39.9m
+== epoch 608 val_loss 0.00376 best 0.00376 elapsed 39.9m
+== epoch 609 val_loss 0.00377 best 0.00376 elapsed 40.0m
+ep 609 step 25000 loss 0.00174 lr 1.19e-03 170,549 pos/s elapsed 40.0m
+== epoch 610 val_loss 0.00377 best 0.00376 elapsed 40.0m
+== epoch 611 val_loss 0.00378 best 0.00376 elapsed 40.1m
+== epoch 612 val_loss 0.00378 best 0.00376 elapsed 40.2m
+ep 612 step 25100 loss 0.00172 lr 1.18e-03 170,545 pos/s elapsed 40.2m
+== epoch 613 val_loss 0.00377 best 0.00376 elapsed 40.2m
+== epoch 614 val_loss 0.00377 best 0.00376 elapsed 40.3m
+ep 614 step 25200 loss 0.00174 lr 1.18e-03 170,553 pos/s elapsed 40.3m
+== epoch 615 val_loss 0.00377 best 0.00376 elapsed 40.4m
+== epoch 616 val_loss 0.00378 best 0.00376 elapsed 40.4m
+== epoch 617 val_loss 0.00378 best 0.00376 elapsed 40.5m
+ep 617 step 25300 loss 0.00171 lr 1.17e-03 170,552 pos/s elapsed 40.5m
+== epoch 618 val_loss 0.00377 best 0.00376 elapsed 40.6m
+== epoch 619 val_loss 0.00377 best 0.00376 elapsed 40.6m
+ep 619 step 25400 loss 0.00173 lr 1.17e-03 170,562 pos/s elapsed 40.7m
+== epoch 620 val_loss 0.00377 best 0.00376 elapsed 40.7m
+== epoch 621 val_loss 0.00378 best 0.00376 elapsed 40.8m
+ep 621 step 25500 loss 0.00175 lr 1.16e-03 170,556 pos/s elapsed 40.8m
+== epoch 622 val_loss 0.00377 best 0.00376 elapsed 40.8m
+== epoch 623 val_loss 0.00379 best 0.00376 elapsed 40.9m
+== epoch 624 val_loss 0.00378 best 0.00376 elapsed 41.0m
+ep 624 step 25600 loss 0.00172 lr 1.16e-03 170,566 pos/s elapsed 41.0m
+== epoch 625 val_loss 0.00377 best 0.00376 elapsed 41.0m
+== epoch 626 val_loss 0.00378 best 0.00376 elapsed 41.1m
+ep 626 step 25700 loss 0.00174 lr 1.15e-03 170,578 pos/s elapsed 41.1m
+== epoch 627 val_loss 0.00377 best 0.00376 elapsed 41.2m
+== epoch 628 val_loss 0.00378 best 0.00376 elapsed 41.2m
+== epoch 629 val_loss 0.00377 best 0.00376 elapsed 41.3m
+ep 629 step 25800 loss 0.00173 lr 1.15e-03 170,572 pos/s elapsed 41.3m
+== epoch 630 val_loss 0.00377 best 0.00376 elapsed 41.4m
+== epoch 631 val_loss 0.00378 best 0.00376 elapsed 41.4m
+ep 631 step 25900 loss 0.00173 lr 1.14e-03 170,580 pos/s elapsed 41.5m
+== epoch 632 val_loss 0.00377 best 0.00376 elapsed 41.5m
+== epoch 633 val_loss 0.00377 best 0.00376 elapsed 41.5m
+== epoch 634 val_loss 0.00378 best 0.00376 elapsed 41.6m
+ep 634 step 26000 loss 0.00171 lr 1.14e-03 170,583 pos/s elapsed 41.6m
+== epoch 635 val_loss 0.00377 best 0.00376 elapsed 41.7m
+== epoch 636 val_loss 0.00378 best 0.00376 elapsed 41.7m
+ep 636 step 26100 loss 0.00172 lr 1.13e-03 170,593 pos/s elapsed 41.8m
+== epoch 637 val_loss 0.00378 best 0.00376 elapsed 41.8m
+== epoch 638 val_loss 0.00379 best 0.00376 elapsed 41.9m
+== epoch 639 val_loss 0.00378 best 0.00376 elapsed 41.9m
+ep 639 step 26200 loss 0.00166 lr 1.12e-03 170,589 pos/s elapsed 41.9m
+== epoch 640 val_loss 0.00376 best 0.00376 elapsed 42.0m
+== epoch 641 val_loss 0.00377 best 0.00376 elapsed 42.1m
+ep 641 step 26300 loss 0.00172 lr 1.12e-03 170,605 pos/s elapsed 42.1m
+== epoch 642 val_loss 0.00377 best 0.00376 elapsed 42.1m
+== epoch 643 val_loss 0.00378 best 0.00376 elapsed 42.2m
+ep 643 step 26400 loss 0.00174 lr 1.11e-03 170,626 pos/s elapsed 42.2m
+== epoch 644 val_loss 0.00378 best 0.00376 elapsed 42.3m
+== epoch 645 val_loss 0.00377 best 0.00376 elapsed 42.3m
+== epoch 646 val_loss 0.00376 best 0.00376 elapsed 42.4m
+ep 646 step 26500 loss 0.00171 lr 1.11e-03 170,641 pos/s elapsed 42.4m
+== epoch 647 val_loss 0.00377 best 0.00376 elapsed 42.5m
+== epoch 648 val_loss 0.00377 best 0.00376 elapsed 42.5m
+ep 648 step 26600 loss 0.00174 lr 1.10e-03 170,648 pos/s elapsed 42.6m
+== epoch 649 val_loss 0.00377 best 0.00376 elapsed 42.6m
+== epoch 650 val_loss 0.00377 best 0.00376 elapsed 42.6m
+== epoch 651 val_loss 0.00377 best 0.00376 elapsed 42.7m
+ep 651 step 26700 loss 0.00171 lr 1.10e-03 170,667 pos/s elapsed 42.7m
+== epoch 652 val_loss 0.00377 best 0.00376 elapsed 42.8m
+== epoch 653 val_loss 0.00377 best 0.00376 elapsed 42.8m
+ep 653 step 26800 loss 0.00173 lr 1.09e-03 170,689 pos/s elapsed 42.9m
+== epoch 654 val_loss 0.00376 best 0.00376 elapsed 42.9m
+== epoch 655 val_loss 0.00377 best 0.00376 elapsed 43.0m
+== epoch 656 val_loss 0.00377 best 0.00376 elapsed 43.0m
+ep 656 step 26900 loss 0.00170 lr 1.09e-03 170,699 pos/s elapsed 43.0m
+== epoch 657 val_loss 0.00376 best 0.00376 elapsed 43.1m
+== epoch 658 val_loss 0.00376 best 0.00376 elapsed 43.2m
+ep 658 step 27000 loss 0.00172 lr 1.08e-03 170,720 pos/s elapsed 43.2m
+== epoch 659 val_loss 0.00376 best 0.00376 elapsed 43.2m
+== epoch 660 val_loss 0.00378 best 0.00376 elapsed 43.3m
+ep 660 step 27100 loss 0.00174 lr 1.08e-03 170,749 pos/s elapsed 43.3m
+== epoch 661 val_loss 0.00377 best 0.00376 elapsed 43.3m
+== epoch 662 val_loss 0.00377 best 0.00376 elapsed 43.4m
+== epoch 663 val_loss 0.00378 best 0.00376 elapsed 43.5m
+ep 663 step 27200 loss 0.00172 lr 1.07e-03 170,770 pos/s elapsed 43.5m
+== epoch 664 val_loss 0.00377 best 0.00376 elapsed 43.5m
+== epoch 665 val_loss 0.00377 best 0.00376 elapsed 43.6m
+ep 665 step 27300 loss 0.00173 lr 1.07e-03 170,788 pos/s elapsed 43.6m
+== epoch 666 val_loss 0.00377 best 0.00376 elapsed 43.7m
+== epoch 667 val_loss 0.00377 best 0.00376 elapsed 43.7m
+== epoch 668 val_loss 0.00376 best 0.00376 elapsed 43.8m
+ep 668 step 27400 loss 0.00171 lr 1.06e-03 170,800 pos/s elapsed 43.8m
+== epoch 669 val_loss 0.00377 best 0.00376 elapsed 43.9m
+== epoch 670 val_loss 0.00376 best 0.00376 elapsed 43.9m
+ep 670 step 27500 loss 0.00173 lr 1.06e-03 170,808 pos/s elapsed 44.0m
+== epoch 671 val_loss 0.00378 best 0.00376 elapsed 44.0m
+== epoch 672 val_loss 0.00376 best 0.00376 elapsed 44.0m
+== epoch 673 val_loss 0.00377 best 0.00376 elapsed 44.1m
+ep 673 step 27600 loss 0.00170 lr 1.05e-03 170,832 pos/s elapsed 44.1m
+== epoch 674 val_loss 0.00377 best 0.00376 elapsed 44.2m
+== epoch 675 val_loss 0.00377 best 0.00376 elapsed 44.2m
+ep 675 step 27700 loss 0.00172 lr 1.04e-03 170,839 pos/s elapsed 44.3m
+== epoch 676 val_loss 0.00378 best 0.00376 elapsed 44.3m
+== epoch 677 val_loss 0.00377 best 0.00376 elapsed 44.4m
+== epoch 678 val_loss 0.00378 best 0.00376 elapsed 44.4m
+ep 678 step 27800 loss 0.00171 lr 1.04e-03 170,846 pos/s elapsed 44.4m
+== epoch 679 val_loss 0.00377 best 0.00376 elapsed 44.5m
+== epoch 680 val_loss 0.00377 best 0.00376 elapsed 44.6m
+ep 680 step 27900 loss 0.00171 lr 1.03e-03 170,862 pos/s elapsed 44.6m
+== epoch 681 val_loss 0.00378 best 0.00376 elapsed 44.6m
+== epoch 682 val_loss 0.00377 best 0.00376 elapsed 44.7m
+ep 682 step 28000 loss 0.00173 lr 1.03e-03 170,874 pos/s elapsed 44.7m
+== epoch 683 val_loss 0.00377 best 0.00376 elapsed 44.8m
+== epoch 684 val_loss 0.00378 best 0.00376 elapsed 44.8m
+== epoch 685 val_loss 0.00377 best 0.00376 elapsed 44.9m
+ep 685 step 28100 loss 0.00171 lr 1.02e-03 170,892 pos/s elapsed 44.9m
+== epoch 686 val_loss 0.00377 best 0.00376 elapsed 44.9m
+== epoch 687 val_loss 0.00378 best 0.00376 elapsed 45.0m
+ep 687 step 28200 loss 0.00173 lr 1.02e-03 170,908 pos/s elapsed 45.1m
+== epoch 688 val_loss 0.00378 best 0.00376 elapsed 45.1m
+== epoch 689 val_loss 0.00378 best 0.00376 elapsed 45.1m
+== epoch 690 val_loss 0.00377 best 0.00376 elapsed 45.2m
+ep 690 step 28300 loss 0.00170 lr 1.01e-03 170,924 pos/s elapsed 45.2m
+== epoch 691 val_loss 0.00378 best 0.00376 elapsed 45.3m
+== epoch 692 val_loss 0.00378 best 0.00376 elapsed 45.3m
+ep 692 step 28400 loss 0.00172 lr 1.01e-03 170,939 pos/s elapsed 45.4m
+== epoch 693 val_loss 0.00378 best 0.00376 elapsed 45.4m
+== epoch 694 val_loss 0.00377 best 0.00376 elapsed 45.4m
+== epoch 695 val_loss 0.00377 best 0.00376 elapsed 45.5m
+ep 695 step 28500 loss 0.00170 lr 1.00e-03 170,964 pos/s elapsed 45.5m
+== epoch 696 val_loss 0.00377 best 0.00376 elapsed 45.6m
+== epoch 697 val_loss 0.00379 best 0.00376 elapsed 45.6m
+ep 697 step 28600 loss 0.00172 lr 9.97e-04 170,977 pos/s elapsed 45.7m
+== epoch 698 val_loss 0.00378 best 0.00376 elapsed 45.7m
+== epoch 699 val_loss 0.00378 best 0.00376 elapsed 45.8m
+ep 699 step 28700 loss 0.00173 lr 9.92e-04 170,988 pos/s elapsed 45.8m
+== epoch 700 val_loss 0.00377 best 0.00376 elapsed 45.8m
+== epoch 701 val_loss 0.00377 best 0.00376 elapsed 45.9m
+== epoch 702 val_loss 0.00377 best 0.00376 elapsed 46.0m
+ep 702 step 28800 loss 0.00170 lr 9.86e-04 170,998 pos/s elapsed 46.0m
+== epoch 703 val_loss 0.00378 best 0.00376 elapsed 46.0m
+== epoch 704 val_loss 0.00378 best 0.00376 elapsed 46.1m
+ep 704 step 28900 loss 0.00173 lr 9.81e-04 171,005 pos/s elapsed 46.1m
+== epoch 705 val_loss 0.00378 best 0.00376 elapsed 46.2m
+== epoch 706 val_loss 0.00379 best 0.00376 elapsed 46.2m
+== epoch 707 val_loss 0.00377 best 0.00376 elapsed 46.3m
+ep 707 step 29000 loss 0.00170 lr 9.75e-04 171,012 pos/s elapsed 46.3m
+== epoch 708 val_loss 0.00377 best 0.00376 elapsed 46.3m
+== epoch 709 val_loss 0.00377 best 0.00376 elapsed 46.4m
+ep 709 step 29100 loss 0.00172 lr 9.70e-04 171,025 pos/s elapsed 46.5m
+== epoch 710 val_loss 0.00377 best 0.00376 elapsed 46.5m
+== epoch 711 val_loss 0.00378 best 0.00376 elapsed 46.5m
+== epoch 712 val_loss 0.00376 best 0.00376 elapsed 46.6m
+ep 712 step 29200 loss 0.00169 lr 9.65e-04 171,040 pos/s elapsed 46.6m
+== epoch 713 val_loss 0.00378 best 0.00376 elapsed 46.7m
+== epoch 714 val_loss 0.00377 best 0.00376 elapsed 46.7m
+ep 714 step 29300 loss 0.00171 lr 9.59e-04 171,055 pos/s elapsed 46.8m
+== epoch 715 val_loss 0.00378 best 0.00376 elapsed 46.8m
+== epoch 716 val_loss 0.00377 best 0.00376 elapsed 46.9m
+== epoch 717 val_loss 0.00376 best 0.00376 elapsed 46.9m
+ep 717 step 29400 loss 0.00168 lr 9.54e-04 171,059 pos/s elapsed 46.9m
+== epoch 718 val_loss 0.00376 best 0.00376 elapsed 47.0m
+== epoch 719 val_loss 0.00378 best 0.00376 elapsed 47.1m
+ep 719 step 29500 loss 0.00170 lr 9.49e-04 171,078 pos/s elapsed 47.1m
+== epoch 720 val_loss 0.00377 best 0.00376 elapsed 47.1m
+== epoch 721 val_loss 0.00376 best 0.00376 elapsed 47.2m
+ep 721 step 29600 loss 0.00172 lr 9.43e-04 171,091 pos/s elapsed 47.2m
+== epoch 722 val_loss 0.00378 best 0.00376 elapsed 47.2m
+== epoch 723 val_loss 0.00377 best 0.00376 elapsed 47.3m
+== epoch 724 val_loss 0.00377 best 0.00376 elapsed 47.4m
+ep 724 step 29700 loss 0.00170 lr 9.38e-04 171,098 pos/s elapsed 47.4m
+== epoch 725 val_loss 0.00377 best 0.00376 elapsed 47.4m
+== epoch 726 val_loss 0.00378 best 0.00376 elapsed 47.5m
+ep 726 step 29800 loss 0.00172 lr 9.33e-04 171,109 pos/s elapsed 47.6m
+== epoch 727 val_loss 0.00377 best 0.00376 elapsed 47.6m
+== epoch 728 val_loss 0.00377 best 0.00376 elapsed 47.6m
+== epoch 729 val_loss 0.00377 best 0.00376 elapsed 47.7m
+ep 729 step 29900 loss 0.00169 lr 9.27e-04 171,110 pos/s elapsed 47.7m
+== epoch 730 val_loss 0.00377 best 0.00376 elapsed 47.8m
+== epoch 731 val_loss 0.00377 best 0.00376 elapsed 47.8m
+ep 731 step 30000 loss 0.00172 lr 9.22e-04 171,108 pos/s elapsed 47.9m
+== epoch 732 val_loss 0.00377 best 0.00376 elapsed 47.9m
+== epoch 733 val_loss 0.00378 best 0.00376 elapsed 48.0m
+== epoch 734 val_loss 0.00376 best 0.00376 elapsed 48.0m
+ep 734 step 30100 loss 0.00170 lr 9.16e-04 171,091 pos/s elapsed 48.0m
+== epoch 735 val_loss 0.00377 best 0.00376 elapsed 48.1m
+== epoch 736 val_loss 0.00377 best 0.00376 elapsed 48.2m
+ep 736 step 30200 loss 0.00171 lr 9.11e-04 171,107 pos/s elapsed 48.2m
+== epoch 737 val_loss 0.00377 best 0.00376 elapsed 48.2m
+== epoch 738 val_loss 0.00377 best 0.00376 elapsed 48.3m
+== epoch 739 val_loss 0.00376 best 0.00376 elapsed 48.4m
+ep 739 step 30300 loss 0.00167 lr 9.06e-04 171,111 pos/s elapsed 48.4m
+== epoch 740 val_loss 0.00377 best 0.00376 elapsed 48.4m
+== epoch 741 val_loss 0.00376 best 0.00376 elapsed 48.5m
+ep 741 step 30400 loss 0.00171 lr 9.00e-04 171,129 pos/s elapsed 48.5m
+== epoch 742 val_loss 0.00377 best 0.00376 elapsed 48.5m
+== epoch 743 val_loss 0.00376 best 0.00376 elapsed 48.6m
+ep 743 step 30500 loss 0.00172 lr 8.95e-04 171,133 pos/s elapsed 48.7m
+== epoch 744 val_loss 0.00376 best 0.00376 elapsed 48.7m
+== epoch 745 val_loss 0.00378 best 0.00376 elapsed 48.7m
+== epoch 746 val_loss 0.00377 best 0.00376 elapsed 48.8m
+ep 746 step 30600 loss 0.00169 lr 8.89e-04 171,123 pos/s elapsed 48.8m
+== epoch 747 val_loss 0.00377 best 0.00376 elapsed 48.9m
+== epoch 748 val_loss 0.00377 best 0.00376 elapsed 48.9m
+ep 748 step 30700 loss 0.00172 lr 8.84e-04 171,119 pos/s elapsed 49.0m
+== epoch 749 val_loss 0.00378 best 0.00376 elapsed 49.0m
+== epoch 750 val_loss 0.00377 best 0.00376 elapsed 49.1m
+== epoch 751 val_loss 0.00378 best 0.00376 elapsed 49.1m
+ep 751 step 30800 loss 0.00167 lr 8.79e-04 171,120 pos/s elapsed 49.1m
+== epoch 752 val_loss 0.00377 best 0.00376 elapsed 49.2m
+== epoch 753 val_loss 0.00377 best 0.00376 elapsed 49.3m
+ep 753 step 30900 loss 0.00170 lr 8.73e-04 171,125 pos/s elapsed 49.3m
+== epoch 754 val_loss 0.00378 best 0.00376 elapsed 49.3m
+== epoch 755 val_loss 0.00378 best 0.00376 elapsed 49.4m
+== epoch 756 val_loss 0.00378 best 0.00376 elapsed 49.5m
+ep 756 step 31000 loss 0.00167 lr 8.68e-04 171,124 pos/s elapsed 49.5m
+== epoch 757 val_loss 0.00377 best 0.00376 elapsed 49.5m
+== epoch 758 val_loss 0.00377 best 0.00376 elapsed 49.6m
+ep 758 step 31100 loss 0.00170 lr 8.63e-04 171,141 pos/s elapsed 49.6m
+== epoch 759 val_loss 0.00376 best 0.00376 elapsed 49.7m
+== epoch 760 val_loss 0.00377 best 0.00376 elapsed 49.7m
+ep 760 step 31200 loss 0.00172 lr 8.57e-04 171,152 pos/s elapsed 49.8m
+== epoch 761 val_loss 0.00378 best 0.00376 elapsed 49.8m
+== epoch 762 val_loss 0.00377 best 0.00376 elapsed 49.8m
+== epoch 763 val_loss 0.00378 best 0.00376 elapsed 49.9m
+ep 763 step 31300 loss 0.00169 lr 8.52e-04 171,162 pos/s elapsed 49.9m
+== epoch 764 val_loss 0.00378 best 0.00376 elapsed 50.0m
+== epoch 765 val_loss 0.00378 best 0.00376 elapsed 50.0m
+ep 765 step 31400 loss 0.00171 lr 8.47e-04 171,172 pos/s elapsed 50.1m
+== epoch 766 val_loss 0.00378 best 0.00376 elapsed 50.1m
+== epoch 767 val_loss 0.00378 best 0.00376 elapsed 50.2m
+== epoch 768 val_loss 0.00377 best 0.00376 elapsed 50.2m
+ep 768 step 31500 loss 0.00169 lr 8.42e-04 171,181 pos/s elapsed 50.2m
+== epoch 769 val_loss 0.00376 best 0.00376 elapsed 50.3m
+== epoch 770 val_loss 0.00378 best 0.00376 elapsed 50.4m
+ep 770 step 31600 loss 0.00171 lr 8.36e-04 171,192 pos/s elapsed 50.4m
+== epoch 771 val_loss 0.00377 best 0.00376 elapsed 50.4m
+== epoch 772 val_loss 0.00378 best 0.00376 elapsed 50.5m
+== epoch 773 val_loss 0.00378 best 0.00376 elapsed 50.6m
+ep 773 step 31700 loss 0.00168 lr 8.31e-04 171,203 pos/s elapsed 50.6m
+== epoch 774 val_loss 0.00378 best 0.00376 elapsed 50.6m
+== epoch 775 val_loss 0.00377 best 0.00376 elapsed 50.7m
+ep 775 step 31800 loss 0.00170 lr 8.26e-04 171,213 pos/s elapsed 50.7m
+== epoch 776 val_loss 0.00378 best 0.00376 elapsed 50.7m
+== epoch 777 val_loss 0.00378 best 0.00376 elapsed 50.8m
+== epoch 778 val_loss 0.00377 best 0.00376 elapsed 50.9m
+ep 778 step 31900 loss 0.00165 lr 8.20e-04 171,196 pos/s elapsed 50.9m
+== epoch 779 val_loss 0.00377 best 0.00376 elapsed 50.9m
+== epoch 780 val_loss 0.00377 best 0.00376 elapsed 51.0m
+ep 780 step 32000 loss 0.00170 lr 8.15e-04 171,204 pos/s elapsed 51.0m
+== epoch 781 val_loss 0.00378 best 0.00376 elapsed 51.1m
+== epoch 782 val_loss 0.00377 best 0.00376 elapsed 51.1m
+ep 782 step 32100 loss 0.00171 lr 8.10e-04 171,207 pos/s elapsed 51.2m
+== epoch 783 val_loss 0.00378 best 0.00376 elapsed 51.2m
+== epoch 784 val_loss 0.00378 best 0.00376 elapsed 51.3m
+== epoch 785 val_loss 0.00377 best 0.00376 elapsed 51.3m
+ep 785 step 32200 loss 0.00169 lr 8.04e-04 171,214 pos/s elapsed 51.4m
+== epoch 786 val_loss 0.00378 best 0.00376 elapsed 51.4m
+== epoch 787 val_loss 0.00378 best 0.00376 elapsed 51.5m
+ep 787 step 32300 loss 0.00171 lr 7.99e-04 171,226 pos/s elapsed 51.5m
+== epoch 788 val_loss 0.00378 best 0.00376 elapsed 51.5m
+== epoch 789 val_loss 0.00377 best 0.00376 elapsed 51.6m
+== epoch 790 val_loss 0.00378 best 0.00376 elapsed 51.7m
+ep 790 step 32400 loss 0.00169 lr 7.94e-04 171,236 pos/s elapsed 51.7m
+== epoch 791 val_loss 0.00378 best 0.00376 elapsed 51.7m
+== epoch 792 val_loss 0.00377 best 0.00376 elapsed 51.8m
+ep 792 step 32500 loss 0.00170 lr 7.89e-04 171,240 pos/s elapsed 51.8m
+== epoch 793 val_loss 0.00378 best 0.00376 elapsed 51.8m
+== epoch 794 val_loss 0.00378 best 0.00376 elapsed 51.9m
+== epoch 795 val_loss 0.00378 best 0.00376 elapsed 52.0m
+ep 795 step 32600 loss 0.00167 lr 7.83e-04 171,240 pos/s elapsed 52.0m
+== epoch 796 val_loss 0.00378 best 0.00376 elapsed 52.0m
+== epoch 797 val_loss 0.00379 best 0.00376 elapsed 52.1m
+ep 797 step 32700 loss 0.00170 lr 7.78e-04 171,252 pos/s elapsed 52.1m
+== epoch 798 val_loss 0.00378 best 0.00376 elapsed 52.2m
+== epoch 799 val_loss 0.00379 best 0.00376 elapsed 52.2m
+ep 799 step 32800 loss 0.00171 lr 7.73e-04 171,261 pos/s elapsed 52.3m
+== epoch 800 val_loss 0.00378 best 0.00376 elapsed 52.3m
+== epoch 801 val_loss 0.00378 best 0.00376 elapsed 52.4m
+== epoch 802 val_loss 0.00378 best 0.00376 elapsed 52.4m
+ep 802 step 32900 loss 0.00169 lr 7.68e-04 171,276 pos/s elapsed 52.5m
+== epoch 803 val_loss 0.00378 best 0.00376 elapsed 52.5m
+== epoch 804 val_loss 0.00378 best 0.00376 elapsed 52.6m
+ep 804 step 33000 loss 0.00171 lr 7.63e-04 171,286 pos/s elapsed 52.6m
+== epoch 805 val_loss 0.00378 best 0.00376 elapsed 52.6m
+== epoch 806 val_loss 0.00378 best 0.00376 elapsed 52.7m
+== epoch 807 val_loss 0.00379 best 0.00376 elapsed 52.7m
+ep 807 step 33100 loss 0.00170 lr 7.58e-04 171,295 pos/s elapsed 52.8m
+== epoch 808 val_loss 0.00379 best 0.00376 elapsed 52.8m
+== epoch 809 val_loss 0.00377 best 0.00376 elapsed 52.9m
+ep 809 step 33200 loss 0.00170 lr 7.52e-04 171,300 pos/s elapsed 52.9m
+== epoch 810 val_loss 0.00378 best 0.00376 elapsed 52.9m
+== epoch 811 val_loss 0.00378 best 0.00376 elapsed 53.0m
+== epoch 812 val_loss 0.00378 best 0.00376 elapsed 53.1m
+ep 812 step 33300 loss 0.00167 lr 7.47e-04 171,298 pos/s elapsed 53.1m
+== epoch 813 val_loss 0.00378 best 0.00376 elapsed 53.1m
+== epoch 814 val_loss 0.00378 best 0.00376 elapsed 53.2m
+ep 814 step 33400 loss 0.00169 lr 7.42e-04 171,298 pos/s elapsed 53.2m
+== epoch 815 val_loss 0.00379 best 0.00376 elapsed 53.3m
+== epoch 816 val_loss 0.00378 best 0.00376 elapsed 53.3m
+== epoch 817 val_loss 0.00378 best 0.00376 elapsed 53.4m
+ep 817 step 33500 loss 0.00168 lr 7.37e-04 171,285 pos/s elapsed 53.4m
+== epoch 818 val_loss 0.00378 best 0.00376 elapsed 53.5m
+== epoch 819 val_loss 0.00378 best 0.00376 elapsed 53.5m
+ep 819 step 33600 loss 0.00168 lr 7.31e-04 171,296 pos/s elapsed 53.6m
+== epoch 820 val_loss 0.00379 best 0.00376 elapsed 53.6m
+== epoch 821 val_loss 0.00378 best 0.00376 elapsed 53.7m
+ep 821 step 33700 loss 0.00170 lr 7.26e-04 171,302 pos/s elapsed 53.7m
+== epoch 822 val_loss 0.00378 best 0.00376 elapsed 53.7m
+== epoch 823 val_loss 0.00378 best 0.00376 elapsed 53.8m
+== epoch 824 val_loss 0.00377 best 0.00376 elapsed 53.9m
+ep 824 step 33800 loss 0.00169 lr 7.21e-04 171,283 pos/s elapsed 53.9m
+== epoch 825 val_loss 0.00379 best 0.00376 elapsed 53.9m
+== epoch 826 val_loss 0.00379 best 0.00376 elapsed 54.0m
+ep 826 step 33900 loss 0.00170 lr 7.16e-04 171,292 pos/s elapsed 54.0m
+== epoch 827 val_loss 0.00377 best 0.00376 elapsed 54.1m
+== epoch 828 val_loss 0.00379 best 0.00376 elapsed 54.1m
+== epoch 829 val_loss 0.00378 best 0.00376 elapsed 54.2m
+ep 829 step 34000 loss 0.00169 lr 7.11e-04 171,293 pos/s elapsed 54.2m
+== epoch 830 val_loss 0.00379 best 0.00376 elapsed 54.2m
+== epoch 831 val_loss 0.00379 best 0.00376 elapsed 54.3m
+ep 831 step 34100 loss 0.00170 lr 7.06e-04 171,303 pos/s elapsed 54.4m
+== epoch 832 val_loss 0.00378 best 0.00376 elapsed 54.4m
+== epoch 833 val_loss 0.00378 best 0.00376 elapsed 54.4m
+== epoch 834 val_loss 0.00378 best 0.00376 elapsed 54.5m
+ep 834 step 34200 loss 0.00168 lr 7.01e-04 171,320 pos/s elapsed 54.5m
+== epoch 835 val_loss 0.00378 best 0.00376 elapsed 54.6m
+== epoch 836 val_loss 0.00379 best 0.00376 elapsed 54.6m
+ep 836 step 34300 loss 0.00169 lr 6.96e-04 171,338 pos/s elapsed 54.7m
+== epoch 837 val_loss 0.00378 best 0.00376 elapsed 54.7m
+== epoch 838 val_loss 0.00379 best 0.00376 elapsed 54.8m
+== epoch 839 val_loss 0.00378 best 0.00376 elapsed 54.8m
+ep 839 step 34400 loss 0.00170 lr 6.91e-04 171,350 pos/s elapsed 54.8m
+== epoch 840 val_loss 0.00378 best 0.00376 elapsed 54.9m
+== epoch 841 val_loss 0.00378 best 0.00376 elapsed 54.9m
+ep 841 step 34500 loss 0.00169 lr 6.86e-04 171,363 pos/s elapsed 55.0m
+== epoch 842 val_loss 0.00379 best 0.00376 elapsed 55.0m
+== epoch 843 val_loss 0.00378 best 0.00376 elapsed 55.1m
+ep 843 step 34600 loss 0.00170 lr 6.81e-04 171,381 pos/s elapsed 55.1m
+== epoch 844 val_loss 0.00379 best 0.00376 elapsed 55.1m
+== epoch 845 val_loss 0.00379 best 0.00376 elapsed 55.2m
+== epoch 846 val_loss 0.00379 best 0.00376 elapsed 55.3m
+ep 846 step 34700 loss 0.00168 lr 6.76e-04 171,390 pos/s elapsed 55.3m
+== epoch 847 val_loss 0.00379 best 0.00376 elapsed 55.3m
+== epoch 848 val_loss 0.00377 best 0.00376 elapsed 55.4m
+ep 848 step 34800 loss 0.00169 lr 6.71e-04 171,403 pos/s elapsed 55.4m
+== epoch 849 val_loss 0.00379 best 0.00376 elapsed 55.5m
+== epoch 850 val_loss 0.00379 best 0.00376 elapsed 55.5m
+== epoch 851 val_loss 0.00379 best 0.00376 elapsed 55.6m
+ep 851 step 34900 loss 0.00168 lr 6.66e-04 171,410 pos/s elapsed 55.6m
+== epoch 852 val_loss 0.00379 best 0.00376 elapsed 55.6m
+== epoch 853 val_loss 0.00378 best 0.00376 elapsed 55.7m
+ep 853 step 35000 loss 0.00169 lr 6.61e-04 171,415 pos/s elapsed 55.8m
+== epoch 854 val_loss 0.00379 best 0.00376 elapsed 55.8m
+== epoch 855 val_loss 0.00379 best 0.00376 elapsed 55.8m
+== epoch 856 val_loss 0.00379 best 0.00376 elapsed 55.9m
+ep 856 step 35100 loss 0.00167 lr 6.56e-04 171,410 pos/s elapsed 55.9m
+== epoch 857 val_loss 0.00378 best 0.00376 elapsed 56.0m
+== epoch 858 val_loss 0.00379 best 0.00376 elapsed 56.0m
+ep 858 step 35200 loss 0.00169 lr 6.51e-04 171,421 pos/s elapsed 56.1m
+== epoch 859 val_loss 0.00379 best 0.00376 elapsed 56.1m
+== epoch 860 val_loss 0.00378 best 0.00376 elapsed 56.2m
+ep 860 step 35300 loss 0.00170 lr 6.46e-04 171,430 pos/s elapsed 56.2m
+== epoch 861 val_loss 0.00379 best 0.00376 elapsed 56.2m
+== epoch 862 val_loss 0.00379 best 0.00376 elapsed 56.3m
+== epoch 863 val_loss 0.00378 best 0.00376 elapsed 56.4m
+ep 863 step 35400 loss 0.00167 lr 6.41e-04 171,440 pos/s elapsed 56.4m
+== epoch 864 val_loss 0.00379 best 0.00376 elapsed 56.4m
+== epoch 865 val_loss 0.00379 best 0.00376 elapsed 56.5m
+ep 865 step 35500 loss 0.00169 lr 6.36e-04 171,451 pos/s elapsed 56.5m
+== epoch 866 val_loss 0.00378 best 0.00376 elapsed 56.5m
+== epoch 867 val_loss 0.00379 best 0.00376 elapsed 56.6m
+== epoch 868 val_loss 0.00379 best 0.00376 elapsed 56.7m
+ep 868 step 35600 loss 0.00167 lr 6.31e-04 171,455 pos/s elapsed 56.7m
+== epoch 869 val_loss 0.00379 best 0.00376 elapsed 56.7m
+== epoch 870 val_loss 0.00380 best 0.00376 elapsed 56.8m
+ep 870 step 35700 loss 0.00169 lr 6.26e-04 171,456 pos/s elapsed 56.9m
+== epoch 871 val_loss 0.00379 best 0.00376 elapsed 56.9m
+== epoch 872 val_loss 0.00380 best 0.00376 elapsed 56.9m
+== epoch 873 val_loss 0.00379 best 0.00376 elapsed 57.0m
+ep 873 step 35800 loss 0.00166 lr 6.21e-04 171,457 pos/s elapsed 57.0m
+== epoch 874 val_loss 0.00379 best 0.00376 elapsed 57.1m
+== epoch 875 val_loss 0.00379 best 0.00376 elapsed 57.1m
+ep 875 step 35900 loss 0.00168 lr 6.16e-04 171,466 pos/s elapsed 57.2m
+== epoch 876 val_loss 0.00379 best 0.00376 elapsed 57.2m
+== epoch 877 val_loss 0.00378 best 0.00376 elapsed 57.3m
+== epoch 878 val_loss 0.00379 best 0.00376 elapsed 57.3m
+ep 878 step 36000 loss 0.00166 lr 6.11e-04 171,468 pos/s elapsed 57.3m
+== epoch 879 val_loss 0.00380 best 0.00376 elapsed 57.4m
+== epoch 880 val_loss 0.00379 best 0.00376 elapsed 57.5m
+ep 880 step 36100 loss 0.00168 lr 6.06e-04 171,482 pos/s elapsed 57.5m
+== epoch 881 val_loss 0.00379 best 0.00376 elapsed 57.5m
+== epoch 882 val_loss 0.00379 best 0.00376 elapsed 57.6m
+ep 882 step 36200 loss 0.00169 lr 6.02e-04 171,497 pos/s elapsed 57.6m
+== epoch 883 val_loss 0.00379 best 0.00376 elapsed 57.6m
+== epoch 884 val_loss 0.00380 best 0.00376 elapsed 57.7m
+== epoch 885 val_loss 0.00378 best 0.00376 elapsed 57.8m
+ep 885 step 36300 loss 0.00167 lr 5.97e-04 171,497 pos/s elapsed 57.8m
+== epoch 886 val_loss 0.00379 best 0.00376 elapsed 57.8m
+== epoch 887 val_loss 0.00379 best 0.00376 elapsed 57.9m
+ep 887 step 36400 loss 0.00169 lr 5.92e-04 171,503 pos/s elapsed 58.0m
+== epoch 888 val_loss 0.00379 best 0.00376 elapsed 58.0m
+== epoch 889 val_loss 0.00379 best 0.00376 elapsed 58.0m
+== epoch 890 val_loss 0.00379 best 0.00376 elapsed 58.1m
+ep 890 step 36500 loss 0.00168 lr 5.87e-04 171,512 pos/s elapsed 58.1m
+== epoch 891 val_loss 0.00380 best 0.00376 elapsed 58.2m
+== epoch 892 val_loss 0.00379 best 0.00376 elapsed 58.2m
+ep 892 step 36600 loss 0.00168 lr 5.82e-04 171,527 pos/s elapsed 58.3m
+== epoch 893 val_loss 0.00379 best 0.00376 elapsed 58.3m
+== epoch 894 val_loss 0.00379 best 0.00376 elapsed 58.3m
+== epoch 895 val_loss 0.00379 best 0.00376 elapsed 58.4m
+ep 895 step 36700 loss 0.00168 lr 5.78e-04 171,535 pos/s elapsed 58.4m
+== epoch 896 val_loss 0.00380 best 0.00376 elapsed 58.5m
+== epoch 897 val_loss 0.00379 best 0.00376 elapsed 58.5m
+ep 897 step 36800 loss 0.00168 lr 5.73e-04 171,547 pos/s elapsed 58.6m
+== epoch 898 val_loss 0.00379 best 0.00376 elapsed 58.6m
+== epoch 899 val_loss 0.00380 best 0.00376 elapsed 58.7m
+ep 899 step 36900 loss 0.00169 lr 5.68e-04 171,565 pos/s elapsed 58.7m
+== epoch 900 val_loss 0.00379 best 0.00376 elapsed 58.7m
+== epoch 901 val_loss 0.00379 best 0.00376 elapsed 58.8m
+== epoch 902 val_loss 0.00380 best 0.00376 elapsed 58.9m
+ep 902 step 37000 loss 0.00167 lr 5.63e-04 171,569 pos/s elapsed 58.9m
+== epoch 903 val_loss 0.00380 best 0.00376 elapsed 58.9m
+== epoch 904 val_loss 0.00380 best 0.00376 elapsed 59.0m
+ep 904 step 37100 loss 0.00169 lr 5.59e-04 171,583 pos/s elapsed 59.0m
+== epoch 905 val_loss 0.00379 best 0.00376 elapsed 59.1m
+== epoch 906 val_loss 0.00379 best 0.00376 elapsed 59.1m
+== epoch 907 val_loss 0.00380 best 0.00376 elapsed 59.2m
+ep 907 step 37200 loss 0.00168 lr 5.54e-04 171,596 pos/s elapsed 59.2m
+== epoch 908 val_loss 0.00380 best 0.00376 elapsed 59.2m
+== epoch 909 val_loss 0.00379 best 0.00376 elapsed 59.3m
+ep 909 step 37300 loss 0.00168 lr 5.49e-04 171,596 pos/s elapsed 59.4m
+== epoch 910 val_loss 0.00379 best 0.00376 elapsed 59.4m
+== epoch 911 val_loss 0.00380 best 0.00376 elapsed 59.4m
+== epoch 912 val_loss 0.00379 best 0.00376 elapsed 59.5m
+ep 912 step 37400 loss 0.00167 lr 5.45e-04 171,601 pos/s elapsed 59.5m
+== epoch 913 val_loss 0.00380 best 0.00376 elapsed 59.6m
+== epoch 914 val_loss 0.00380 best 0.00376 elapsed 59.6m
+ep 914 step 37500 loss 0.00168 lr 5.40e-04 171,614 pos/s elapsed 59.7m
+== epoch 915 val_loss 0.00379 best 0.00376 elapsed 59.7m
+== epoch 916 val_loss 0.00380 best 0.00376 elapsed 59.8m
+== epoch 917 val_loss 0.00379 best 0.00376 elapsed 59.8m
+ep 917 step 37600 loss 0.00168 lr 5.35e-04 171,618 pos/s elapsed 59.8m
+== epoch 918 val_loss 0.00379 best 0.00376 elapsed 59.9m
+== epoch 919 val_loss 0.00380 best 0.00376 elapsed 59.9m
+ep 919 step 37700 loss 0.00168 lr 5.31e-04 171,632 pos/s elapsed 60.0m
+== epoch 920 val_loss 0.00380 best 0.00376 elapsed 60.0m
+== epoch 921 val_loss 0.00379 best 0.00376 elapsed 60.1m
+ep 921 step 37800 loss 0.00169 lr 5.26e-04 171,645 pos/s elapsed 60.1m
+== epoch 922 val_loss 0.00380 best 0.00376 elapsed 60.1m
+== epoch 923 val_loss 0.00380 best 0.00376 elapsed 60.2m
+== epoch 924 val_loss 0.00380 best 0.00376 elapsed 60.3m
+ep 924 step 37900 loss 0.00168 lr 5.22e-04 171,661 pos/s elapsed 60.3m
+== epoch 925 val_loss 0.00379 best 0.00376 elapsed 60.3m
+== epoch 926 val_loss 0.00379 best 0.00376 elapsed 60.4m
+ep 926 step 38000 loss 0.00169 lr 5.17e-04 171,675 pos/s elapsed 60.4m
+== epoch 927 val_loss 0.00380 best 0.00376 elapsed 60.5m
+== epoch 928 val_loss 0.00380 best 0.00376 elapsed 60.5m
+== epoch 929 val_loss 0.00379 best 0.00376 elapsed 60.6m
+ep 929 step 38100 loss 0.00166 lr 5.12e-04 171,692 pos/s elapsed 60.6m
+== epoch 930 val_loss 0.00379 best 0.00376 elapsed 60.6m
+== epoch 931 val_loss 0.00380 best 0.00376 elapsed 60.7m
+ep 931 step 38200 loss 0.00168 lr 5.08e-04 171,706 pos/s elapsed 60.8m
+== epoch 932 val_loss 0.00380 best 0.00376 elapsed 60.8m
+== epoch 933 val_loss 0.00379 best 0.00376 elapsed 60.8m
+== epoch 934 val_loss 0.00379 best 0.00376 elapsed 60.9m
+ep 934 step 38300 loss 0.00166 lr 5.03e-04 171,712 pos/s elapsed 60.9m
+== epoch 935 val_loss 0.00380 best 0.00376 elapsed 61.0m
+== epoch 936 val_loss 0.00380 best 0.00376 elapsed 61.0m
+ep 936 step 38400 loss 0.00167 lr 4.99e-04 171,730 pos/s elapsed 61.1m
+== epoch 937 val_loss 0.00379 best 0.00376 elapsed 61.1m
+== epoch 938 val_loss 0.00379 best 0.00376 elapsed 61.1m
+== epoch 939 val_loss 0.00379 best 0.00376 elapsed 61.2m
+ep 939 step 38500 loss 0.00164 lr 4.94e-04 171,739 pos/s elapsed 61.2m
+== epoch 940 val_loss 0.00380 best 0.00376 elapsed 61.3m
+== epoch 941 val_loss 0.00379 best 0.00376 elapsed 61.3m
+ep 941 step 38600 loss 0.00166 lr 4.90e-04 171,746 pos/s elapsed 61.4m
+== epoch 942 val_loss 0.00380 best 0.00376 elapsed 61.4m
+== epoch 943 val_loss 0.00380 best 0.00376 elapsed 61.5m
+ep 943 step 38700 loss 0.00168 lr 4.85e-04 171,749 pos/s elapsed 61.5m
+== epoch 944 val_loss 0.00379 best 0.00376 elapsed 61.5m
+== epoch 945 val_loss 0.00380 best 0.00376 elapsed 61.6m
+== epoch 946 val_loss 0.00380 best 0.00376 elapsed 61.7m
+ep 946 step 38800 loss 0.00167 lr 4.81e-04 171,758 pos/s elapsed 61.7m
+== epoch 947 val_loss 0.00379 best 0.00376 elapsed 61.7m
+== epoch 948 val_loss 0.00379 best 0.00376 elapsed 61.8m
+ep 948 step 38900 loss 0.00168 lr 4.77e-04 171,770 pos/s elapsed 61.8m
+== epoch 949 val_loss 0.00380 best 0.00376 elapsed 61.9m
+== epoch 950 val_loss 0.00380 best 0.00376 elapsed 61.9m
+== epoch 951 val_loss 0.00379 best 0.00376 elapsed 62.0m
+ep 951 step 39000 loss 0.00166 lr 4.72e-04 171,772 pos/s elapsed 62.0m
+== epoch 952 val_loss 0.00379 best 0.00376 elapsed 62.0m
+== epoch 953 val_loss 0.00379 best 0.00376 elapsed 62.1m
+ep 953 step 39100 loss 0.00167 lr 4.68e-04 171,784 pos/s elapsed 62.2m
+== epoch 954 val_loss 0.00379 best 0.00376 elapsed 62.2m
+== epoch 955 val_loss 0.00380 best 0.00376 elapsed 62.2m
+== epoch 956 val_loss 0.00380 best 0.00376 elapsed 62.3m
+ep 956 step 39200 loss 0.00166 lr 4.63e-04 171,782 pos/s elapsed 62.3m
+== epoch 957 val_loss 0.00379 best 0.00376 elapsed 62.4m
+== epoch 958 val_loss 0.00379 best 0.00376 elapsed 62.4m
+ep 958 step 39300 loss 0.00168 lr 4.59e-04 171,793 pos/s elapsed 62.5m
+== epoch 959 val_loss 0.00379 best 0.00376 elapsed 62.5m
+== epoch 960 val_loss 0.00379 best 0.00376 elapsed 62.6m
+ep 960 step 39400 loss 0.00168 lr 4.55e-04 171,809 pos/s elapsed 62.6m
+== epoch 961 val_loss 0.00379 best 0.00376 elapsed 62.6m
+== epoch 962 val_loss 0.00379 best 0.00376 elapsed 62.7m
+== epoch 963 val_loss 0.00380 best 0.00376 elapsed 62.8m
+ep 963 step 39500 loss 0.00167 lr 4.50e-04 171,812 pos/s elapsed 62.8m
+== epoch 964 val_loss 0.00379 best 0.00376 elapsed 62.8m
+== epoch 965 val_loss 0.00380 best 0.00376 elapsed 62.9m
+ep 965 step 39600 loss 0.00168 lr 4.46e-04 171,809 pos/s elapsed 62.9m
+== epoch 966 val_loss 0.00380 best 0.00376 elapsed 62.9m
+== epoch 967 val_loss 0.00379 best 0.00376 elapsed 63.0m
+== epoch 968 val_loss 0.00380 best 0.00376 elapsed 63.1m
+ep 968 step 39700 loss 0.00166 lr 4.41e-04 171,818 pos/s elapsed 63.1m
+== epoch 969 val_loss 0.00379 best 0.00376 elapsed 63.1m
+== epoch 970 val_loss 0.00380 best 0.00376 elapsed 63.2m
+ep 970 step 39800 loss 0.00167 lr 4.37e-04 171,828 pos/s elapsed 63.2m
+== epoch 971 val_loss 0.00380 best 0.00376 elapsed 63.3m
+== epoch 972 val_loss 0.00379 best 0.00376 elapsed 63.3m
+== epoch 973 val_loss 0.00379 best 0.00376 elapsed 63.4m
+ep 973 step 39900 loss 0.00167 lr 4.33e-04 171,841 pos/s elapsed 63.4m
+== epoch 974 val_loss 0.00379 best 0.00376 elapsed 63.5m
+== epoch 975 val_loss 0.00379 best 0.00376 elapsed 63.5m
+ep 975 step 40000 loss 0.00168 lr 4.29e-04 171,853 pos/s elapsed 63.6m
+== epoch 976 val_loss 0.00380 best 0.00376 elapsed 63.6m
+== epoch 977 val_loss 0.00379 best 0.00376 elapsed 63.6m
+== epoch 978 val_loss 0.00379 best 0.00376 elapsed 63.7m
+ep 978 step 40100 loss 0.00164 lr 4.24e-04 171,860 pos/s elapsed 63.7m
+== epoch 979 val_loss 0.00380 best 0.00376 elapsed 63.8m
+== epoch 980 val_loss 0.00379 best 0.00376 elapsed 63.8m
+ep 980 step 40200 loss 0.00167 lr 4.20e-04 171,865 pos/s elapsed 63.9m
+== epoch 981 val_loss 0.00379 best 0.00376 elapsed 63.9m
+== epoch 982 val_loss 0.00380 best 0.00376 elapsed 64.0m
+ep 982 step 40300 loss 0.00168 lr 4.16e-04 171,882 pos/s elapsed 64.0m
+== epoch 983 val_loss 0.00380 best 0.00376 elapsed 64.0m
+== epoch 984 val_loss 0.00379 best 0.00376 elapsed 64.1m
+== epoch 985 val_loss 0.00379 best 0.00376 elapsed 64.2m
+ep 985 step 40400 loss 0.00166 lr 4.12e-04 171,893 pos/s elapsed 64.2m
+== epoch 986 val_loss 0.00379 best 0.00376 elapsed 64.2m
+== epoch 987 val_loss 0.00379 best 0.00376 elapsed 64.3m
+ep 987 step 40500 loss 0.00168 lr 4.08e-04 171,897 pos/s elapsed 64.3m
+== epoch 988 val_loss 0.00380 best 0.00376 elapsed 64.3m
+== epoch 989 val_loss 0.00379 best 0.00376 elapsed 64.4m
+== epoch 990 val_loss 0.00379 best 0.00376 elapsed 64.5m
+ep 990 step 40600 loss 0.00167 lr 4.04e-04 171,909 pos/s elapsed 64.5m
+== epoch 991 val_loss 0.00379 best 0.00376 elapsed 64.5m
+== epoch 992 val_loss 0.00379 best 0.00376 elapsed 64.6m
+ep 992 step 40700 loss 0.00167 lr 3.99e-04 171,900 pos/s elapsed 64.7m
+== epoch 993 val_loss 0.00379 best 0.00376 elapsed 64.7m
+== epoch 994 val_loss 0.00379 best 0.00376 elapsed 64.7m
+== epoch 995 val_loss 0.00380 best 0.00376 elapsed 64.8m
+ep 995 step 40800 loss 0.00168 lr 3.95e-04 171,892 pos/s elapsed 64.8m
+== epoch 996 val_loss 0.00380 best 0.00376 elapsed 64.9m
+== epoch 997 val_loss 0.00379 best 0.00376 elapsed 64.9m
+ep 997 step 40900 loss 0.00166 lr 3.91e-04 171,895 pos/s elapsed 65.0m
+== epoch 998 val_loss 0.00379 best 0.00376 elapsed 65.0m
+== epoch 999 val_loss 0.00380 best 0.00376 elapsed 65.1m
+ep 999 step 41000 loss 0.00168 lr 3.87e-04 171,907 pos/s elapsed 65.1m
+== epoch 1000 val_loss 0.00379 best 0.00376 elapsed 65.1m
+== epoch 1001 val_loss 0.00379 best 0.00376 elapsed 65.2m
+== epoch 1002 val_loss 0.00380 best 0.00376 elapsed 65.3m
+ep 1002 step 41100 loss 0.00167 lr 3.83e-04 171,914 pos/s elapsed 65.3m
+== epoch 1003 val_loss 0.00379 best 0.00376 elapsed 65.3m
+== epoch 1004 val_loss 0.00380 best 0.00376 elapsed 65.4m
+ep 1004 step 41200 loss 0.00168 lr 3.79e-04 171,926 pos/s elapsed 65.4m
+== epoch 1005 val_loss 0.00380 best 0.00376 elapsed 65.4m
+== epoch 1006 val_loss 0.00380 best 0.00376 elapsed 65.5m
+== epoch 1007 val_loss 0.00380 best 0.00376 elapsed 65.6m
+ep 1007 step 41300 loss 0.00166 lr 3.75e-04 171,929 pos/s elapsed 65.6m
+== epoch 1008 val_loss 0.00380 best 0.00376 elapsed 65.6m
+== epoch 1009 val_loss 0.00379 best 0.00376 elapsed 65.7m
+ep 1009 step 41400 loss 0.00167 lr 3.71e-04 171,926 pos/s elapsed 65.8m
+== epoch 1010 val_loss 0.00379 best 0.00376 elapsed 65.8m
+== epoch 1011 val_loss 0.00379 best 0.00376 elapsed 65.8m
+== epoch 1012 val_loss 0.00379 best 0.00376 elapsed 65.9m
+ep 1012 step 41500 loss 0.00165 lr 3.67e-04 171,932 pos/s elapsed 65.9m
+== epoch 1013 val_loss 0.00380 best 0.00376 elapsed 66.0m
+== epoch 1014 val_loss 0.00380 best 0.00376 elapsed 66.0m
+ep 1014 step 41600 loss 0.00167 lr 3.63e-04 171,943 pos/s elapsed 66.1m
+== epoch 1015 val_loss 0.00379 best 0.00376 elapsed 66.1m
+== epoch 1016 val_loss 0.00380 best 0.00376 elapsed 66.2m
+== epoch 1017 val_loss 0.00379 best 0.00376 elapsed 66.2m
+ep 1017 step 41700 loss 0.00168 lr 3.59e-04 171,946 pos/s elapsed 66.2m
+== epoch 1018 val_loss 0.00379 best 0.00376 elapsed 66.3m
+== epoch 1019 val_loss 0.00380 best 0.00376 elapsed 66.3m
+ep 1019 step 41800 loss 0.00166 lr 3.55e-04 171,952 pos/s elapsed 66.4m
+== epoch 1020 val_loss 0.00379 best 0.00376 elapsed 66.4m
+== epoch 1021 val_loss 0.00380 best 0.00376 elapsed 66.5m
+ep 1021 step 41900 loss 0.00167 lr 3.51e-04 171,961 pos/s elapsed 66.5m
+== epoch 1022 val_loss 0.00379 best 0.00376 elapsed 66.5m
+== epoch 1023 val_loss 0.00379 best 0.00376 elapsed 66.6m
+== epoch 1024 val_loss 0.00379 best 0.00376 elapsed 66.7m
+ep 1024 step 42000 loss 0.00167 lr 3.47e-04 171,967 pos/s elapsed 66.7m
+== epoch 1025 val_loss 0.00380 best 0.00376 elapsed 66.7m
+== epoch 1026 val_loss 0.00379 best 0.00376 elapsed 66.8m
+ep 1026 step 42100 loss 0.00167 lr 3.43e-04 171,970 pos/s elapsed 66.8m
+== epoch 1027 val_loss 0.00380 best 0.00376 elapsed 66.9m
+== epoch 1028 val_loss 0.00379 best 0.00376 elapsed 66.9m
+== epoch 1029 val_loss 0.00380 best 0.00376 elapsed 67.0m
+ep 1029 step 42200 loss 0.00166 lr 3.39e-04 171,971 pos/s elapsed 67.0m
+== epoch 1030 val_loss 0.00380 best 0.00376 elapsed 67.1m
+== epoch 1031 val_loss 0.00380 best 0.00376 elapsed 67.1m
+ep 1031 step 42300 loss 0.00167 lr 3.35e-04 171,968 pos/s elapsed 67.2m
+== epoch 1032 val_loss 0.00380 best 0.00376 elapsed 67.2m
+== epoch 1033 val_loss 0.00379 best 0.00376 elapsed 67.3m
+== epoch 1034 val_loss 0.00380 best 0.00376 elapsed 67.3m
+ep 1034 step 42400 loss 0.00165 lr 3.31e-04 171,959 pos/s elapsed 67.3m
+== epoch 1035 val_loss 0.00380 best 0.00376 elapsed 67.4m
+== epoch 1036 val_loss 0.00379 best 0.00376 elapsed 67.4m
+ep 1036 step 42500 loss 0.00166 lr 3.27e-04 171,961 pos/s elapsed 67.5m
+== epoch 1037 val_loss 0.00379 best 0.00376 elapsed 67.5m
+== epoch 1038 val_loss 0.00379 best 0.00376 elapsed 67.6m
+== epoch 1039 val_loss 0.00380 best 0.00376 elapsed 67.6m
+ep 1039 step 42600 loss 0.00161 lr 3.23e-04 171,955 pos/s elapsed 67.6m
+== epoch 1040 val_loss 0.00380 best 0.00376 elapsed 67.7m
+== epoch 1041 val_loss 0.00379 best 0.00376 elapsed 67.8m
+ep 1041 step 42700 loss 0.00166 lr 3.20e-04 171,960 pos/s elapsed 67.8m
+== epoch 1042 val_loss 0.00380 best 0.00376 elapsed 67.8m
+== epoch 1043 val_loss 0.00380 best 0.00376 elapsed 67.9m
+ep 1043 step 42800 loss 0.00167 lr 3.16e-04 171,965 pos/s elapsed 68.0m
+== epoch 1044 val_loss 0.00380 best 0.00376 elapsed 68.0m
+== epoch 1045 val_loss 0.00379 best 0.00376 elapsed 68.0m
+== epoch 1046 val_loss 0.00380 best 0.00376 elapsed 68.1m
+ep 1046 step 42900 loss 0.00167 lr 3.12e-04 171,970 pos/s elapsed 68.1m
+== epoch 1047 val_loss 0.00380 best 0.00376 elapsed 68.2m
+== epoch 1048 val_loss 0.00379 best 0.00376 elapsed 68.2m
+ep 1048 step 43000 loss 0.00167 lr 3.09e-04 171,975 pos/s elapsed 68.3m
+== epoch 1049 val_loss 0.00380 best 0.00376 elapsed 68.3m
+== epoch 1050 val_loss 0.00380 best 0.00376 elapsed 68.4m
+== epoch 1051 val_loss 0.00380 best 0.00376 elapsed 68.4m
+ep 1051 step 43100 loss 0.00165 lr 3.05e-04 171,983 pos/s elapsed 68.4m
+== epoch 1052 val_loss 0.00380 best 0.00376 elapsed 68.5m
+== epoch 1053 val_loss 0.00380 best 0.00376 elapsed 68.5m
+ep 1053 step 43200 loss 0.00166 lr 3.01e-04 171,984 pos/s elapsed 68.6m
+== epoch 1054 val_loss 0.00380 best 0.00376 elapsed 68.6m
+== epoch 1055 val_loss 0.00380 best 0.00376 elapsed 68.7m
+== epoch 1056 val_loss 0.00380 best 0.00376 elapsed 68.7m
+ep 1056 step 43300 loss 0.00165 lr 2.98e-04 171,985 pos/s elapsed 68.7m
+== epoch 1057 val_loss 0.00379 best 0.00376 elapsed 68.8m
+== epoch 1058 val_loss 0.00379 best 0.00376 elapsed 68.9m
+ep 1058 step 43400 loss 0.00166 lr 2.94e-04 171,969 pos/s elapsed 68.9m
+== epoch 1059 val_loss 0.00379 best 0.00376 elapsed 68.9m
+== epoch 1060 val_loss 0.00380 best 0.00376 elapsed 69.0m
+ep 1060 step 43500 loss 0.00167 lr 2.90e-04 171,963 pos/s elapsed 69.1m
+== epoch 1061 val_loss 0.00380 best 0.00376 elapsed 69.1m
+== epoch 1062 val_loss 0.00380 best 0.00376 elapsed 69.1m
+== epoch 1063 val_loss 0.00380 best 0.00376 elapsed 69.2m
+ep 1063 step 43600 loss 0.00166 lr 2.86e-04 171,965 pos/s elapsed 69.2m
+== epoch 1064 val_loss 0.00380 best 0.00376 elapsed 69.3m
+== epoch 1065 val_loss 0.00380 best 0.00376 elapsed 69.3m
+ep 1065 step 43700 loss 0.00167 lr 2.83e-04 171,967 pos/s elapsed 69.4m
+== epoch 1066 val_loss 0.00380 best 0.00376 elapsed 69.4m
+== epoch 1067 val_loss 0.00380 best 0.00376 elapsed 69.5m
+== epoch 1068 val_loss 0.00379 best 0.00376 elapsed 69.5m
+ep 1068 step 43800 loss 0.00166 lr 2.79e-04 171,974 pos/s elapsed 69.5m
+== epoch 1069 val_loss 0.00380 best 0.00376 elapsed 69.6m
+== epoch 1070 val_loss 0.00380 best 0.00376 elapsed 69.7m
+ep 1070 step 43900 loss 0.00166 lr 2.76e-04 171,975 pos/s elapsed 69.7m
+== epoch 1071 val_loss 0.00380 best 0.00376 elapsed 69.7m
+== epoch 1072 val_loss 0.00380 best 0.00376 elapsed 69.8m
+== epoch 1073 val_loss 0.00380 best 0.00376 elapsed 69.9m
+ep 1073 step 44000 loss 0.00165 lr 2.72e-04 171,980 pos/s elapsed 69.9m
+== epoch 1074 val_loss 0.00380 best 0.00376 elapsed 69.9m
+== epoch 1075 val_loss 0.00380 best 0.00376 elapsed 70.0m
+ep 1075 step 44100 loss 0.00166 lr 2.69e-04 171,991 pos/s elapsed 70.0m
+== epoch 1076 val_loss 0.00380 best 0.00376 elapsed 70.0m
+== epoch 1077 val_loss 0.00380 best 0.00376 elapsed 70.1m
+== epoch 1078 val_loss 0.00380 best 0.00376 elapsed 70.2m
+ep 1078 step 44200 loss 0.00166 lr 2.66e-04 171,996 pos/s elapsed 70.2m
+== epoch 1079 val_loss 0.00379 best 0.00376 elapsed 70.2m
+== epoch 1080 val_loss 0.00380 best 0.00376 elapsed 70.3m
+ep 1080 step 44300 loss 0.00165 lr 2.62e-04 171,999 pos/s elapsed 70.3m
+== epoch 1081 val_loss 0.00379 best 0.00376 elapsed 70.4m
+== epoch 1082 val_loss 0.00380 best 0.00376 elapsed 70.4m
+ep 1082 step 44400 loss 0.00167 lr 2.59e-04 172,009 pos/s elapsed 70.5m
+== epoch 1083 val_loss 0.00379 best 0.00376 elapsed 70.5m
+== epoch 1084 val_loss 0.00380 best 0.00376 elapsed 70.6m
+== epoch 1085 val_loss 0.00379 best 0.00376 elapsed 70.6m
+ep 1085 step 44500 loss 0.00165 lr 2.55e-04 172,020 pos/s elapsed 70.6m
+== epoch 1086 val_loss 0.00380 best 0.00376 elapsed 70.7m
+== epoch 1087 val_loss 0.00380 best 0.00376 elapsed 70.7m
+ep 1087 step 44600 loss 0.00167 lr 2.52e-04 172,028 pos/s elapsed 70.8m
+== epoch 1088 val_loss 0.00380 best 0.00376 elapsed 70.8m
+== epoch 1089 val_loss 0.00380 best 0.00376 elapsed 70.9m
+== epoch 1090 val_loss 0.00379 best 0.00376 elapsed 70.9m
+ep 1090 step 44700 loss 0.00166 lr 2.49e-04 172,019 pos/s elapsed 71.0m
+== epoch 1091 val_loss 0.00380 best 0.00376 elapsed 71.0m
+== epoch 1092 val_loss 0.00379 best 0.00376 elapsed 71.1m
+ep 1092 step 44800 loss 0.00166 lr 2.45e-04 172,025 pos/s elapsed 71.1m
+== epoch 1093 val_loss 0.00380 best 0.00376 elapsed 71.1m
+== epoch 1094 val_loss 0.00380 best 0.00376 elapsed 71.2m
+== epoch 1095 val_loss 0.00380 best 0.00376 elapsed 71.3m
+ep 1095 step 44900 loss 0.00165 lr 2.42e-04 172,027 pos/s elapsed 71.3m
+== epoch 1096 val_loss 0.00379 best 0.00376 elapsed 71.3m
+== epoch 1097 val_loss 0.00379 best 0.00376 elapsed 71.4m
+ep 1097 step 45000 loss 0.00166 lr 2.39e-04 172,028 pos/s elapsed 71.4m
+== epoch 1098 val_loss 0.00379 best 0.00376 elapsed 71.5m
+== epoch 1099 val_loss 0.00380 best 0.00376 elapsed 71.5m
+ep 1099 step 45100 loss 0.00167 lr 2.36e-04 172,033 pos/s elapsed 71.6m
+== epoch 1100 val_loss 0.00380 best 0.00376 elapsed 71.6m
+== epoch 1101 val_loss 0.00380 best 0.00376 elapsed 71.7m
+== epoch 1102 val_loss 0.00380 best 0.00376 elapsed 71.7m
+ep 1102 step 45200 loss 0.00165 lr 2.32e-04 172,042 pos/s elapsed 71.7m
+== epoch 1103 val_loss 0.00380 best 0.00376 elapsed 71.8m
+== epoch 1104 val_loss 0.00379 best 0.00376 elapsed 71.8m
+ep 1104 step 45300 loss 0.00167 lr 2.29e-04 172,048 pos/s elapsed 71.9m
+== epoch 1105 val_loss 0.00380 best 0.00376 elapsed 71.9m
+== epoch 1106 val_loss 0.00379 best 0.00376 elapsed 72.0m
+== epoch 1107 val_loss 0.00379 best 0.00376 elapsed 72.0m
+ep 1107 step 45400 loss 0.00165 lr 2.26e-04 172,058 pos/s elapsed 72.1m
+== epoch 1108 val_loss 0.00380 best 0.00376 elapsed 72.1m
+== epoch 1109 val_loss 0.00380 best 0.00376 elapsed 72.2m
+ep 1109 step 45500 loss 0.00166 lr 2.23e-04 172,069 pos/s elapsed 72.2m
+== epoch 1110 val_loss 0.00380 best 0.00376 elapsed 72.2m
+== epoch 1111 val_loss 0.00380 best 0.00376 elapsed 72.3m
+== epoch 1112 val_loss 0.00380 best 0.00376 elapsed 72.3m
+ep 1112 step 45600 loss 0.00165 lr 2.20e-04 172,081 pos/s elapsed 72.4m
+== epoch 1113 val_loss 0.00380 best 0.00376 elapsed 72.4m
+== epoch 1114 val_loss 0.00380 best 0.00376 elapsed 72.5m
+ep 1114 step 45700 loss 0.00166 lr 2.17e-04 172,092 pos/s elapsed 72.5m
+== epoch 1115 val_loss 0.00380 best 0.00376 elapsed 72.5m
+== epoch 1116 val_loss 0.00380 best 0.00376 elapsed 72.6m
+== epoch 1117 val_loss 0.00379 best 0.00376 elapsed 72.7m
+ep 1117 step 45800 loss 0.00164 lr 2.14e-04 172,099 pos/s elapsed 72.7m
+== epoch 1118 val_loss 0.00380 best 0.00376 elapsed 72.7m
+== epoch 1119 val_loss 0.00379 best 0.00376 elapsed 72.8m
+ep 1119 step 45900 loss 0.00165 lr 2.11e-04 172,104 pos/s elapsed 72.8m
+== epoch 1120 val_loss 0.00380 best 0.00376 elapsed 72.9m
+== epoch 1121 val_loss 0.00380 best 0.00376 elapsed 72.9m
+ep 1121 step 46000 loss 0.00166 lr 2.08e-04 172,112 pos/s elapsed 73.0m
+== epoch 1122 val_loss 0.00380 best 0.00376 elapsed 73.0m
+== epoch 1123 val_loss 0.00380 best 0.00376 elapsed 73.1m
+== epoch 1124 val_loss 0.00380 best 0.00376 elapsed 73.1m
+ep 1124 step 46100 loss 0.00166 lr 2.05e-04 172,112 pos/s elapsed 73.1m
+== epoch 1125 val_loss 0.00380 best 0.00376 elapsed 73.2m
+== epoch 1126 val_loss 0.00380 best 0.00376 elapsed 73.2m
+ep 1126 step 46200 loss 0.00166 lr 2.02e-04 172,117 pos/s elapsed 73.3m
+== epoch 1127 val_loss 0.00380 best 0.00376 elapsed 73.3m
+== epoch 1128 val_loss 0.00380 best 0.00376 elapsed 73.4m
+== epoch 1129 val_loss 0.00380 best 0.00376 elapsed 73.4m
+ep 1129 step 46300 loss 0.00164 lr 1.99e-04 172,125 pos/s elapsed 73.5m
+== epoch 1130 val_loss 0.00380 best 0.00376 elapsed 73.5m
+== epoch 1131 val_loss 0.00379 best 0.00376 elapsed 73.6m
+ep 1131 step 46400 loss 0.00166 lr 1.96e-04 172,127 pos/s elapsed 73.6m
+== epoch 1132 val_loss 0.00379 best 0.00376 elapsed 73.6m
+== epoch 1133 val_loss 0.00380 best 0.00376 elapsed 73.7m
+== epoch 1134 val_loss 0.00380 best 0.00376 elapsed 73.8m
+ep 1134 step 46500 loss 0.00162 lr 1.93e-04 172,128 pos/s elapsed 73.8m
+== epoch 1135 val_loss 0.00380 best 0.00376 elapsed 73.8m
+== epoch 1136 val_loss 0.00380 best 0.00376 elapsed 73.9m
+ep 1136 step 46600 loss 0.00166 lr 1.90e-04 172,126 pos/s elapsed 73.9m
+== epoch 1137 val_loss 0.00380 best 0.00376 elapsed 74.0m
+== epoch 1138 val_loss 0.00379 best 0.00376 elapsed 74.0m
+== epoch 1139 val_loss 0.00380 best 0.00376 elapsed 74.1m
+ep 1139 step 46700 loss 0.00160 lr 1.87e-04 172,123 pos/s elapsed 74.1m
+== epoch 1140 val_loss 0.00379 best 0.00376 elapsed 74.1m
+== epoch 1141 val_loss 0.00380 best 0.00376 elapsed 74.2m
+ep 1141 step 46800 loss 0.00165 lr 1.85e-04 172,135 pos/s elapsed 74.2m
+== epoch 1142 val_loss 0.00379 best 0.00376 elapsed 74.3m
+== epoch 1143 val_loss 0.00380 best 0.00376 elapsed 74.3m
+ep 1143 step 46900 loss 0.00166 lr 1.82e-04 172,139 pos/s elapsed 74.4m
+== epoch 1144 val_loss 0.00380 best 0.00376 elapsed 74.4m
+== epoch 1145 val_loss 0.00380 best 0.00376 elapsed 74.5m
+== epoch 1146 val_loss 0.00380 best 0.00376 elapsed 74.5m
+ep 1146 step 47000 loss 0.00165 lr 1.79e-04 172,147 pos/s elapsed 74.6m
+== epoch 1147 val_loss 0.00380 best 0.00376 elapsed 74.6m
+== epoch 1148 val_loss 0.00380 best 0.00376 elapsed 74.7m
+ep 1148 step 47100 loss 0.00166 lr 1.76e-04 172,146 pos/s elapsed 74.7m
+== epoch 1149 val_loss 0.00380 best 0.00376 elapsed 74.7m
+== epoch 1150 val_loss 0.00380 best 0.00376 elapsed 74.8m
+== epoch 1151 val_loss 0.00380 best 0.00376 elapsed 74.9m
+ep 1151 step 47200 loss 0.00166 lr 1.74e-04 172,152 pos/s elapsed 74.9m
+== epoch 1152 val_loss 0.00379 best 0.00376 elapsed 74.9m
+== epoch 1153 val_loss 0.00380 best 0.00376 elapsed 75.0m
+ep 1153 step 47300 loss 0.00166 lr 1.71e-04 172,159 pos/s elapsed 75.0m
+== epoch 1154 val_loss 0.00380 best 0.00376 elapsed 75.0m
+== epoch 1155 val_loss 0.00380 best 0.00376 elapsed 75.1m
+== epoch 1156 val_loss 0.00380 best 0.00376 elapsed 75.2m
+ep 1156 step 47400 loss 0.00166 lr 1.68e-04 172,166 pos/s elapsed 75.2m
+== epoch 1157 val_loss 0.00380 best 0.00376 elapsed 75.2m
+== epoch 1158 val_loss 0.00380 best 0.00376 elapsed 75.3m
+ep 1158 step 47500 loss 0.00166 lr 1.66e-04 172,173 pos/s elapsed 75.3m
+== epoch 1159 val_loss 0.00380 best 0.00376 elapsed 75.4m
+== epoch 1160 val_loss 0.00380 best 0.00376 elapsed 75.4m
+ep 1160 step 47600 loss 0.00166 lr 1.63e-04 172,175 pos/s elapsed 75.5m
+== epoch 1161 val_loss 0.00380 best 0.00376 elapsed 75.5m
+== epoch 1162 val_loss 0.00380 best 0.00376 elapsed 75.6m
+== epoch 1163 val_loss 0.00380 best 0.00376 elapsed 75.6m
+ep 1163 step 47700 loss 0.00166 lr 1.60e-04 172,181 pos/s elapsed 75.6m
+== epoch 1164 val_loss 0.00380 best 0.00376 elapsed 75.7m
+== epoch 1165 val_loss 0.00380 best 0.00376 elapsed 75.7m
+ep 1165 step 47800 loss 0.00166 lr 1.58e-04 172,190 pos/s elapsed 75.8m
+== epoch 1166 val_loss 0.00380 best 0.00376 elapsed 75.8m
+== epoch 1167 val_loss 0.00380 best 0.00376 elapsed 75.9m
+== epoch 1168 val_loss 0.00380 best 0.00376 elapsed 75.9m
+ep 1168 step 47900 loss 0.00166 lr 1.55e-04 172,190 pos/s elapsed 76.0m
+== epoch 1169 val_loss 0.00380 best 0.00376 elapsed 76.0m
+== epoch 1170 val_loss 0.00380 best 0.00376 elapsed 76.1m
+ep 1170 step 48000 loss 0.00166 lr 1.53e-04 172,202 pos/s elapsed 76.1m
+== epoch 1171 val_loss 0.00379 best 0.00376 elapsed 76.1m
+== epoch 1172 val_loss 0.00380 best 0.00376 elapsed 76.2m
+== epoch 1173 val_loss 0.00380 best 0.00376 elapsed 76.3m
+ep 1173 step 48100 loss 0.00165 lr 1.50e-04 172,209 pos/s elapsed 76.3m
+== epoch 1174 val_loss 0.00380 best 0.00376 elapsed 76.3m
+== epoch 1175 val_loss 0.00380 best 0.00376 elapsed 76.4m
+ep 1175 step 48200 loss 0.00165 lr 1.48e-04 172,215 pos/s elapsed 76.4m
+== epoch 1176 val_loss 0.00380 best 0.00376 elapsed 76.5m
+== epoch 1177 val_loss 0.00380 best 0.00376 elapsed 76.5m
+== epoch 1178 val_loss 0.00380 best 0.00376 elapsed 76.6m
+ep 1178 step 48300 loss 0.00167 lr 1.46e-04 172,214 pos/s elapsed 76.6m
+== epoch 1179 val_loss 0.00380 best 0.00376 elapsed 76.6m
+== epoch 1180 val_loss 0.00380 best 0.00376 elapsed 76.7m
+ep 1180 step 48400 loss 0.00165 lr 1.43e-04 172,224 pos/s elapsed 76.7m
+== epoch 1181 val_loss 0.00380 best 0.00376 elapsed 76.8m
+== epoch 1182 val_loss 0.00380 best 0.00376 elapsed 76.8m
+ep 1182 step 48500 loss 0.00166 lr 1.41e-04 172,222 pos/s elapsed 76.9m
+== epoch 1183 val_loss 0.00380 best 0.00376 elapsed 76.9m
+== epoch 1184 val_loss 0.00380 best 0.00376 elapsed 77.0m
+== epoch 1185 val_loss 0.00380 best 0.00376 elapsed 77.0m
+ep 1185 step 48600 loss 0.00165 lr 1.38e-04 172,212 pos/s elapsed 77.1m
+== epoch 1186 val_loss 0.00380 best 0.00376 elapsed 77.1m
+== epoch 1187 val_loss 0.00380 best 0.00376 elapsed 77.2m
+ep 1187 step 48700 loss 0.00165 lr 1.36e-04 172,218 pos/s elapsed 77.2m
+== epoch 1188 val_loss 0.00380 best 0.00376 elapsed 77.2m
+== epoch 1189 val_loss 0.00380 best 0.00376 elapsed 77.3m
+== epoch 1190 val_loss 0.00380 best 0.00376 elapsed 77.4m
+ep 1190 step 48800 loss 0.00164 lr 1.34e-04 172,214 pos/s elapsed 77.4m
+== epoch 1191 val_loss 0.00380 best 0.00376 elapsed 77.4m
+== epoch 1192 val_loss 0.00380 best 0.00376 elapsed 77.5m
+ep 1192 step 48900 loss 0.00165 lr 1.31e-04 172,216 pos/s elapsed 77.5m
+== epoch 1193 val_loss 0.00380 best 0.00376 elapsed 77.6m
+== epoch 1194 val_loss 0.00380 best 0.00376 elapsed 77.6m
+== epoch 1195 val_loss 0.00380 best 0.00376 elapsed 77.7m
+ep 1195 step 49000 loss 0.00165 lr 1.29e-04 172,206 pos/s elapsed 77.7m
+== epoch 1196 val_loss 0.00380 best 0.00376 elapsed 77.8m
+== epoch 1197 val_loss 0.00380 best 0.00376 elapsed 77.8m
+ep 1197 step 49100 loss 0.00165 lr 1.27e-04 172,201 pos/s elapsed 77.9m
+== epoch 1198 val_loss 0.00380 best 0.00376 elapsed 77.9m
+== epoch 1199 val_loss 0.00380 best 0.00376 elapsed 78.0m
+ep 1199 step 49200 loss 0.00166 lr 1.24e-04 172,195 pos/s elapsed 78.0m
+== epoch 1200 val_loss 0.00379 best 0.00376 elapsed 78.0m
+== epoch 1201 val_loss 0.00380 best 0.00376 elapsed 78.1m
+== epoch 1202 val_loss 0.00380 best 0.00376 elapsed 78.2m
+ep 1202 step 49300 loss 0.00166 lr 1.22e-04 172,196 pos/s elapsed 78.2m
+== epoch 1203 val_loss 0.00380 best 0.00376 elapsed 78.2m
+== epoch 1204 val_loss 0.00380 best 0.00376 elapsed 78.3m
+ep 1204 step 49400 loss 0.00165 lr 1.20e-04 172,201 pos/s elapsed 78.3m
+== epoch 1205 val_loss 0.00380 best 0.00376 elapsed 78.3m
+== epoch 1206 val_loss 0.00380 best 0.00376 elapsed 78.4m
+== epoch 1207 val_loss 0.00380 best 0.00376 elapsed 78.5m
+ep 1207 step 49500 loss 0.00165 lr 1.18e-04 172,209 pos/s elapsed 78.5m
+== epoch 1208 val_loss 0.00380 best 0.00376 elapsed 78.5m
+== epoch 1209 val_loss 0.00380 best 0.00376 elapsed 78.6m
+ep 1209 step 49600 loss 0.00165 lr 1.16e-04 172,214 pos/s elapsed 78.6m
+== epoch 1210 val_loss 0.00380 best 0.00376 elapsed 78.7m
+== epoch 1211 val_loss 0.00380 best 0.00376 elapsed 78.7m
+== epoch 1212 val_loss 0.00380 best 0.00376 elapsed 78.8m
+ep 1212 step 49700 loss 0.00166 lr 1.14e-04 172,212 pos/s elapsed 78.8m
+== epoch 1213 val_loss 0.00380 best 0.00376 elapsed 78.9m
+== epoch 1214 val_loss 0.00380 best 0.00376 elapsed 78.9m
+ep 1214 step 49800 loss 0.00166 lr 1.12e-04 172,203 pos/s elapsed 79.0m
+== epoch 1215 val_loss 0.00380 best 0.00376 elapsed 79.0m
+== epoch 1216 val_loss 0.00379 best 0.00376 elapsed 79.1m
+== epoch 1217 val_loss 0.00380 best 0.00376 elapsed 79.1m
+ep 1217 step 49900 loss 0.00166 lr 1.10e-04 172,199 pos/s elapsed 79.1m
+== epoch 1218 val_loss 0.00380 best 0.00376 elapsed 79.2m
+== epoch 1219 val_loss 0.00380 best 0.00376 elapsed 79.3m
+ep 1219 step 50000 loss 0.00165 lr 1.08e-04 172,192 pos/s elapsed 79.3m
+== epoch 1220 val_loss 0.00380 best 0.00376 elapsed 79.3m
+== epoch 1221 val_loss 0.00380 best 0.00376 elapsed 79.4m
+ep 1221 step 50100 loss 0.00165 lr 1.06e-04 172,191 pos/s elapsed 79.5m
+== epoch 1222 val_loss 0.00380 best 0.00376 elapsed 79.5m
+== epoch 1223 val_loss 0.00380 best 0.00376 elapsed 79.5m
+== epoch 1224 val_loss 0.00380 best 0.00376 elapsed 79.6m
+ep 1224 step 50200 loss 0.00164 lr 1.04e-04 172,184 pos/s elapsed 79.6m
+== epoch 1225 val_loss 0.00380 best 0.00376 elapsed 79.7m
+== epoch 1226 val_loss 0.00380 best 0.00376 elapsed 79.7m
+ep 1226 step 50300 loss 0.00165 lr 1.02e-04 172,176 pos/s elapsed 79.8m
+== epoch 1227 val_loss 0.00380 best 0.00376 elapsed 79.8m
+== epoch 1228 val_loss 0.00380 best 0.00376 elapsed 79.9m
+== epoch 1229 val_loss 0.00380 best 0.00376 elapsed 79.9m
+ep 1229 step 50400 loss 0.00165 lr 9.98e-05 172,162 pos/s elapsed 79.9m
+== epoch 1230 val_loss 0.00380 best 0.00376 elapsed 80.0m
+== epoch 1231 val_loss 0.00380 best 0.00376 elapsed 80.1m
+ep 1231 step 50500 loss 0.00165 lr 9.80e-05 172,158 pos/s elapsed 80.1m
+== epoch 1232 val_loss 0.00380 best 0.00376 elapsed 80.1m
+== epoch 1233 val_loss 0.00380 best 0.00376 elapsed 80.2m
+== epoch 1234 val_loss 0.00380 best 0.00376 elapsed 80.2m
+ep 1234 step 50600 loss 0.00166 lr 9.61e-05 172,157 pos/s elapsed 80.3m
+== epoch 1235 val_loss 0.00380 best 0.00376 elapsed 80.3m
+== epoch 1236 val_loss 0.00380 best 0.00376 elapsed 80.4m
+ep 1236 step 50700 loss 0.00165 lr 9.43e-05 172,160 pos/s elapsed 80.4m
+== epoch 1237 val_loss 0.00380 best 0.00376 elapsed 80.4m
+== epoch 1238 val_loss 0.00380 best 0.00376 elapsed 80.5m
+== epoch 1239 val_loss 0.00380 best 0.00376 elapsed 80.6m
+ep 1239 step 50800 loss 0.00164 lr 9.26e-05 172,163 pos/s elapsed 80.6m
+== epoch 1240 val_loss 0.00380 best 0.00376 elapsed 80.6m
+== epoch 1241 val_loss 0.00380 best 0.00376 elapsed 80.7m
+ep 1241 step 50900 loss 0.00165 lr 9.09e-05 172,162 pos/s elapsed 80.7m
+== epoch 1242 val_loss 0.00380 best 0.00376 elapsed 80.8m
+== epoch 1243 val_loss 0.00380 best 0.00376 elapsed 80.8m
+ep 1243 step 51000 loss 0.00165 lr 8.91e-05 172,151 pos/s elapsed 80.9m
+== epoch 1244 val_loss 0.00380 best 0.00376 elapsed 80.9m
+== epoch 1245 val_loss 0.00380 best 0.00376 elapsed 81.0m
+== epoch 1246 val_loss 0.00380 best 0.00376 elapsed 81.0m
+ep 1246 step 51100 loss 0.00165 lr 8.73e-05 172,139 pos/s elapsed 81.1m
+== epoch 1247 val_loss 0.00380 best 0.00376 elapsed 81.1m
+== epoch 1248 val_loss 0.00380 best 0.00376 elapsed 81.2m
+ep 1248 step 51200 loss 0.00165 lr 8.56e-05 172,129 pos/s elapsed 81.2m
+== epoch 1249 val_loss 0.00380 best 0.00376 elapsed 81.2m
+== epoch 1250 val_loss 0.00380 best 0.00376 elapsed 81.3m
+== epoch 1251 val_loss 0.00380 best 0.00376 elapsed 81.4m
+ep 1251 step 51300 loss 0.00164 lr 8.40e-05 172,128 pos/s elapsed 81.4m
+== epoch 1252 val_loss 0.00380 best 0.00376 elapsed 81.4m
+== epoch 1253 val_loss 0.00380 best 0.00376 elapsed 81.5m
+ep 1253 step 51400 loss 0.00165 lr 8.25e-05 172,135 pos/s elapsed 81.5m
+== epoch 1254 val_loss 0.00380 best 0.00376 elapsed 81.6m
+== epoch 1255 val_loss 0.00380 best 0.00376 elapsed 81.6m
+== epoch 1256 val_loss 0.00380 best 0.00376 elapsed 81.7m
+ep 1256 step 51500 loss 0.00165 lr 8.09e-05 172,130 pos/s elapsed 81.7m
+== epoch 1257 val_loss 0.00380 best 0.00376 elapsed 81.8m
+== epoch 1258 val_loss 0.00380 best 0.00376 elapsed 81.8m
+ep 1258 step 51600 loss 0.00165 lr 7.93e-05 172,126 pos/s elapsed 81.9m
+== epoch 1259 val_loss 0.00380 best 0.00376 elapsed 81.9m
+== epoch 1260 val_loss 0.00380 best 0.00376 elapsed 82.0m
+ep 1260 step 51700 loss 0.00165 lr 7.78e-05 172,122 pos/s elapsed 82.0m
+== epoch 1261 val_loss 0.00380 best 0.00376 elapsed 82.0m
+== epoch 1262 val_loss 0.00380 best 0.00376 elapsed 82.1m
+== epoch 1263 val_loss 0.00380 best 0.00376 elapsed 82.2m
+ep 1263 step 51800 loss 0.00165 lr 7.63e-05 172,119 pos/s elapsed 82.2m
+== epoch 1264 val_loss 0.00380 best 0.00376 elapsed 82.2m
+== epoch 1265 val_loss 0.00380 best 0.00376 elapsed 82.3m
+ep 1265 step 51900 loss 0.00165 lr 7.49e-05 172,122 pos/s elapsed 82.3m
+== epoch 1266 val_loss 0.00380 best 0.00376 elapsed 82.3m
+== epoch 1267 val_loss 0.00380 best 0.00376 elapsed 82.4m
+== epoch 1268 val_loss 0.00380 best 0.00376 elapsed 82.5m
+ep 1268 step 52000 loss 0.00165 lr 7.35e-05 172,127 pos/s elapsed 82.5m
+== epoch 1269 val_loss 0.00380 best 0.00376 elapsed 82.5m
+== epoch 1270 val_loss 0.00380 best 0.00376 elapsed 82.6m
+ep 1270 step 52100 loss 0.00165 lr 7.21e-05 172,130 pos/s elapsed 82.7m
+== epoch 1271 val_loss 0.00380 best 0.00376 elapsed 82.7m
+== epoch 1272 val_loss 0.00380 best 0.00376 elapsed 82.7m
+== epoch 1273 val_loss 0.00380 best 0.00376 elapsed 82.8m
+ep 1273 step 52200 loss 0.00167 lr 7.07e-05 172,133 pos/s elapsed 82.8m
+== epoch 1274 val_loss 0.00380 best 0.00376 elapsed 82.9m
+== epoch 1275 val_loss 0.00380 best 0.00376 elapsed 82.9m
+ep 1275 step 52300 loss 0.00165 lr 6.94e-05 172,136 pos/s elapsed 83.0m
+== epoch 1276 val_loss 0.00380 best 0.00376 elapsed 83.0m
+== epoch 1277 val_loss 0.00380 best 0.00376 elapsed 83.1m
+== epoch 1278 val_loss 0.00380 best 0.00376 elapsed 83.1m
+ep 1278 step 52400 loss 0.00168 lr 6.81e-05 172,140 pos/s elapsed 83.1m
+== epoch 1279 val_loss 0.00380 best 0.00376 elapsed 83.2m
+== epoch 1280 val_loss 0.00380 best 0.00376 elapsed 83.2m
+ep 1280 step 52500 loss 0.00165 lr 6.69e-05 172,146 pos/s elapsed 83.3m
+== epoch 1281 val_loss 0.00380 best 0.00376 elapsed 83.3m
+== epoch 1282 val_loss 0.00380 best 0.00376 elapsed 83.4m
+ep 1282 step 52600 loss 0.00165 lr 6.57e-05 172,155 pos/s elapsed 83.4m
+== epoch 1283 val_loss 0.00380 best 0.00376 elapsed 83.4m
+== epoch 1284 val_loss 0.00380 best 0.00376 elapsed 83.5m
+== epoch 1285 val_loss 0.00380 best 0.00376 elapsed 83.6m
+ep 1285 step 52700 loss 0.00166 lr 6.44e-05 172,158 pos/s elapsed 83.6m
+== epoch 1286 val_loss 0.00380 best 0.00376 elapsed 83.6m
+== epoch 1287 val_loss 0.00380 best 0.00376 elapsed 83.7m
+ep 1287 step 52800 loss 0.00165 lr 6.33e-05 172,170 pos/s elapsed 83.7m
+== epoch 1288 val_loss 0.00380 best 0.00376 elapsed 83.8m
+== epoch 1289 val_loss 0.00380 best 0.00376 elapsed 83.8m
+== epoch 1290 val_loss 0.00380 best 0.00376 elapsed 83.9m
+ep 1290 step 52900 loss 0.00164 lr 6.22e-05 172,175 pos/s elapsed 83.9m
+== epoch 1291 val_loss 0.00380 best 0.00376 elapsed 83.9m
+== epoch 1292 val_loss 0.00380 best 0.00376 elapsed 84.0m
+ep 1292 step 53000 loss 0.00165 lr 6.11e-05 172,185 pos/s elapsed 84.1m
+== epoch 1293 val_loss 0.00380 best 0.00376 elapsed 84.1m
+== epoch 1294 val_loss 0.00380 best 0.00376 elapsed 84.1m
+== epoch 1295 val_loss 0.00380 best 0.00376 elapsed 84.2m
+ep 1295 step 53100 loss 0.00167 lr 6.00e-05 172,192 pos/s elapsed 84.2m
+== epoch 1296 val_loss 0.00380 best 0.00376 elapsed 84.3m
+== epoch 1297 val_loss 0.00380 best 0.00376 elapsed 84.3m
+ep 1297 step 53200 loss 0.00165 lr 5.89e-05 172,198 pos/s elapsed 84.4m
+== epoch 1298 val_loss 0.00380 best 0.00376 elapsed 84.4m
+== epoch 1299 val_loss 0.00380 best 0.00376 elapsed 84.5m
+ep 1299 step 53300 loss 0.00165 lr 5.79e-05 172,205 pos/s elapsed 84.5m
+== epoch 1300 val_loss 0.00380 best 0.00376 elapsed 84.5m
+== epoch 1301 val_loss 0.00380 best 0.00376 elapsed 84.6m
+== epoch 1302 val_loss 0.00380 best 0.00376 elapsed 84.6m
+ep 1302 step 53400 loss 0.00165 lr 5.69e-05 172,218 pos/s elapsed 84.7m
+== epoch 1303 val_loss 0.00380 best 0.00376 elapsed 84.7m
+== epoch 1304 val_loss 0.00380 best 0.00376 elapsed 84.8m
+ep 1304 step 53500 loss 0.00165 lr 5.60e-05 172,224 pos/s elapsed 84.8m
+== epoch 1305 val_loss 0.00380 best 0.00376 elapsed 84.8m
+== epoch 1306 val_loss 0.00380 best 0.00376 elapsed 84.9m
+== epoch 1307 val_loss 0.00380 best 0.00376 elapsed 85.0m
+ep 1307 step 53600 loss 0.00165 lr 5.50e-05 172,225 pos/s elapsed 85.0m
+== epoch 1308 val_loss 0.00380 best 0.00376 elapsed 85.0m
+== epoch 1309 val_loss 0.00380 best 0.00376 elapsed 85.1m
+ep 1309 step 53700 loss 0.00165 lr 5.41e-05 172,233 pos/s elapsed 85.1m
+== epoch 1310 val_loss 0.00380 best 0.00376 elapsed 85.2m
+== epoch 1311 val_loss 0.00380 best 0.00376 elapsed 85.2m
+== epoch 1312 val_loss 0.00380 best 0.00376 elapsed 85.3m
+ep 1312 step 53800 loss 0.00166 lr 5.32e-05 172,237 pos/s elapsed 85.3m
+== epoch 1313 val_loss 0.00380 best 0.00376 elapsed 85.3m
+== epoch 1314 val_loss 0.00380 best 0.00376 elapsed 85.4m
+ep 1314 step 53900 loss 0.00165 lr 5.23e-05 172,242 pos/s elapsed 85.5m
+== epoch 1315 val_loss 0.00380 best 0.00376 elapsed 85.5m
+== epoch 1316 val_loss 0.00380 best 0.00376 elapsed 85.5m
+== epoch 1317 val_loss 0.00380 best 0.00376 elapsed 85.6m
+ep 1317 step 54000 loss 0.00165 lr 5.15e-05 172,247 pos/s elapsed 85.6m
+== epoch 1318 val_loss 0.00380 best 0.00376 elapsed 85.7m
+== epoch 1319 val_loss 0.00380 best 0.00376 elapsed 85.7m
+ep 1319 step 54100 loss 0.00165 lr 5.07e-05 172,247 pos/s elapsed 85.8m
+== epoch 1320 val_loss 0.00380 best 0.00376 elapsed 85.8m
+== epoch 1321 val_loss 0.00380 best 0.00376 elapsed 85.9m
+ep 1321 step 54200 loss 0.00165 lr 4.99e-05 172,252 pos/s elapsed 85.9m
+== epoch 1322 val_loss 0.00380 best 0.00376 elapsed 85.9m
+== epoch 1323 val_loss 0.00380 best 0.00376 elapsed 86.0m
+== epoch 1324 val_loss 0.00380 best 0.00376 elapsed 86.1m
+ep 1324 step 54300 loss 0.00164 lr 4.92e-05 172,253 pos/s elapsed 86.1m
+== epoch 1325 val_loss 0.00380 best 0.00376 elapsed 86.1m
+== epoch 1326 val_loss 0.00380 best 0.00376 elapsed 86.2m
+ep 1326 step 54400 loss 0.00165 lr 4.85e-05 172,256 pos/s elapsed 86.2m
+== epoch 1327 val_loss 0.00380 best 0.00376 elapsed 86.2m
+== epoch 1328 val_loss 0.00380 best 0.00376 elapsed 86.3m
+== epoch 1329 val_loss 0.00380 best 0.00376 elapsed 86.4m
+ep 1329 step 54500 loss 0.00165 lr 4.78e-05 172,257 pos/s elapsed 86.4m
+== epoch 1330 val_loss 0.00380 best 0.00376 elapsed 86.4m
+== epoch 1331 val_loss 0.00380 best 0.00376 elapsed 86.5m
+ep 1331 step 54600 loss 0.00165 lr 4.71e-05 172,258 pos/s elapsed 86.6m
+== epoch 1332 val_loss 0.00380 best 0.00376 elapsed 86.6m
+== epoch 1333 val_loss 0.00380 best 0.00376 elapsed 86.6m
+== epoch 1334 val_loss 0.00380 best 0.00376 elapsed 86.7m
+ep 1334 step 54700 loss 0.00164 lr 4.65e-05 172,264 pos/s elapsed 86.7m
+== epoch 1335 val_loss 0.00380 best 0.00376 elapsed 86.8m
+== epoch 1336 val_loss 0.00380 best 0.00376 elapsed 86.8m
+ep 1336 step 54800 loss 0.00165 lr 4.59e-05 172,259 pos/s elapsed 86.9m
+== epoch 1337 val_loss 0.00380 best 0.00376 elapsed 86.9m
+== epoch 1338 val_loss 0.00380 best 0.00376 elapsed 87.0m
+== epoch 1339 val_loss 0.00380 best 0.00376 elapsed 87.0m
+ep 1339 step 54900 loss 0.00168 lr 4.53e-05 172,263 pos/s elapsed 87.0m
+== epoch 1340 val_loss 0.00380 best 0.00376 elapsed 87.1m
+== epoch 1341 val_loss 0.00380 best 0.00376 elapsed 87.2m
+ep 1341 step 55000 loss 0.00164 lr 4.47e-05 172,268 pos/s elapsed 87.2m
+== epoch 1342 val_loss 0.00380 best 0.00376 elapsed 87.2m
+== epoch 1343 val_loss 0.00380 best 0.00376 elapsed 87.3m
+ep 1343 step 55100 loss 0.00165 lr 4.42e-05 172,273 pos/s elapsed 87.3m
+== epoch 1344 val_loss 0.00380 best 0.00376 elapsed 87.3m
+== epoch 1345 val_loss 0.00380 best 0.00376 elapsed 87.4m
+== epoch 1346 val_loss 0.00380 best 0.00376 elapsed 87.5m
+ep 1346 step 55200 loss 0.00165 lr 4.37e-05 172,275 pos/s elapsed 87.5m
+== epoch 1347 val_loss 0.00380 best 0.00376 elapsed 87.5m
+== epoch 1348 val_loss 0.00380 best 0.00376 elapsed 87.6m
+ep 1348 step 55300 loss 0.00165 lr 4.33e-05 172,285 pos/s elapsed 87.6m
+== epoch 1349 val_loss 0.00380 best 0.00376 elapsed 87.7m
+== epoch 1350 val_loss 0.00380 best 0.00376 elapsed 87.7m
+== epoch 1351 val_loss 0.00380 best 0.00376 elapsed 87.8m
+ep 1351 step 55400 loss 0.00166 lr 4.29e-05 172,294 pos/s elapsed 87.8m
+== epoch 1352 val_loss 0.00380 best 0.00376 elapsed 87.9m
+== epoch 1353 val_loss 0.00380 best 0.00376 elapsed 87.9m
+ep 1353 step 55500 loss 0.00165 lr 4.25e-05 172,294 pos/s elapsed 88.0m
+== epoch 1354 val_loss 0.00380 best 0.00376 elapsed 88.0m
+== epoch 1355 val_loss 0.00380 best 0.00376 elapsed 88.0m
+== epoch 1356 val_loss 0.00380 best 0.00376 elapsed 88.1m
+ep 1356 step 55600 loss 0.00164 lr 4.21e-05 172,294 pos/s elapsed 88.1m
+== epoch 1357 val_loss 0.00380 best 0.00376 elapsed 88.2m
+== epoch 1358 val_loss 0.00380 best 0.00376 elapsed 88.2m
+ep 1358 step 55700 loss 0.00165 lr 4.18e-05 172,298 pos/s elapsed 88.3m
+== epoch 1359 val_loss 0.00380 best 0.00376 elapsed 88.3m
+== epoch 1360 val_loss 0.00380 best 0.00376 elapsed 88.4m
+ep 1360 step 55800 loss 0.00165 lr 4.15e-05 172,307 pos/s elapsed 88.4m
+== epoch 1361 val_loss 0.00380 best 0.00376 elapsed 88.4m
+== epoch 1362 val_loss 0.00380 best 0.00376 elapsed 88.5m
+== epoch 1363 val_loss 0.00380 best 0.00376 elapsed 88.6m
+ep 1363 step 55900 loss 0.00165 lr 4.12e-05 172,316 pos/s elapsed 88.6m
+== epoch 1364 val_loss 0.00380 best 0.00376 elapsed 88.6m
+== epoch 1365 val_loss 0.00380 best 0.00376 elapsed 88.7m
+ep 1365 step 56000 loss 0.00165 lr 4.10e-05 172,321 pos/s elapsed 88.7m
+== epoch 1366 val_loss 0.00380 best 0.00376 elapsed 88.7m
+== epoch 1367 val_loss 0.00380 best 0.00376 elapsed 88.8m
+== epoch 1368 val_loss 0.00380 best 0.00376 elapsed 88.9m
+ep 1368 step 56100 loss 0.00164 lr 4.07e-05 172,323 pos/s elapsed 88.9m
+== epoch 1369 val_loss 0.00380 best 0.00376 elapsed 88.9m
+== epoch 1370 val_loss 0.00380 best 0.00376 elapsed 89.0m
+ep 1370 step 56200 loss 0.00165 lr 4.05e-05 172,326 pos/s elapsed 89.1m
+== epoch 1371 val_loss 0.00380 best 0.00376 elapsed 89.1m
+== epoch 1372 val_loss 0.00380 best 0.00376 elapsed 89.1m
+== epoch 1373 val_loss 0.00380 best 0.00376 elapsed 89.2m
+ep 1373 step 56300 loss 0.00165 lr 4.04e-05 172,331 pos/s elapsed 89.2m
+== epoch 1374 val_loss 0.00380 best 0.00376 elapsed 89.3m
+== epoch 1375 val_loss 0.00380 best 0.00376 elapsed 89.3m
+ep 1375 step 56400 loss 0.00165 lr 4.02e-05 172,338 pos/s elapsed 89.4m
+== epoch 1376 val_loss 0.00380 best 0.00376 elapsed 89.4m
+== epoch 1377 val_loss 0.00380 best 0.00376 elapsed 89.5m
+== epoch 1378 val_loss 0.00380 best 0.00376 elapsed 89.5m
+ep 1378 step 56500 loss 0.00165 lr 4.01e-05 172,345 pos/s elapsed 89.5m
+== epoch 1379 val_loss 0.00380 best 0.00376 elapsed 89.6m
+== epoch 1380 val_loss 0.00380 best 0.00376 elapsed 89.6m
+ep 1380 step 56600 loss 0.00165 lr 4.01e-05 172,354 pos/s elapsed 89.7m
+== epoch 1381 val_loss 0.00380 best 0.00376 elapsed 89.7m
+== epoch 1382 val_loss 0.00380 best 0.00376 elapsed 89.8m
+ep 1382 step 56700 loss 0.00165 lr 4.00e-05 172,360 pos/s elapsed 89.8m
+== epoch 1383 val_loss 0.00380 best 0.00376 elapsed 89.8m
+== epoch 1384 val_loss 0.00380 best 0.00376 elapsed 89.9m
+== epoch 1385 val_loss 0.00380 best 0.00376 elapsed 90.0m
+ep 1385 step 56800 loss 0.00165 lr 4.00e-05 172,359 pos/s elapsed 90.0m
+== epoch 1386 val_loss 0.00380 best 0.00376 elapsed 90.0m
+== final val_loss 0.00380 best 0.00376 elapsed 90.0m
+final val_loss 0.00376 (best, epoch 480)
+exported net.bin (201012 bytes)
