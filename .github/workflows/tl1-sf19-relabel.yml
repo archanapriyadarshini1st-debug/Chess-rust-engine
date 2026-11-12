@@ -30,6 +30,10 @@ on:
       gate_tc: {description: "Gate time control", default: "10+0.1"}
       smoke: {description: "true = plumbing test, skip the SD1 equality assertions", default: "false"}
 
+defaults:
+  run:
+    shell: bash   # bash -eo pipefail: a failing trainer must not be hidden by `| tee | grep`
+
 permissions:
   contents: read
   issues: write
@@ -216,7 +220,9 @@ jobs:
       - name: Train (tools/nnue/train.py, unchanged)
         run: |
           python3 tools/nnue/train.py --data labelled.bin --out net.bin --lam ${{ needs.plan.outputs.lam }} \
-            --minutes ${{ needs.plan.outputs.train_minutes }} 2>&1 | tee train.log | grep -E "files|decoded|==|final|exported" | tail -60
+            --minutes ${{ needs.plan.outputs.train_minutes }} > train.log 2>&1 || { echo "TRAINER FAILED:"; tail -n 40 train.log; exit 1; }
+          grep -E "files|decoded|==|final|exported" train.log | tail -60
+          test -s net.bin || { echo "no net.bin produced"; tail -n 40 train.log; exit 1; }
       - name: Teacher agreement on the game-disjoint labelled holdout sample (both nets, same data)
         run: |
           for L in ${{ needs.plan.outputs.lam }} 1.0; do
@@ -279,6 +285,16 @@ jobs:
           SF=$(find /tmp/sfdl -type f -name 'stockfish-*' ! -name '*.tar.gz' | head -1); test -n "$SF"; chmod +x "$SF"
           echo "$SF_BIN_SHA256  $SF" | sha256sum -c -
           echo "SF=$SF" >> "$GITHUB_ENV"
+      - name: Assert both nets really load (the engine silently falls back to HCE otherwise)
+        run: |
+          test -s tlnet/net.bin && test -s sd1net/net.bin
+          if cmp -s tlnet/net.bin sd1net/net.bin; then echo "TL net is byte-identical to SD1: refusing to run a disguised A/A"; exit 1; fi
+          for N in tlnet sd1net; do
+            OUT=$(printf 'position startpos moves e2e4 e7e5\neval\nquit\n' | CRE_NNUE_FILE=$PWD/$N/net.bin ./engine 2>&1)
+            echo "$N: $(echo "$OUT" | grep -E 'eval_nnue|NNUE file' | tr '\n' ' ')"
+            echo "$OUT" | grep -q 'eval_nnue none' && { echo "$N did not load"; exit 1; } || true
+            echo "$OUT" | grep -q 'NNUE file' && { echo "$N failed to parse"; exit 1; } || true
+          done
       - name: Gate (${{ matrix.id }}, ${{ matrix.kind }})
         run: |
           mkdir -p gate_out
