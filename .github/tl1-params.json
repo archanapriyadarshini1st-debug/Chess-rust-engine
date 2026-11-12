@@ -1,2 +1,2 @@
 {"src_run": "43035169390", "relabel_shards": "2", "depth": "12", "max_records": "20000", "lam": "0.75",
- "train_minutes": "4", "gate_games": "4", "sf_games": "4", "gate_tc": "10+0.1", "smoke": "true"}
+ "train_minutes": "4", "gate_games": "4", "sf_games": "4", "gate_tc": "10+0.1", "smoke": "true", "note": "smoke v2: SF extract dir fix"}
