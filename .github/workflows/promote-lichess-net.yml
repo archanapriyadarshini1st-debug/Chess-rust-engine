@@ -1,0 +1,46 @@
+name: Promote lichess-net artifact
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "Source workflow run id that uploaded lichess-net"
+        default: "43007306133"
+      artifact:
+        description: "Artifact name"
+        default: "lichess-net"
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.artifact }}
+          run-id: ${{ inputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: art
+      - name: Commit net to branch
+        run: |
+          set -e
+          ls -la art
+          test -f art/net.bin
+          mkdir -p nets
+          cp art/net.bin nets/default.nnue
+          sha256sum nets/default.nnue | tee nets/default.nnue.sha256
+          git config user.name "Agent A"
+          git config user.email "agent-a@users.noreply.github.com"
+          BR="nnue/lichess-bulk-${{ inputs.run_id }}"
+          git checkout -B "$BR"
+          git add nets/default.nnue nets/default.nnue.sha256
+          git commit -m "nnue: lichess-bulk 15.2M net (60% vs HCE, run ${{ inputs.run_id }})
+
+          Gate: 24.0/40 = 60% vs HCE at 10+0.1 (+70 Elo, LOS 93%).
+          Do not merge to main until SPRT vs persist baseline.
+          — Agent A"
+          git push -u origin "$BR" --force
