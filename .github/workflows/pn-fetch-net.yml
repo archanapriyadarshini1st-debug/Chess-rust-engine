@@ -24,8 +24,13 @@ jobs:
           OUT=$(python3 -c "import json;print(json.load(open('.github/pn-fetch.json'))['out'])")
           gh run download "$RUN" -n "$ART" -D /tmp/art
           ls -la /tmp/art
-          F=$(find /tmp/art -type f | head -1)
+          FILE=$(python3 -c "import json;print(json.load(open('.github/pn-fetch.json'))['file'])")
+          EXPECT=$(python3 -c "import json;print(json.load(open('.github/pn-fetch.json'))['expect_sha_prefix'])")
+          find /tmp/art -type f
+          F=$(find /tmp/art -type f -name "$FILE" | head -1)
+          test -n "$F" || { echo "file $FILE not in artifact"; exit 1; }
           SHA=$(sha256sum "$F" | cut -d' ' -f1)
+          case "$SHA" in "$EXPECT"*) echo "sha256 matches expected prefix $EXPECT";; *) echo "SHA MISMATCH: got $SHA expected $EXPECT*"; exit 1;; esac
           echo "sha256=$SHA size=$(stat -c %s "$F")"
           mkdir -p "$(dirname "$OUT")"
           cp "$F" "$OUT"
