@@ -1,1 +1,1 @@
-{"run_id": 43035169390, "artifact": "sd-net", "out": "nets/candidates/sd1-a598bf2f.bin"}
+{"run_id": 43035169390, "artifact": "sd-net", "file": "net.bin", "expect_sha_prefix": "a598bf2f3247", "out": "nets/candidates/sd1-a598bf2f.bin"}
