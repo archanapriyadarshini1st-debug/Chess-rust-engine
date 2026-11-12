@@ -4,6 +4,7 @@
 use crate::params;
 use crate::board::Position;
 use crate::eval::evaluate;
+use crate::attacks::{bishop_attacks, knight_attacks, pawn_attacks_bb, rook_attacks};
 use crate::movegen::{legal_moves, noisy_moves, pseudo_legal};
 use crate::see::see_ge;
 use crate::time::TimeManager;
@@ -46,6 +47,10 @@ pub struct ThreadData {
     pub root_depth: i32,
     pub counter: [[Move; 64]; 64],
     pub ply_move: [Move; MAX_PLY],
+    /// pawn-structure history [slot 512][piece 12][to 64] (XPawnHist)
+    pub pawn_hist: Vec<i16>,
+    /// singular double-extensions on the current path (XDblExt)
+    pub dbl: [u8; MAX_PLY],
 }
 
 const HIST_MAX: i32 = 16384;
@@ -57,6 +62,71 @@ fn cont_idx(pp: usize, pt: usize, pc: usize, to: usize) -> usize {
 #[inline]
 fn cap_idx(pc: usize, to: usize, victim: usize) -> usize {
     (pc * 64 + to) * 6 + victim
+}
+
+const PAWN_SLOTS: usize = 512;
+
+#[inline]
+fn pawn_idx(pos: &Position, pc: usize, to: usize) -> usize {
+    let wp = pos.bb(Color::White, PieceType::Pawn);
+    let bp = pos.bb(Color::Black, PieceType::Pawn);
+    let k = (wp.wrapping_mul(0x9E37_79B9_7F4A_7C15) ^ bp.wrapping_mul(0xC2B2_AE3D_27D4_EB4F))
+        .wrapping_mul(0x1656_67B1_9E37_79F9);
+    let slot = (k >> 55) as usize; // 9 bits
+    (slot * 12 + pc) * 64 + to
+}
+
+/// Squares attacked by enemy pawns / (pawns+minors) / (pawns+minors+rooks).
+/// Used only for quiet-move ordering (XThreatOrd).
+fn threat_maps(pos: &Position) -> [u64; 3] {
+    let them = pos.side.flip();
+    let occ = pos.occ();
+    let by_pawn = pawn_attacks_bb(them, pos.bb(them, PieceType::Pawn));
+    let mut by_minor = by_pawn;
+    let mut n = pos.bb(them, PieceType::Knight);
+    while n != 0 {
+        let sq = crate::types::Square::new(n.trailing_zeros() as u8);
+        n &= n - 1;
+        by_minor |= knight_attacks(sq);
+    }
+    let mut b = pos.bb(them, PieceType::Bishop);
+    while b != 0 {
+        let sq = crate::types::Square::new(b.trailing_zeros() as u8);
+        b &= b - 1;
+        by_minor |= bishop_attacks(sq, occ);
+    }
+    let mut by_rook = by_minor;
+    let mut r = pos.bb(them, PieceType::Rook);
+    while r != 0 {
+        let sq = crate::types::Square::new(r.trailing_zeros() as u8);
+        r &= r - 1;
+        by_rook |= rook_attacks(sq, occ);
+    }
+    [by_pawn, by_minor, by_rook]
+}
+
+/// Stockfish-documented idea (move ordering by "threatened pieces"), own constants:
+/// reward moving a piece that a lesser enemy piece attacks, punish stepping onto
+/// a square a lesser piece attacks.
+fn threat_bonus(pos: &Position, mv: Move, thr: &[u64; 3]) -> i32 {
+    let from = mv.from().bb();
+    let to = mv.to().bb();
+    let (pw, mi, ro) = (thr[0], thr[1], thr[2]);
+    let b = match pos.piece_on(mv.from()).ty() {
+        PieceType::Queen => {
+            (if ro & from != 0 { 8000 } else if mi & from != 0 { 4000 } else if pw & from != 0 { 2000 } else { 0 })
+                - (if ro & to != 0 { 8000 } else if mi & to != 0 { 4000 } else { 0 })
+        }
+        PieceType::Rook => {
+            (if mi & from != 0 { 4000 } else if pw & from != 0 { 2000 } else { 0 })
+                - (if mi & to != 0 { 3000 } else { 0 })
+        }
+        PieceType::Knight | PieceType::Bishop => {
+            (if pw & from != 0 { 3000 } else { 0 }) - (if pw & to != 0 { 3000 } else { 0 })
+        }
+        _ => 0,
+    };
+    b * params::x_threat_scale() / 100
 }
 
 #[inline]
@@ -90,6 +160,8 @@ impl ThreadData {
             root_depth: 0,
             counter: [[Move::NONE; 64]; 64],
             ply_move: [Move::NONE; MAX_PLY],
+            pawn_hist: vec![0; PAWN_SLOTS * 12 * 64],
+            dbl: [0; MAX_PLY],
         }
     }
 
@@ -113,6 +185,7 @@ impl ThreadData {
         self.stack_to = [0; MAX_PLY];
         self.root_depth = 0;
         self.ply_move = [Move::NONE; MAX_PLY];
+        self.dbl = [0; MAX_PLY];
         self.hash_hist.clear();
     }
 
@@ -147,11 +220,17 @@ fn quiet_hist(td: &ThreadData, pos: &Position, mv: Move, ply: usize) -> i32 {
         if ply >= 2 {
             h += td.cont_hist[cont_idx(td.stack_pc[ply - 2] as usize, td.stack_to[ply - 2] as usize, pc, to)] as i32;
         }
+        if ply >= 4 && params::x_cont4() != 0 {
+            h += td.cont_hist[cont_idx(td.stack_pc[ply - 4] as usize, td.stack_to[ply - 4] as usize, pc, to)] as i32;
+        }
+        if params::x_pawn_hist() != 0 {
+            h += td.pawn_hist[pawn_idx(pos, pc, to)] as i32;
+        }
     }
     h
 }
 
-fn score_move(td: &ThreadData, pos: &Position, mv: Move, tt_move: Move, ply: usize) -> i32 {
+fn score_move(td: &ThreadData, pos: &Position, mv: Move, tt_move: Move, ply: usize, thr: &[u64; 3]) -> i32 {
     if mv == tt_move {
         return 10_000_000;
     }
@@ -184,7 +263,11 @@ fn score_move(td: &ThreadData, pos: &Position, mv: Move, tt_move: Move, ply: usi
             return 850_000;
         }
     }
-    quiet_hist(td, pos, mv, ply)
+    let mut q = quiet_hist(td, pos, mv, ply);
+    if thr[2] != 0 {
+        q += threat_bonus(pos, mv, thr);
+    }
+    q
 }
 
 fn sort_moves(
@@ -194,10 +277,11 @@ fn sort_moves(
     n: usize,
     tt_move: Move,
     ply: usize,
+    thr: &[u64; 3],
 ) {
     let mut scores = [0i32; MAX_MOVES];
     for i in 0..n {
-        scores[i] = score_move(td, pos, moves[i], tt_move, ply);
+        scores[i] = score_move(td, pos, moves[i], tt_move, ply, thr);
     }
     for i in 1..n {
         let key_m = moves[i];
@@ -254,6 +338,14 @@ fn update_history(td: &mut ThreadData, pos: &Position, mv: Move, ply: usize, bon
         if ply >= 2 {
             let i = cont_idx(td.stack_pc[ply - 2] as usize, td.stack_to[ply - 2] as usize, pc, to);
             gravity(&mut td.cont_hist[i], bonus);
+        }
+        if ply >= 4 && params::x_cont4() != 0 {
+            let i = cont_idx(td.stack_pc[ply - 4] as usize, td.stack_to[ply - 4] as usize, pc, to);
+            gravity(&mut td.cont_hist[i], bonus);
+        }
+        if params::x_pawn_hist() != 0 {
+            let i = pawn_idx(pos, pc, to);
+            gravity(&mut td.pawn_hist[i], bonus);
         }
     }
 }
@@ -331,7 +423,7 @@ fn qsearch(pos: &Position, td: &mut ThreadData, mut alpha: i32, beta: i32, ply: 
     if n == 0 {
         return if in_check { mated_in(ply) } else { stand };
     }
-    sort_moves(td, pos, &mut moves, n, Move::NONE, ply as usize);
+    sort_moves(td, pos, &mut moves, n, Move::NONE, ply as usize, &[0; 3]);
 
     let mut best = stand;
     for i in 0..n {
@@ -526,6 +618,13 @@ fn search(
         }
         if s < rbeta {
             se_ext = 1;
+            if params::x_dbl_ext() != 0
+                && !is_pv
+                && td.dbl[ply as usize] < 3
+                && s < rbeta - params::x_dbl_margin()
+            {
+                se_ext = 2;
+            }
         } else if !is_pv && s >= beta {
             return s;
         }
@@ -536,7 +635,8 @@ fn search(
     if n == 0 {
         return if in_check { mated_in(ply) } else { DRAW };
     }
-    sort_moves(td, pos, &mut moves, n, tt_move, ply as usize);
+    let thr = if params::x_threat_ord() != 0 && !in_check { threat_maps(pos) } else { [0; 3] };
+    sort_moves(td, pos, &mut moves, n, tt_move, ply as usize, &thr);
 
     let mut best = -INF;
     let mut best_move = Move::NONE;
@@ -609,6 +709,7 @@ fn search(
         td.stack_pc[ply as usize] = pos.piece_on(mv.from()).index() as u8;
         td.stack_to[ply as usize] = mv.to().index() as u8;
         td.ply_move[ply as usize] = mv;
+        td.dbl[ply as usize + 1] = td.dbl[ply as usize] + (mv == tt_move && se_ext == 2) as u8;
 
         let mut score;
         if legal == 1 {
