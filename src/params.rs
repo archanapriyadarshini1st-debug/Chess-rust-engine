@@ -74,6 +74,8 @@ tunables! {
     lmr_hist_div,       "LmrHistDiv",       6000,   2000, 16000,  600;
     // --- aspiration windows ---
     asp_window,         "AspWindow",          25,      8,    80,    3;
+    // --- NNUE output scale in percent (100 == net's raw score; no effect on HCE) ---
+    nnue_scale,         "NnueScale",         100,     30,   200,    5;
 }
 
 /// Set a tunable by its UCI name. Returns `false` if the name is unknown.
