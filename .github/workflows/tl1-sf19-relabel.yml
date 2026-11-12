@@ -1,0 +1,361 @@
+name: TL1 SF19 teacher relabel of the SD1 data
+
+# Agent TL. EXP-TL1 (experiments/EXP-TL1-sf19-teacher-relabel.md). Pre-registered; no Elo claim until the gate says so.
+#
+# Question: SD1 (run 43035169390) trained on the engine's OWN depth-7 HCE scores + game results and beat HCE by +123.
+#   Is the HCE score the ceiling of that recipe? Replace ONLY the score by Stockfish 19 MAX (fixed depth) on the
+#   IDENTICAL 20M positions (same game results, same lam, same trainer, same minutes) and compare TL vs SD1 head-to-head.
+# Stockfish is the TEACHER here (offline labels). The engine never calls it at runtime.
+#
+#   prep   : download SD1 shards -> re-run sd_merge EXACTLY (asserts the 20M/757k/WDL counts equal SD1's) -> split in parts
+#   relabel: N parallel jobs, tools/teacher/relabel_records.py, SF19 sha256 pinned, per-part provenance
+#   train  : concatenate labelled parts IN ORDER -> tools/nnue/train.py (unchanged) -> teacher-agreement on a held-out sample
+#   gate   : TL vs SD1 (last-known-good), 5 replicates + A/A (SD1 vs SD1); informational: each vs SF19 UCI_Elo 3000 (2 reps)
+#   report : pooled numbers auto-posted to issue #1
+
+on:
+  push:
+    branches: ["agentTL/**"]
+    paths: [".github/tl1-params.json"]
+  workflow_dispatch:
+    inputs:
+      src_run: {description: "SD1 run whose sd-shard-*/sd-net artifacts are the source", default: "43035169390"}
+      relabel_shards: {description: "Parallel relabel jobs", default: "16"}
+      depth: {description: "Stockfish 19 fixed depth (never < 10)", default: "12"}
+      max_records: {description: "Cap passed to sd_merge (20000000 reproduces SD1 exactly)", default: "20000000"}
+      lam: {description: "Weight of teacher score vs game result", default: "0.75"}
+      train_minutes: {description: "Training wall clock", default: "230"}
+      gate_games: {description: "Games per h2h replicate (5 + A/A)", default: "100"}
+      sf_games: {description: "Games per SF19 UCI_Elo 3000 replicate (2 per net)", default: "100"}
+      gate_tc: {description: "Gate time control", default: "10+0.1"}
+      smoke: {description: "true = plumbing test, skip the SD1 equality assertions", default: "false"}
+
+permissions:
+  contents: read
+  issues: write
+  actions: read
+
+env:
+  FASTCHESS_URL: https://github.com/Disservin/fastchess/releases/download/v1.8.3-alpha/fastchess-linux-x86-64.tar
+  SF_URL: https://github.com/official-stockfish/Stockfish/releases/download/sf_19/stockfish-linux-x86-64-universal.tar.gz
+  SF_BIN_SHA256: 0f83d24cc46d2c66c60f16001af5444873bc112b7d028594513426894c12da19
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      shard_list: ${{ steps.p.outputs.shard_list }}
+      src_run: ${{ steps.p.outputs.src_run }}
+      relabel_shards: ${{ steps.p.outputs.relabel_shards }}
+      depth: ${{ steps.p.outputs.depth }}
+      max_records: ${{ steps.p.outputs.max_records }}
+      lam: ${{ steps.p.outputs.lam }}
+      train_minutes: ${{ steps.p.outputs.train_minutes }}
+      gate_games: ${{ steps.p.outputs.gate_games }}
+      sf_games: ${{ steps.p.outputs.sf_games }}
+      gate_tc: ${{ steps.p.outputs.gate_tc }}
+      smoke: ${{ steps.p.outputs.smoke }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: p
+        env:
+          EV: ${{ github.event_name }}
+          INPUTS: ${{ toJSON(inputs) }}
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os
+          p = json.loads(os.environ["INPUTS"]) if os.environ["EV"] == "workflow_dispatch" else json.load(open(".github/tl1-params.json"))
+          n, d = int(p["relabel_shards"]), int(p["depth"])
+          assert 1 <= n <= 20, n
+          assert d >= 10, "teacher labels shallower than depth 10 are too noisy (EXP-P1)"
+          assert 0.0 <= float(p["lam"]) <= 1.0
+          if str(p["smoke"]).lower() != "true":
+              assert int(p["max_records"]) == 20000000, "a real run must reproduce SD1's 20M positions"
+              assert int(p["train_minutes"]) >= 230 and int(p["gate_games"]) >= 100, "real run must match SD1's recipe and gate size"
+          print("shard_list=" + json.dumps(list(range(1, n + 1)) + ["h"]))
+          for k in ("src_run", "relabel_shards", "depth", "max_records", "lam", "train_minutes", "gate_games", "sf_games", "gate_tc", "smoke"):
+              print(f"{k}={str(p[k]).lower() if k == 'smoke' else p[k]}")
+          PY
+
+  prep:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: pip install numpy
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: sd-shard-*
+          path: data
+          merge-multiple: true
+          run-id: ${{ needs.plan.outputs.src_run }}
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+      - name: Merge exactly as SD1 did
+        run: |
+          free -g | head -2
+          python3 tools/sd/sd_merge.py --inp 'data/**/*.bin' --out merged.bin --holdout holdout.bin --max-records ${{ needs.plan.outputs.max_records }} | tee merge.txt
+          if [ "${{ needs.plan.outputs.smoke }}" != "true" ]; then
+            python3 - <<'PY'
+          import json
+          s = json.load(open("merged.bin.stats.json"))
+          # SD1 report (issue #1, run 43035169390): these must match or the comparison is not like-for-like
+          want = {"raw_records": 30415673, "train_final": 20000000, "holdout_unique": 757331, "wdl_stm_loss_draw_win_train": [8532059, 3320989, 8146952]}
+          for k, v in want.items():
+              assert s[k] == v, (k, s[k], v)
+          print("PREP OK: merged data is identical in size and WDL mix to SD1's training set")
+          PY
+          fi
+      - name: Split into ordered parts + a deterministic holdout sample
+        run: |
+          python3 - <<'PY'
+          import numpy as np, os, json
+          R = np.dtype([("occ","<u8"),("pcs","u1",(16,)),("stm","u1"),("score","<i2"),("wdl","u1")])
+          n_parts = int("${{ needs.plan.outputs.relabel_shards }}")
+          a = np.memmap("merged.bin", dtype=R, mode="r")
+          os.makedirs("parts")
+          cuts = np.linspace(0, len(a), n_parts + 1).astype(np.int64)
+          for i in range(n_parts):
+              np.asarray(a[cuts[i]:cuts[i+1]]).tofile(f"parts/part_{i+1:03d}.bin")
+          h = np.fromfile("holdout.bin", dtype=R)
+          sub = h[::max(1, len(h) // 100000)][:100000]       # stride sample of the GAME-DISJOINT holdout, <= 100k
+          sub.tofile("parts/hold_sub.bin")
+          json.dump({"parts": n_parts, "train_records": int(len(a)), "holdout_sub": int(len(sub))}, open("parts/split.json", "w"))
+          print(open("parts/split.json").read())
+          PY
+          ls -la parts | head -30
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tl-parts
+          path: parts/
+          retention-days: 14
+          compression-level: 1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tl-prep-report
+          path: |
+            merge.txt
+            merged.bin.stats.json
+          retention-days: 30
+
+  relabel:
+    needs: [plan, prep]
+    runs-on: ubuntu-latest
+    timeout-minutes: 345
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON(needs.plan.outputs.shard_list) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: pip install numpy chess
+      - uses: actions/download-artifact@v4
+        with: {name: tl-parts, path: parts}
+      - name: Fetch and verify the pinned Stockfish 19
+        run: |
+          curl -fsSL --retry 3 "$SF_URL" -o sf.tar.gz && tar xzf sf.tar.gz
+          SF=$(find . -type f -name 'stockfish*' ! -name '*.tar.gz' | head -1); chmod +x "$SF"
+          echo "$SF_BIN_SHA256  $SF" | sha256sum -c -
+          echo "SF=$PWD/${SF#./}" >> "$GITHUB_ENV"
+      - name: Unit tests (incl. end-to-end on real SF19)
+        run: python3 tools/teacher/test_relabel_records.py --stockfish "$SF"
+      - name: Relabel (shard ${{ matrix.shard }})
+        run: |
+          mkdir -p lab
+          if [ "${{ matrix.shard }}" = "h" ]; then IN=parts/hold_sub.bin; OUT=lab/hold_sub.bin; else N=$(printf '%03d' ${{ matrix.shard }}); IN=parts/part_$N.bin; OUT=lab/part_$N.bin; fi
+          python3 tools/teacher/relabel_records.py --stockfish "$SF" --in "$IN" --out "$OUT" --depth ${{ needs.plan.outputs.depth }} --procs 4 2>&1 | tail -n 40
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tl-lab-${{ matrix.shard }}
+          path: lab/
+          retention-days: 14
+          compression-level: 1
+
+  train:
+    needs: [plan, relabel]
+    runs-on: ubuntu-latest
+    timeout-minutes: 345
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - uses: actions/download-artifact@v4
+        with: {pattern: tl-lab-*, path: lab, merge-multiple: true}
+      - uses: actions/download-artifact@v4
+        with:
+          name: sd-net
+          path: sd1net
+          run-id: ${{ needs.plan.outputs.src_run }}
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+      - name: Install deps
+        run: |
+          pip install numpy chess
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+      - name: Concatenate labelled parts in order and audit
+        run: |
+          ls lab | head -40
+          cat $(ls lab/part_*.bin | sort) > labelled.bin
+          python3 - <<'PY'
+          import numpy as np, json, glob
+          R = np.dtype([("occ","<u8"),("pcs","u1",(16,)),("stm","u1"),("score","<i2"),("wdl","u1")])
+          a = np.fromfile("labelled.bin", dtype=R)
+          prov = [json.load(open(p)) for p in sorted(glob.glob("lab/part_*.bin.provenance.json"))]
+          drop = {k: sum(p["dropped"][k] for p in prov) for k in prov[0]["dropped"]}
+          rep = {"records": int(len(a)), "dropped": drop, "teacher": prov[0]["teacher"], "stockfish_sha256": prov[0]["stockfish_sha256"][:16],
+                 "depth": prov[0]["depth"], "mean_abs_delta_vs_hce_score_cp": round(sum(p["mean_abs_delta_vs_input_score_cp"] * p["records_out"] for p in prov) / max(1, len(a)), 1),
+                 "abs_score_lt50_frac": float((np.abs(a["score"]) < 50).mean()), "wdl_train": np.bincount(a["wdl"], minlength=3).tolist()}
+          assert len({p["stockfish_sha256"] for p in prov}) == 1, "mixed teacher binaries"
+          json.dump(rep, open("labelled.audit.json", "w"), indent=1); print(json.dumps(rep, indent=1))
+          PY
+      - name: Train (tools/nnue/train.py, unchanged)
+        run: |
+          python3 tools/nnue/train.py --data labelled.bin --out net.bin --lam ${{ needs.plan.outputs.lam }} \
+            --minutes ${{ needs.plan.outputs.train_minutes }} 2>&1 | tee train.log | grep -E "files|decoded|==|final|exported" | tail -60
+      - name: Teacher agreement on the game-disjoint labelled holdout sample (both nets, same data)
+        run: |
+          for L in ${{ needs.plan.outputs.lam }} 1.0; do
+            for N in net.bin sd1net/net.bin; do
+              echo "== lam=$L net=$N sha=$(sha256sum $N | cut -c1-12)"
+              python3 tools/sd/holdout_eval.py --net $N --holdout lab/hold_sub.bin --lam $L --json /tmp/h.json
+            done
+          done 2>&1 | tee holdout_teacher.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tl-net
+          path: |
+            net.bin
+            net.bin.parity.txt
+            train.log
+            labelled.audit.json
+            holdout_teacher.txt
+          retention-days: 30
+
+  gate:
+    needs: [plan, train]
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {id: "1", kind: h2h, seed: 1013}
+          - {id: "2", kind: h2h, seed: 2026}
+          - {id: "3", kind: h2h, seed: 3039}
+          - {id: "4", kind: h2h, seed: 4052}
+          - {id: "5", kind: h2h, seed: 5065}
+          - {id: aa, kind: aa, seed: 777}
+          - {id: tlsf1, kind: sf, net: tl, seed: 4242}
+          - {id: tlsf2, kind: sf, net: tl, seed: 7777}
+          - {id: sdsf1, kind: sf, net: sd1, seed: 4242}
+          - {id: sdsf2, kind: sf, net: sd1, seed: 7777}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/download-artifact@v4
+        with: {name: tl-net, path: tlnet}
+      - uses: actions/download-artifact@v4
+        with:
+          name: sd-net
+          path: sd1net
+          run-id: ${{ needs.plan.outputs.src_run }}
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+      - name: Build engine, fastchess, Stockfish 19
+        run: |
+          cargo build --release
+          cp target/release/chess-rust-engine ./engine
+          echo "bench (HCE):    $(printf 'setoption name UseNNUE value false\nbench 10\nquit\n' | ./engine | grep ' nps' | tail -1)"
+          echo "bench (TL net): $(printf 'setoption name UseNNUE value true\nbench 10\nquit\n' | CRE_NNUE_FILE=$PWD/tlnet/net.bin ./engine | grep ' nps' | tail -1)"
+          echo "bench (SD1):    $(printf 'setoption name UseNNUE value true\nbench 10\nquit\n' | CRE_NNUE_FILE=$PWD/sd1net/net.bin ./engine | grep ' nps' | tail -1)"
+          mkdir -p /tmp/fc && curl -fsSL --retry 3 "$FASTCHESS_URL" -o /tmp/fc.tar && tar xf /tmp/fc.tar -C /tmp/fc
+          FC=$(find /tmp/fc -type f -name fastchess | head -1); chmod +x "$FC"; ln -sf "$FC" /tmp/fastchess
+          curl -fsSL --retry 3 "$SF_URL" -o sf.tar.gz && tar xzf sf.tar.gz
+          SF=$(find . -type f -name 'stockfish*' ! -name '*.tar.gz' | head -1); chmod +x "$SF"
+          echo "$SF_BIN_SHA256  $SF" | sha256sum -c -
+          echo "SF=$PWD/${SF#./}" >> "$GITHUB_ENV"
+      - name: Gate (${{ matrix.id }}, ${{ matrix.kind }})
+        run: |
+          mkdir -p gate_out
+          for W in tl sd1; do
+            cat > gate_out/$W.sh <<WRAP
+          #!/usr/bin/env bash
+          export CRE_NNUE_FILE="$PWD/$( [ $W = tl ] && echo tlnet || echo sd1net )/net.bin"
+          exec "$PWD/engine" "\$@"
+          WRAP
+            chmod +x gate_out/$W.sh
+          done
+          SEED=${{ matrix.seed }}; TC="${{ needs.plan.outputs.gate_tc }}"
+          COMMON="-openings file=tools/openings_book.epd format=epd order=random -srand $SEED -games 2 -repeat -concurrency 3 -pgnout file=gate_out/games.pgn -recover -ratinginterval 10"
+          case "${{ matrix.kind }}" in
+            h2h) G=${{ needs.plan.outputs.gate_games }}
+                 /tmp/fastchess -engine name=TL cmd=$PWD/gate_out/tl.sh option.UseNNUE=true option.Hash=64 \
+                   -engine name=SD1 cmd=$PWD/gate_out/sd1.sh option.UseNNUE=true option.Hash=64 \
+                   -each tc="$TC" $COMMON -rounds $(( G / 2 )) 2>&1 | tee gate_out/gate.log | tail -n 12 ;;
+            aa)  G=${{ needs.plan.outputs.gate_games }}
+                 /tmp/fastchess -engine name=SD1 cmd=$PWD/gate_out/sd1.sh option.UseNNUE=true option.Hash=64 \
+                   -engine name=SD1B cmd=$PWD/gate_out/sd1.sh option.UseNNUE=true option.Hash=64 \
+                   -each tc="$TC" $COMMON -rounds $(( G / 2 )) 2>&1 | tee gate_out/gate.log | tail -n 12 ;;
+            sf)  G=${{ needs.plan.outputs.sf_games }}
+                 NAME=$( [ "${{ matrix.net }}" = tl ] && echo TL || echo SD1 )
+                 /tmp/fastchess -engine name=$NAME cmd=$PWD/gate_out/${{ matrix.net }}.sh option.UseNNUE=true option.Hash=64 \
+                   -engine name=SF19 cmd="$SF" option.UCI_LimitStrength=true option.UCI_Elo=3000 option.Hash=64 option.Threads=1 \
+                   -each tc="$TC" $COMMON -rounds $(( G / 2 )) 2>&1 | tee gate_out/gate.log | tail -n 12 ;;
+          esac
+          echo "config: kind=${{ matrix.kind }} id=${{ matrix.id }} engine_sha=$(sha256sum engine | cut -c1-12) tl_net_sha=$(sha256sum tlnet/net.bin | cut -c1-12) sd1_net_sha=$(sha256sum sd1net/net.bin | cut -c1-12) sf_bin_sha=${SF_BIN_SHA256:0:12} book_sha=$(sha256sum tools/openings_book.epd | cut -c1-12) tc=$TC srand=$SEED hash=64 threads=1 runner=$(nproc)vCPU" | tee gate_out/config.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tl-gate-${{ matrix.id }}
+          path: gate_out/
+          retention-days: 30
+
+  report:
+    needs: [plan, train, gate]
+    if: ${{ always() && needs.train.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: {pattern: tl-*, path: art}
+      - name: Pool and post
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ls -R art | head -80
+          python3 tools/sd/pool_gate.py art/tl-gate-[1-5]/gate.log --aa art/tl-gate-aa/gate.log --json pooled.json | tee pooled.txt
+          python3 tools/sd/pool_gate.py art/tl-gate-tlsf1/gate.log art/tl-gate-tlsf2/gate.log --json sf_tl.json | tee sf_tl.txt || true
+          python3 tools/sd/pool_gate.py art/tl-gate-sdsf1/gate.log art/tl-gate-sdsf2/gate.log --json sf_sd1.json | tee sf_sd1.txt || true
+          {
+            echo "## Agent TL: EXP-TL1 result (run ${{ github.run_id }}) - machine-generated, numbers copied verbatim"
+            echo
+            echo "Ref \`${{ github.ref_name }}\` @ \`${{ github.sha }}\`; source SD1 run \`${{ needs.plan.outputs.src_run }}\`; teacher SF19 depth ${{ needs.plan.outputs.depth }} (sha256 \`${SF_BIN_SHA256:0:16}\`); lam ${{ needs.plan.outputs.lam }}; smoke=${{ needs.plan.outputs.smoke }}; h2h ${{ needs.plan.outputs.gate_games }} games x 5 + A/A at ${{ needs.plan.outputs.gate_tc }}."
+            echo
+            echo '**TL net (SF19-labelled) vs SD1 net (HCE-labelled, last-known-good):**'
+            echo '```'; cat pooled.txt; echo '```'
+            echo '**Informational, each net vs SF19 UCI_Elo 3000 (2 replicates):**'
+            echo '```'; echo "TL:";  cat sf_tl.txt; echo "SD1:"; cat sf_sd1.txt; echo '```'
+            echo '**Data audit / training / teacher agreement:**'
+            echo '```'
+            cat art/tl-prep-report/merged.bin.stats.json | python3 -c "import json,sys;d=json.load(sys.stdin);d.pop('shards',None);print(json.dumps(d))" || true
+            cat art/tl-net/labelled.audit.json 2>/dev/null | python3 -c "import json,sys;print(json.dumps(json.load(sys.stdin)))" || true
+            grep -h "final val_loss" art/tl-net/train.log || true
+            cat art/tl-net/holdout_teacher.txt 2>/dev/null | grep -E "==|mse|explained" || true
+            cat art/tl-gate-1/config.txt art/tl-gate-tlsf1/config.txt 2>/dev/null || true
+            echo '```'
+            echo "Pre-registered rule (docs: experiments/EXP-TL1-sf19-teacher-relabel.md, fixed before any game): PROMOTE-CANDIDATE iff pooled TL-vs-SD1 >= 52% with LOS >= 97.5%, >= 4/5 replicates > 50%, A/A inside its CI of 50%, AND no downside: TL's SF19-3000 score is not lower than SD1's by more than the pair's combined 95% error. Anything else: not shipped, recorded as is. A smoke run proves plumbing only."
+          } > comment.md
+          gh issue comment 1 --repo ${{ github.repository }} --body-file comment.md || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tl-report
+          path: |
+            pooled.json
+            pooled.txt
+            sf_tl.txt
+            sf_sd1.txt
+            comment.md
