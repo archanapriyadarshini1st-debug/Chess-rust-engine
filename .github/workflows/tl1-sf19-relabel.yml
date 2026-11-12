@@ -158,10 +158,10 @@ jobs:
         with: {name: tl-parts, path: parts}
       - name: Fetch and verify the pinned Stockfish 19
         run: |
-          curl -fsSL --retry 3 "$SF_URL" -o sf.tar.gz && tar xzf sf.tar.gz
-          SF=$(find . -type f -name 'stockfish*' ! -name '*.tar.gz' | head -1); chmod +x "$SF"
+          mkdir -p /tmp/sfdl && curl -fsSL --retry 3 "$SF_URL" -o /tmp/sfdl/sf.tar.gz && tar xzf /tmp/sfdl/sf.tar.gz -C /tmp/sfdl
+          SF=$(find /tmp/sfdl -type f -name 'stockfish-*' ! -name '*.tar.gz' | head -1); test -n "$SF"; chmod +x "$SF"
           echo "$SF_BIN_SHA256  $SF" | sha256sum -c -
-          echo "SF=$PWD/${SF#./}" >> "$GITHUB_ENV"
+          echo "SF=$SF" >> "$GITHUB_ENV"
       - name: Unit tests (incl. end-to-end on real SF19)
         run: python3 tools/teacher/test_relabel_records.py --stockfish "$SF"
       - name: Relabel (shard ${{ matrix.shard }})
@@ -275,10 +275,10 @@ jobs:
           echo "bench (SD1):    $(printf 'setoption name UseNNUE value true\nbench 10\nquit\n' | CRE_NNUE_FILE=$PWD/sd1net/net.bin ./engine | grep ' nps' | tail -1)"
           mkdir -p /tmp/fc && curl -fsSL --retry 3 "$FASTCHESS_URL" -o /tmp/fc.tar && tar xf /tmp/fc.tar -C /tmp/fc
           FC=$(find /tmp/fc -type f -name fastchess | head -1); chmod +x "$FC"; ln -sf "$FC" /tmp/fastchess
-          curl -fsSL --retry 3 "$SF_URL" -o sf.tar.gz && tar xzf sf.tar.gz
-          SF=$(find . -type f -name 'stockfish*' ! -name '*.tar.gz' | head -1); chmod +x "$SF"
+          mkdir -p /tmp/sfdl && curl -fsSL --retry 3 "$SF_URL" -o /tmp/sfdl/sf.tar.gz && tar xzf /tmp/sfdl/sf.tar.gz -C /tmp/sfdl
+          SF=$(find /tmp/sfdl -type f -name 'stockfish-*' ! -name '*.tar.gz' | head -1); test -n "$SF"; chmod +x "$SF"
           echo "$SF_BIN_SHA256  $SF" | sha256sum -c -
-          echo "SF=$PWD/${SF#./}" >> "$GITHUB_ENV"
+          echo "SF=$SF" >> "$GITHUB_ENV"
       - name: Gate (${{ matrix.id }}, ${{ matrix.kind }})
         run: |
           mkdir -p gate_out
