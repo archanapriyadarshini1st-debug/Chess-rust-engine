@@ -108,6 +108,61 @@ impl Position {
         piece
     }
 
+    /// Reject positions the search cannot handle (EXP-GP2) and repair harmless
+    /// inconsistencies. A GUI or fuzzer that sends a position without a king,
+    /// with the side NOT to move in check, or with pawns on the back rank used to
+    /// make the engine panic (index out of range in the attack tables), which
+    /// forfeits the game. Returns false when the position is unusable.
+    fn sanitize(&mut self) -> bool {
+        for c in [Color::White, Color::Black] {
+            if self.bb(c, PieceType::King).count_ones() != 1 {
+                return false;
+            }
+            if self.bb(c, PieceType::Pawn).count_ones() > 8 || self.colors[c.index()].count_ones() > 16 {
+                return false;
+            }
+        }
+        if self.pieces[PieceType::Pawn.index()] & 0xFF00_0000_0000_00FF != 0 {
+            return false;
+        }
+        // The side that just moved can never be left in check.
+        if self.in_check_for(self.side.flip()) {
+            return false;
+        }
+        // Castling rights only make sense with the king and rook on their home squares.
+        let mut ok = 0u8;
+        let wk = self.piece_on(Square::E1) == Piece::new(Color::White, PieceType::King);
+        let bk = self.piece_on(Square::E8) == Piece::new(Color::Black, PieceType::King);
+        let wr = Piece::new(Color::White, PieceType::Rook);
+        let br = Piece::new(Color::Black, PieceType::Rook);
+        if wk && self.piece_on(Square::H1) == wr {
+            ok |= WK;
+        }
+        if wk && self.piece_on(Square::A1) == wr {
+            ok |= WQ;
+        }
+        if bk && self.piece_on(Square::H8) == br {
+            ok |= BK;
+        }
+        if bk && self.piece_on(Square::A8) == br {
+            ok |= BQ;
+        }
+        self.castling &= ok;
+        // An en-passant square must be empty, on the right rank, with the pawn behind it.
+        if let Some(ep) = self.ep {
+            let (rank, pawn_rank, victim) = if self.side == Color::White {
+                (5u8, 4u8, Piece::new(Color::Black, PieceType::Pawn))
+            } else {
+                (2u8, 3u8, Piece::new(Color::White, PieceType::Pawn))
+            };
+            let behind = Square::from_file_rank(ep.file(), pawn_rank);
+            if ep.rank() != rank || !self.piece_on(ep).is_none() || self.piece_on(behind) != victim {
+                self.ep = None;
+            }
+        }
+        true
+    }
+
     pub fn from_fen(fen: &str) -> Option<Position> {
         let mut pos = Position::empty();
         let mut parts = fen.split_whitespace();
@@ -175,6 +230,10 @@ impl Position {
         }
         if let Some(fm) = parts.next() {
             pos.fullmove = fm.parse().ok()?;
+        }
+
+        if !pos.sanitize() {
+            return None;
         }
 
         pos.hash ^= ZOBRIST.castle[pos.castling as usize];
