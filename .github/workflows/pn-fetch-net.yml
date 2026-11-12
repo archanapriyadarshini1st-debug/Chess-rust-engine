@@ -1,0 +1,36 @@
+name: PN fetch net
+# Agent PN, EXP-PN1 step 1. Copies the `sd-net` artifact of a finished run into the repo so it survives
+# artifact expiry. Runs only when .github/pn-fetch.json changes on an agentPN/** branch. No engine code.
+on:
+  push:
+    branches: ["agentPN/**"]
+    paths: [".github/pn-fetch.json"]
+permissions:
+  contents: write
+  actions: read
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download artifact and commit it
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          RUN=$(python3 -c "import json;print(json.load(open('.github/pn-fetch.json'))['run_id'])")
+          ART=$(python3 -c "import json;print(json.load(open('.github/pn-fetch.json'))['artifact'])")
+          OUT=$(python3 -c "import json;print(json.load(open('.github/pn-fetch.json'))['out'])")
+          gh run download "$RUN" -n "$ART" -D /tmp/art
+          ls -la /tmp/art
+          F=$(find /tmp/art -type f | head -1)
+          SHA=$(sha256sum "$F" | cut -d' ' -f1)
+          echo "sha256=$SHA size=$(stat -c %s "$F")"
+          mkdir -p "$(dirname "$OUT")"
+          cp "$F" "$OUT"
+          echo "$SHA  $(basename "$OUT")" > "$OUT.sha256"
+          git config user.name "Agent PN"; git config user.email "agent-pn@users.noreply.github.com"
+          git add "$OUT" "$OUT.sha256"
+          git commit -m "nets: add SD1 net from run $RUN (sha256 ${SHA:0:12}) [Agent PN]"
+          git push
