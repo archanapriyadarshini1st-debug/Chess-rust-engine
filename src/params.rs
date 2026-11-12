@@ -74,6 +74,14 @@ tunables! {
     lmr_hist_div,       "LmrHistDiv",       6000,   2000, 16000,  600;
     // --- aspiration windows ---
     asp_window,         "AspWindow",          25,      8,    80,    3;
+    // --- Agent HX experiments (EXP-HX1): all default OFF == bench-identical ---
+    // Not SPSA targets (switches); XThreatScale / XDblMargin are the only tunable magnitudes.
+    x_threat_ord,       "XThreatOrd",          0,      0,     1,    1;
+    x_threat_scale,     "XThreatScale",      100,     25,   400,   25;
+    x_pawn_hist,        "XPawnHist",           0,      0,     1,    1;
+    x_cont4,            "XConthist4",          0,      0,     1,    1;
+    x_dbl_ext,          "XDblExt",             0,      0,     1,    1;
+    x_dbl_margin,       "XDblMargin",         30,     10,   200,   10;
 }
 
 /// Set a tunable by its UCI name. Returns `false` if the name is unknown.
