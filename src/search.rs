@@ -234,6 +234,14 @@ fn is_repetition(td: &ThreadData, pos: &Position) -> bool {
 
 fn is_draw(td: &ThreadData, pos: &Position, ply: i32) -> bool {
     if pos.halfmove >= 100 {
+        // FIDE 5.2.1 / 9.3: checkmate takes precedence over the fifty-move
+        // rule. A side that is in check with no legal reply on the 100th
+        // half-move has been mated, not drawn. Only in-check nodes pay for
+        // the legality probe, so every other node is unchanged.
+        if pos.in_check() {
+            let mut buf = [Move::NONE; MAX_MOVES];
+            return legal_moves(pos, &mut buf) > 0;
+        }
         return true;
     }
     if pos.is_insufficient_material() {
