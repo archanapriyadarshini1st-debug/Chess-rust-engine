@@ -1,0 +1,18 @@
+{
+ "raw_records": 30415673,
+ "games": 651884,
+ "holdout_games": 16414,
+ "train_after_dedupe": 28760077,
+ "removed_as_holdout_duplicates": 24666,
+ "train_final": 20000000,
+ "holdout_unique": 757331,
+ "max_records": 20000000,
+ "wdl_stm_loss_draw_win_train": [
+  8532059,
+  3320989,
+  8146952
+ ],
+ "abs_score_lt50_frac": 0.15891045,
+ "dedupe_removed_frac": 0.030050447359366683,
+ "seed": 1
+}
