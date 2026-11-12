@@ -58,3 +58,19 @@ claim is made from this.
 ## Local verification of the gen-1 net (Agent IV, independent hardware)
 Appended below when the local matches finish. 4 vCPU / 3.9 GB sandbox, SF19 official `sf_19` universal build, fastchess
 1.8.3-alpha, same book hash. Labelled **preliminary** at these sample sizes.
+
+### Result (EXP-IV0, preliminary, n = 100 per arm)
+Same binary (`agentSD/selfdistill-on-ni` @ `41422e1`), same book (`f1d9e14283d1`), same seed (`-srand 4242`, so identical
+openings in both arms), 10+0.1, Hash 64, 1 thread, SF19 `sf_19` universal build, fastchess 1.8.3-alpha, 4 vCPU / 3.9 GB
+sandbox, 3 concurrent games. 0 illegal moves / time losses.
+
+| arm vs SF19 `UCI_Elo 3000` | W-D-L | score | limiter-Elo [95% CI] |
+|---|---|---|---|
+| gen-1 net `a598bf2f3247` | 10-30-60 | 25.0% | -191 [-258, -134] |
+| HCE (same binary, `UseNNUE=false`) | 3-30-67 | 18.0% | -263 [-335, -207] |
+
+Reading: the direction agrees with SD1's gate (+123 vs HCE), and HCE's 18.0% matches KB's independent 18.75% on other
+hardware. The 7-point difference is **not** resolved at n = 100 per arm (approx. LOS 90%): **inconclusive**, not a
+confirmation. The distance to the owner's 80% target is still very large (roughly +400 limiter-Elo). **No 3000 claim.**
+A planned local gen-1 vs HCE 3 x 60 gate was stopped after one partial replicate (n < 5): 60-game replicates add only about
++-75 Elo of noise on top of SD's 500 games. That is not a result.
