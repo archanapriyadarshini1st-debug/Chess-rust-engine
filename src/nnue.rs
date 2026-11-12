@@ -145,6 +145,9 @@ impl Network {
             sum += d * d * w[HIDDEN + i] as i32;
         }
         let out = (sum / QA + self.out_b[bucket]) as i64 * SCALE as i64 / (QA * QB) as i64;
+        // `NnueScale` (percent, default 100 == identity) maps the net's score scale onto the one the
+        // search margins were tuned for (EXP-NS1: raw net scores are ~1.45x wider than SF19's).
+        let out = out * crate::params::nnue_scale() as i64 / 100;
         (out as i32).clamp(-MAX_EVAL, MAX_EVAL)
     }
 
