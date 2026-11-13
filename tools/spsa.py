@@ -105,7 +105,7 @@ def play_match(args, plus: dict[str, int], minus: dict[str, int], seed: int) -> 
         args.fastchess,
         "-engine", f"cmd={args.engine}", "name=plus", "option.Hash=16", "option.Threads=1", *opts(plus),
         "-engine", f"cmd={args.engine}", "name=minus", "option.Hash=16", "option.Threads=1", *opts(minus),
-        "-each", f"tc={args.tc}",
+        "-each", *(["tc=inf", f"nodes={args.nodes}"] if args.nodes else [f"tc={args.tc}"]),
         "-rounds", str(args.rounds), "-games", "2", "-repeat", "-concurrency", str(args.concurrency),
         "-openings", f"file={args.book}", "format=epd", "order=random",
         "-srand", str(seed),
@@ -150,6 +150,9 @@ def main() -> None:
     ap.add_argument("--fastchess", default="fastchess")
     ap.add_argument("--book", default="tools/openings_book.epd")
     ap.add_argument("--tc", default="5+0.05")
+    ap.add_argument("--nodes", type=int, default=0,
+                    help="fixed nodes per move instead of --tc (floor 20000). Low-noise, hardware-independent "
+                         "training signal; verdict must still come from a real time-control gate")
     ap.add_argument("--iterations", type=int, default=400)
     ap.add_argument("--rounds", type=int, default=4, help="rounds per iteration (2 games each)")
     ap.add_argument("--concurrency", type=int, default=3)
@@ -174,7 +177,11 @@ def main() -> None:
         spec = [Param(f"P{i}", 50, 0, 100, 4, 0.002) for i in range(8)]
         optimum = {p.name: rng.uniform(25, 75) for p in spec}
     else:
-        check_tc(args.tc)
+        if args.nodes:
+            if args.nodes < 20000:
+                sys.exit("refusing --nodes < 20000: shallow fixed-node games teach/tune bad behaviour")
+        else:
+            check_tc(args.tc)
         spec = engine_spec(args.engine)
         optimum = {}
     if args.only:
