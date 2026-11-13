@@ -74,6 +74,11 @@ tunables! {
     lmr_hist_div,       "LmrHistDiv",       6000,   2000, 16000,  600;
     // --- aspiration windows ---
     asp_window,         "AspWindow",          25,      8,    80,    3;
+    // --- static-eval correction history (EXP-CC1). CorrWeight 0 = OFF (bench-identical) ---
+    // CorrWeight: percent of the mean (pawn, non-pawn W, non-pawn B) learned
+    // error that is added to the static eval. CorrMax: hard clamp in cp.
+    corr_weight,        "CorrWeight",          0,      0,   300,   25;
+    corr_max,           "CorrMax",            64,      8,   200,    8;
 }
 
 /// Set a tunable by its UCI name. Returns `false` if the name is unknown.

@@ -46,9 +46,72 @@ pub struct ThreadData {
     pub root_depth: i32,
     pub counter: [[Move; 64]; 64],
     pub ply_move: [Move; MAX_PLY],
+    /// static-eval correction history [table 3][side 2][CORR_SIZE], units 1/CORR_GRAIN cp
+    pub corr: Vec<i16>,
 }
 
 const HIST_MAX: i32 = 16384;
+
+// ---- static-eval correction history (EXP-CC1) --------------------------------
+// Learns, per (pawn structure | white non-pawn set | black non-pawn set, side to
+// move), the running mean of (search score - raw static eval) and adds a clamped
+// fraction of it back to the static eval used for pruning decisions.
+// Unlike the reverted PR #5 attempt, entries are a *weighted mean in cp units*
+// (never a gravity sum), the applied value is clamped to +-CorrMax cp, and the
+// whole feature is a no-op when CorrWeight == 0.
+const CORR_BITS: u32 = 14;
+const CORR_SIZE: usize = 1 << CORR_BITS;
+const CORR_GRAIN: i32 = 32;
+const CORR_LIMIT: i32 = 200 * CORR_GRAIN;
+
+#[inline(always)]
+fn corr_fin(mut z: u64) -> usize {
+    z ^= z >> 32;
+    z = z.wrapping_mul(0x9E37_79B9_7F4A_7C15);
+    (z >> (64 - CORR_BITS)) as usize
+}
+
+/// Flat table offsets for [pawns, white non-pawns, black non-pawns].
+#[inline]
+fn corr_slots(pos: &Position) -> [usize; 3] {
+    let wp = pos.pieces[0] & pos.colors[0];
+    let bp = pos.pieces[0] & pos.colors[1];
+    let pk = corr_fin(wp.wrapping_mul(0xA24B_AED4_963E_E407) ^ bp.wrapping_mul(0x9FB2_1C65_1E98_DF25));
+    let np = |c: usize| -> usize {
+        let m = pos.colors[c];
+        corr_fin(
+            (pos.pieces[1] & m).wrapping_mul(0xD6E8_FEB8_6659_FD93)
+                ^ (pos.pieces[2] & m).wrapping_mul(0xC2B2_AE3D_27D4_EB4F)
+                ^ (pos.pieces[3] & m).wrapping_mul(0x1656_67B1_9E37_79F9)
+                ^ (pos.pieces[4] & m).wrapping_mul(0x27D4_EB2F_1656_67C5)
+                ^ (pos.pieces[5] & m).wrapping_mul(0x8CB9_2BA7_2F3D_8DD7),
+        )
+    };
+    let s = pos.side.index();
+    [
+        (0 * 2 + s) * CORR_SIZE + pk,
+        (1 * 2 + s) * CORR_SIZE + np(0),
+        (2 * 2 + s) * CORR_SIZE + np(1),
+    ]
+}
+
+#[inline]
+fn corr_value(td: &ThreadData, slots: &[usize; 3], weight: i32) -> i32 {
+    let sum = td.corr[slots[0]] as i32 + td.corr[slots[1]] as i32 + td.corr[slots[2]] as i32;
+    let cp = sum * weight / (3 * CORR_GRAIN * 100);
+    let m = params::corr_max();
+    cp.clamp(-m, m)
+}
+
+#[inline]
+fn corr_update(td: &mut ThreadData, slots: &[usize; 3], diff_cp: i32, depth: i32) {
+    let target = (diff_cp.clamp(-200, 200) * CORR_GRAIN).clamp(-CORR_LIMIT, CORR_LIMIT);
+    let w = (depth + 1).clamp(1, 16);
+    for &i in slots {
+        let old = td.corr[i] as i32;
+        td.corr[i] = ((old * (256 - w) + target * w) / 256) as i16;
+    }
+}
 
 #[inline]
 fn cont_idx(pp: usize, pt: usize, pc: usize, to: usize) -> usize {
@@ -90,6 +153,7 @@ impl ThreadData {
             root_depth: 0,
             counter: [[Move::NONE; 64]; 64],
             ply_move: [Move::NONE; MAX_PLY],
+            corr: vec![0; 3 * 2 * CORR_SIZE],
         }
     }
 
@@ -455,10 +519,18 @@ fn search(
     // saturates at ±512 cp (gravity uses HIST_MAX=16384), poisons RFP/NMP, and
     // scored 12.5% vs SF19 UCI_Elo 2400 against 69% with this line gone and
     // 71% on 451d933 (pre-#5). Re-add only with a SPRT vs this baseline.
-    let static_eval = if in_check {
+    let raw_eval = if in_check {
         -INF
     } else {
         evaluate(pos)
+    };
+    let corr_w = params::corr_weight();
+    let corr_on = corr_w > 0 && !in_check;
+    let corr_slot = if corr_on { corr_slots(pos) } else { [0; 3] };
+    let static_eval = if corr_on {
+        raw_eval + corr_value(td, &corr_slot, corr_w)
+    } else {
+        raw_eval
     };
     td.eval_stack[ply as usize] = static_eval;
     let improving = ply >= 2
@@ -714,6 +786,16 @@ fn search(
 
     if legal == 0 {
         return if in_check { mated_in(ply) } else { DRAW };
+    }
+
+    if corr_on
+        && excluded.is_none()
+        && best.abs() < MATE_IN_MAX_LOCAL
+        && (best_move.is_none() || !(best_move.is_capture() || best_move.is_promo()))
+        && !(bound == BOUND_LOWER && best <= raw_eval)
+        && !(bound == BOUND_UPPER && best >= raw_eval)
+    {
+        corr_update(td, &corr_slot, best - raw_eval, depth.max(1));
     }
 
     if excluded.is_none() {
