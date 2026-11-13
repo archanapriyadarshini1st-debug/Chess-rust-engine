@@ -1,0 +1,3 @@
+{"iv_run": "43213454181", "tl_run": "43226480499", "relabel_shards": "1", "take_every": "1", "max_records": "120000", "depth": "10", "lam": "0.75",
+ "train_minutes": "4", "gate_games": "4", "sf_games": "4", "gate_tc": "10+0.1", "smoke": "true",
+ "note": "SMOKE ONLY (plumbing): 120k IV records, depth 10, one TL part, 4-minute train, 4-game gates. No Elo claim can come from this run."}
