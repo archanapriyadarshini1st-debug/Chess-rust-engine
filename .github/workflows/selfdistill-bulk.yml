@@ -1,0 +1,272 @@
+name: SD1 self-distill bulk NNUE
+
+# Agent SD. EXP-SD1 (experiments/EXP-SD1-selfplay-scale.md). Pre-registered, no Elo claim until the gate says so.
+#
+# Question: is the NNUE wall a DATA-VOLUME problem for the engine's own self-play distribution?
+#   stage-0 (EXP-G1) reached HCE parity on 0.76M positions; nothing here has been run at >= 20M with game results.
+# Pipeline:   datagen (pinned Agent-Z `datagen-bin`, HCE depth-N self-play, W/D/L from played games)
+#          -> merge (identical-shard rejection, dedupe, GAME-disjoint holdout) -> train (tools/nnue/train.py, unchanged)
+#          -> holdout eval -> gate: net vs HCE, 5 independent replicates + A/A control
+#          -> report (pooled Elo/CI/LOS) auto-posted to issue #1.
+# Labels are the engine's OWN HCE search scores plus game results. No Stockfish label is used here.
+# The gate engine is built from `ref` (default: this branch = incremental-NNUE engine), so the net runs at ~HCE speed.
+
+on:
+  # Until this file is on `main`, GitHub cannot dispatch it by name. Pushing .github/sd1-params.json on an agentSD/** branch
+  # runs it with those parameters (reviewable, versioned, reproducible). After merge, workflow_dispatch works as usual.
+  push:
+    branches: ["agentSD/**"]
+    paths: [".github/sd1-params.json"]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Engine/tools ref for training + gate"
+        default: "agentSD/selfdistill-on-ni"
+      datagen_sha:
+        description: "Pinned commit of pepp-castt/Chess-rust-engine agentZ/datagen-bin (PR #22)"
+        default: "ad45119aedc46c5ffba8161e13fd3cf89cdf0230"
+      shards:
+        description: "Parallel datagen jobs (4 threads each)"
+        default: "5"
+      gen_minutes:
+        description: "Minutes of datagen per shard"
+        default: "70"
+      depth:
+        description: "HCE search depth for labels (never < 7)"
+        default: "7"
+      seed:
+        description: "Base seed (shards/chunks derive unique seeds from it)"
+        default: "1"
+      max_records:
+        description: "Cap on unique training positions (trainer needs ~350 B/pos RAM)"
+        default: "20000000"
+      lam:
+        description: "Weight of search score vs game result in the target"
+        default: "0.75"
+      train_minutes:
+        description: "Wall-clock minutes of training"
+        default: "230"
+      gate_games:
+        description: "Games per gate replicate (5 replicates + 1 A/A)"
+        default: "100"
+      gate_tc:
+        description: "Gate time control"
+        default: "10+0.1"
+
+permissions:
+  contents: read
+  issues: write
+
+env:
+  FASTCHESS_URL: https://github.com/Disservin/fastchess/releases/download/v1.8.3-alpha/fastchess-linux-x86-64.tar
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      shard_list: ${{ steps.p.outputs.shard_list }}
+      datagen_sha: ${{ steps.p.outputs.datagen_sha }}
+      shards: ${{ steps.p.outputs.shards }}
+      gen_minutes: ${{ steps.p.outputs.gen_minutes }}
+      depth: ${{ steps.p.outputs.depth }}
+      seed: ${{ steps.p.outputs.seed }}
+      max_records: ${{ steps.p.outputs.max_records }}
+      lam: ${{ steps.p.outputs.lam }}
+      train_minutes: ${{ steps.p.outputs.train_minutes }}
+      gate_games: ${{ steps.p.outputs.gate_games }}
+      gate_tc: ${{ steps.p.outputs.gate_tc }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+      - id: p
+        env:
+          EV: ${{ github.event_name }}
+          INPUTS: ${{ toJSON(inputs) }}
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os
+          p = json.loads(os.environ["INPUTS"]) if os.environ["EV"] == "workflow_dispatch" else json.load(open(".github/sd1-params.json"))
+          n, d = int(p["shards"]), int(p["depth"])
+          assert 1 <= n <= 20, n
+          assert d >= 7, "labels shallower than depth 7 teach the net noise"
+          assert 0.0 <= float(p["lam"]) <= 1.0
+          print("shard_list=" + json.dumps(list(range(1, n + 1))))
+          for k in ("datagen_sha", "shards", "gen_minutes", "depth", "seed", "max_records", "lam", "train_minutes", "gate_games", "gate_tc"):
+              print(f"{k}={p[k]}")
+          PY
+
+  datagen:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON(needs.plan.outputs.shard_list) }}
+    steps:
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build the pinned generator (Agent Z, PR #22)
+        run: |
+          git clone --quiet https://github.com/pepp-castt/Chess-rust-engine /tmp/zdg
+          cd /tmp/zdg
+          git fetch --quiet origin agentZ/datagen-bin
+          git checkout --quiet --detach "${{ needs.plan.outputs.datagen_sha }}"
+          test "$(git rev-parse HEAD)" = "${{ needs.plan.outputs.datagen_sha }}"
+          cargo build --release 2>&1 | tail -2
+          echo "generator bench: $(timeout 120 ./target/release/chess-rust-engine bench 8 | tail -1)"
+      - name: Generate (time-boxed, chunked, unique seed per chunk)
+        run: |
+          cd /tmp/zdg
+          mkdir -p out
+          END=$(( $(date +%s) + ${{ needs.plan.outputs.gen_minutes }} * 60 ))
+          K=0
+          while [ "$(date +%s)" -lt "$END" ]; do
+            CRE_DATAGEN_SEED=$(( ${{ needs.plan.outputs.seed }} * 1000000 + ${{ matrix.shard }} * 1000 + K )) \
+              ./target/release/chess-rust-engine datagen-bin 400000 ${{ needs.plan.outputs.depth }} out/s${{ matrix.shard }}_$K.bin 4 2>&1 | tail -1
+            K=$(( K + 1 ))
+          done
+          ls -la out | head -50
+          du -sh out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sd-shard-${{ matrix.shard }}
+          path: /tmp/zdg/out/
+          retention-days: 14
+          compression-level: 3
+
+  train:
+    needs: [plan, datagen]
+    runs-on: ubuntu-latest
+    timeout-minutes: 345
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: sd-shard-*
+          path: data
+          merge-multiple: true
+      - name: Install deps
+        run: |
+          pip install numpy chess
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+      - name: Merge (identical-shard rejection, dedupe, game-disjoint holdout)
+        run: |
+          free -g | head -2
+          python3 tools/sd/sd_merge.py --inp 'data/**/*.bin' --out merged.bin --holdout holdout.bin \
+            --max-records ${{ needs.plan.outputs.max_records }} | tee merge.txt
+      - name: Train
+        run: |
+          python3 tools/nnue/train.py --data merged.bin --out net.bin --lam ${{ needs.plan.outputs.lam }} \
+            --minutes ${{ needs.plan.outputs.train_minutes }} 2>&1 | tee train.log | grep -E "files|decoded|==|final|exported" | tail -60
+      - name: Game-disjoint holdout loss
+        run: |
+          python3 tools/sd/holdout_eval.py --net net.bin --holdout holdout.bin --lam ${{ needs.plan.outputs.lam }} --json holdout.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sd-net
+          path: |
+            net.bin
+            net.bin.parity.txt
+            train.log
+            merge.txt
+            merged.bin.stats.json
+            holdout.json
+          retention-days: 30
+
+  gate:
+    needs: [plan, train]
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      matrix:
+        rep: [1, 2, 3, 4, 5, aa]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/download-artifact@v4
+        with:
+          name: sd-net
+          path: net
+      - name: Build engine + fastchess
+        run: |
+          cargo build --release
+          cp target/release/chess-rust-engine ./engine
+          echo "bench (HCE):  $(printf 'setoption name UseNNUE value false\nbench 10\nquit\n' | ./engine | grep ' nps' | tail -1)"
+          echo "bench (net):  $(printf 'setoption name UseNNUE value true\nbench 10\nquit\n' | CRE_NNUE_FILE=$PWD/net/net.bin ./engine | grep ' nps' | tail -1)"
+          mkdir -p /tmp/fc
+          curl -fsSL --retry 3 "$FASTCHESS_URL" -o /tmp/fc.tar && tar xf /tmp/fc.tar -C /tmp/fc
+          FC=$(find /tmp/fc -type f -name fastchess | head -1); chmod +x "$FC"; ln -sf "$FC" /tmp/fastchess
+      - name: Gate (replicate ${{ matrix.rep }})
+        run: |
+          mkdir -p gate_out
+          cat > gate_out/net.sh <<WRAP
+          #!/usr/bin/env bash
+          export CRE_NNUE_FILE="$PWD/net/net.bin"
+          exec "$PWD/engine" "\$@"
+          WRAP
+          chmod +x gate_out/net.sh
+          if [ "${{ matrix.rep }}" = "aa" ]; then SEED=777; A="name=NET cmd=$PWD/engine option.UseNNUE=false"; else SEED=$(( ${{ matrix.rep }} * 1013 )); A="name=NET cmd=$PWD/gate_out/net.sh option.UseNNUE=true"; fi
+          /tmp/fastchess -engine $A option.Hash=64 \
+            -engine name=HCE cmd="$PWD/engine" option.UseNNUE=false option.Hash=64 \
+            -each tc="${{ needs.plan.outputs.gate_tc }}" \
+            -openings file=tools/openings_book.epd format=epd order=random -srand $SEED \
+            -rounds $(( ${{ needs.plan.outputs.gate_games }} / 2 )) -games 2 -repeat -concurrency 3 \
+            -pgnout file=gate_out/games.pgn -recover -ratinginterval 10 2>&1 | tee gate_out/gate.log | tail -n 12
+          echo "config: engine_sha=$(sha256sum engine | cut -c1-12) net_sha=$(sha256sum net/net.bin | cut -c1-12) book_sha=$(sha256sum tools/openings_book.epd | cut -c1-12) tc=${{ needs.plan.outputs.gate_tc }} games=${{ needs.plan.outputs.gate_games }} srand=$SEED hash=64 threads=1 rep=${{ matrix.rep }}" | tee gate_out/config.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sd-gate-${{ matrix.rep }}
+          path: gate_out/
+          retention-days: 30
+
+  report:
+    needs: [plan, train, gate]
+    if: ${{ always() && needs.train.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: sd-*
+          path: art
+      - name: Pool and post
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ls -R art | head -60
+          python3 tools/sd/pool_gate.py art/sd-gate-[1-5]/gate.log --aa art/sd-gate-aa/gate.log --json pooled.json | tee pooled.txt
+          {
+            echo "## Agent SD: EXP-SD1 result (run ${{ github.run_id }}) - machine-generated, numbers copied verbatim"
+            echo
+            echo "Engine/tools ref \`${{ inputs.ref || github.ref }}\` @ \`${{ github.sha }}\`; generator pinned \`${{ needs.plan.outputs.datagen_sha }}\`; depth ${{ needs.plan.outputs.depth }}; lam ${{ needs.plan.outputs.lam }}; gate ${{ needs.plan.outputs.gate_games }} games x 5 replicates + A/A at ${{ needs.plan.outputs.gate_tc }}."
+            echo
+            echo '```'
+            cat pooled.txt
+            echo
+            [ -f art/sd-net/merged.bin.stats.json ] && python3 -c "import json;d=json.load(open('art/sd-net/merged.bin.stats.json'));d.pop('shards',None);print(json.dumps(d))"
+            [ -f art/sd-net/holdout.json ] && cat art/sd-net/holdout.json
+            grep -h "final val_loss" art/sd-net/train.log || true
+            cat art/sd-gate-1/config.txt art/sd-gate-aa/config.txt 2>/dev/null || true
+            echo '```'
+            echo
+            echo "Pre-registered rule (EXP-SD1): KEEP the direction if pooled score >= 52% with LOS >= 97.5% and >= 4/5 replicates > 50% and the A/A control is within its CI of 50%. Anything else: not shipped; the result is recorded either way. A merge additionally needs sprt.yml on main."
+          } > comment.md
+          gh issue comment 1 --repo ${{ github.repository }} --body-file comment.md || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sd-report
+          path: |
+            pooled.json
+            pooled.txt
+            comment.md
