@@ -1,0 +1,98 @@
+Indexing opening suite...
+Started game 1 of 40 (NET vs HCE)
+Started game 3 of 40 (NET vs HCE)
+Started game 2 of 40 (HCE vs NET)
+Finished game 2 (HCE vs NET): 0-1 {Black mates}
+Started game 4 of 40 (HCE vs NET)
+Finished game 1 (NET vs HCE): 1-0 {White mates}
+Started game 5 of 40 (NET vs HCE)
+Finished game 3 (NET vs HCE): 1/2-1/2 {Draw by fifty moves rule}
+Started game 6 of 40 (HCE vs NET)
+Finished game 4 (HCE vs NET): 0-1 {Black mates}
+Started game 7 of 40 (NET vs HCE)
+Finished game 5 (NET vs HCE): 0-1 {Black mates}
+Started game 8 of 40 (HCE vs NET)
+Finished game 6 (HCE vs NET): 0-1 {Black mates}
+Started game 9 of 40 (NET vs HCE)
+Finished game 8 (HCE vs NET): 0-1 {Black mates}
+Started game 10 of 40 (HCE vs NET)
+Finished game 9 (NET vs HCE): 1-0 {White mates}
+Started game 11 of 40 (NET vs HCE)
+Finished game 7 (NET vs HCE): 1/2-1/2 {Draw by 3-fold repetition}
+Started game 12 of 40 (HCE vs NET)
+Finished game 10 (HCE vs NET): 0-1 {Black mates}
+Started game 13 of 40 (NET vs HCE)
+Finished game 11 (NET vs HCE): 1-0 {White mates}
+Started game 14 of 40 (HCE vs NET)
+Finished game 12 (HCE vs NET): 0-1 {Black mates}
+Started game 15 of 40 (NET vs HCE)
+Finished game 14 (HCE vs NET): 0-1 {Black mates}
+Started game 16 of 40 (HCE vs NET)
+Finished game 13 (NET vs HCE): 1-0 {White mates}
+Started game 17 of 40 (NET vs HCE)
+Finished game 15 (NET vs HCE): 1-0 {White mates}
+Started game 18 of 40 (HCE vs NET)
+Finished game 16 (HCE vs NET): 0-1 {Black mates}
+Started game 19 of 40 (NET vs HCE)
+Finished game 17 (NET vs HCE): 1-0 {White mates}
+Started game 20 of 40 (HCE vs NET)
+Finished game 19 (NET vs HCE): 0-1 {Black mates}
+Started game 21 of 40 (NET vs HCE)
+Finished game 18 (HCE vs NET): 0-1 {Black mates}
+Started game 22 of 40 (HCE vs NET)
+Finished game 20 (HCE vs NET): 1-0 {White mates}
+--------------------------------------------------
+Results of NET vs HCE (10+0.1, 1t, 64MB, openings_book.epd):
+Elo: 240.82 +/- 399.70, nElo: 236.04 +/- 152.27
+LOS: 99.88 %, DrawRatio: 10.00 %, PairsRatio: 8.00
+Games: 20, Wins: 15, Losses: 3, Draws: 2, Points: 16.0 (80.00 %)
+Ptnml(0-2): [1, 0, 1, 2, 6], WL/DD Ratio: inf
+--------------------------------------------------
+Started game 23 of 40 (NET vs HCE)
+Finished game 21 (NET vs HCE): 1-0 {White mates}
+Started game 24 of 40 (HCE vs NET)
+Finished game 22 (HCE vs NET): 0-1 {Black mates}
+Started game 25 of 40 (NET vs HCE)
+Finished game 23 (NET vs HCE): 1-0 {White mates}
+Started game 26 of 40 (HCE vs NET)
+Finished game 24 (HCE vs NET): 1-0 {White mates}
+Started game 27 of 40 (NET vs HCE)
+Finished game 26 (HCE vs NET): 0-1 {Black mates}
+Started game 28 of 40 (HCE vs NET)
+Finished game 25 (NET vs HCE): 1-0 {White mates}
+Started game 29 of 40 (NET vs HCE)
+Finished game 27 (NET vs HCE): 1-0 {White mates}
+Started game 30 of 40 (HCE vs NET)
+Finished game 29 (NET vs HCE): 1-0 {White mates}
+Started game 31 of 40 (NET vs HCE)
+Finished game 28 (HCE vs NET): 0-1 {Black mates}
+Started game 32 of 40 (HCE vs NET)
+Finished game 30 (HCE vs NET): 0-1 {Black mates}
+Started game 33 of 40 (NET vs HCE)
+Finished game 31 (NET vs HCE): 1/2-1/2 {Draw by insufficient mating material}
+Started game 34 of 40 (HCE vs NET)
+Finished game 33 (NET vs HCE): 0-1 {Black mates}
+Started game 35 of 40 (NET vs HCE)
+Finished game 35 (NET vs HCE): 1-0 {White mates}
+Started game 36 of 40 (HCE vs NET)
+Finished game 32 (HCE vs NET): 1/2-1/2 {Draw by fifty moves rule}
+Started game 37 of 40 (NET vs HCE)
+Finished game 34 (HCE vs NET): 1/2-1/2 {Draw by insufficient mating material}
+Started game 38 of 40 (HCE vs NET)
+Finished game 36 (HCE vs NET): 0-1 {Black mates}
+Started game 39 of 40 (NET vs HCE)
+Finished game 37 (NET vs HCE): 1/2-1/2 {Draw by insufficient mating material}
+Started game 40 of 40 (HCE vs NET)
+Finished game 39 (NET vs HCE): 1-0 {White mates}
+Finished game 38 (HCE vs NET): 0-1 {Black mates}
+Finished game 40 (HCE vs NET): 0-1 {Black mates}
+--------------------------------------------------
+Results of NET vs HCE (10+0.1, 1t, 64MB, openings_book.epd):
+Elo: 240.82 +/- 159.36, nElo: 252.80 +/- 107.67
+LOS: 100.00 %, DrawRatio: 15.00 %, PairsRatio: 7.50
+Games: 40, Wins: 29, Losses: 5, Draws: 6, Points: 32.0 (80.00 %)
+Ptnml(0-2): [1, 1, 3, 3, 12], WL/DD Ratio: 2.00
+--------------------------------------------------
+Finished match
+Total Time: 00:07:30 (hours:minutes:seconds)
+

@@ -1,0 +1,1 @@
+config: engine_sha=120d94e91190 net_sha=964d07413bac tc=10+0.1 games=40 book=openings_book.epd hash=64 threads=1
