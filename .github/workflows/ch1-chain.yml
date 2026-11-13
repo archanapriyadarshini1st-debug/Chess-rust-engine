@@ -219,6 +219,8 @@ jobs:
           pip install numpy chess
           pip install torch --index-url https://download.pytorch.org/whl/cpu
       - name: Mix TL 20M + CH data (evaluation-holdout positions removed) and audit
+        env:
+          SMOKE: ${{ needs.plan.outputs.smoke }}
         run: |
           ls lab | head -30; ls tllab | head -30
           if [ "${{ needs.plan.outputs.smoke }}" != "true" ]; then test "$(ls tllab/part_*.bin | wc -l)" = "16" || { echo "expected TL's 16 labelled parts"; exit 1; }; fi
@@ -231,7 +233,9 @@ jobs:
           prov = [json.load(open(p)) for p in sorted(glob.glob("lab/part_*.bin.provenance.json"))]
           tlp = [json.load(open(p)) for p in sorted(glob.glob("tllab/part_*.bin.provenance.json"))]  # (smoke uses part_001 only; same teacher either way)
           assert len({p["stockfish_sha256"] for p in prov + tlp}) == 1, "mixed teacher binaries between TL and CH labels"
-          assert all(p["depth"] == prov[0]["depth"] for p in prov + tlp), "mixed teacher depths"
+          import os
+          if os.environ.get("SMOKE") != "true":   # smoke labels at depth 10 on purpose; a real run must not mix depths
+              assert all(p["depth"] == prov[0]["depth"] for p in prov + tlp), "mixed teacher depths"
           drop = {k: sum(p["dropped"][k] for p in prov) for k in prov[0]["dropped"]}
           rep = {"records": int(len(a)), "ch_dropped_by_relabel": drop, "teacher": prov[0]["teacher"], "stockfish_sha256": prov[0]["stockfish_sha256"][:16],
                  "depth": prov[0]["depth"], "abs_score_lt50_frac": float((np.abs(a["score"]) < 50).mean()), "wdl_train": np.bincount(a["wdl"], minlength=3).tolist(),
