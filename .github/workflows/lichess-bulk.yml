@@ -39,6 +39,12 @@ on:
       gate_tc:
         description: "Gate time control"
         default: "10+0.1"
+      resume_net:
+        description: "Repo path of a CRN1 net to continue training from (Agent Z9); empty = from scratch"
+        default: ""
+      train_lr:
+        description: "Adam learning rate (fine-tune runs use 1e-3 or lower)"
+        default: "0.002"
 
 env:
   FASTCHESS_URL: https://github.com/Disservin/fastchess/releases/download/v1.8.3-alpha/fastchess-linux-x86-64.tar
@@ -133,9 +139,14 @@ jobs:
           print("total records", tot)
           PY
       - name: "Train (lam=1.0, Lichess data has no game results)"
+        env:
+          RESUME: ${{ inputs.resume_net }}
+          LR: ${{ inputs.train_lr }}
         run: |
-          python3 tools/nnue/train.py --data 'data/*.bin' --out net.bin --lam 1.0 \
-            --minutes ${{ inputs.train_minutes }} 2>&1 | tee train.log | grep -E "files|decoded|==|final|exported" | tail -80
+          EXTRA=""
+          if [ -n "$RESUME" ]; then test -f "$RESUME" && sha256sum "$RESUME" && EXTRA="--resume $RESUME"; fi
+          python3 tools/nnue/train.py --data 'data/*.bin' --out net.bin --lam 1.0 --lr "$LR" $EXTRA \
+            --minutes ${{ inputs.train_minutes }} 2>&1 | tee train.log | grep -E "files|decoded|resumed|==|final|exported" | tail -80
       - uses: actions/upload-artifact@v4
         with:
           name: lichess-net
