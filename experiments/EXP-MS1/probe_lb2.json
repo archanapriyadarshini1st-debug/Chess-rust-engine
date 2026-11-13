@@ -1,0 +1,31 @@
+{
+ "net": "/tmp/nets/lb2.nnue",
+ "options": [],
+ "seed": 1,
+ "classes": {
+  "minor": {
+   "n": 150,
+   "mean_hce": 350,
+   "mean_eval": 381,
+   "mean_ratio": 1.095,
+   "sign_wrong": 0,
+   "pass": true
+  },
+  "rook": {
+   "n": 150,
+   "mean_hce": 448,
+   "mean_eval": 457,
+   "mean_ratio": 1.032,
+   "sign_wrong": 0,
+   "pass": true
+  },
+  "queen": {
+   "n": 150,
+   "mean_hce": 1000,
+   "mean_eval": 830,
+   "mean_ratio": 0.831,
+   "sign_wrong": 0,
+   "pass": true
+  }
+ }
+}

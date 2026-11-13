@@ -222,10 +222,40 @@ fn pst_index(color: Color, sq: Square) -> usize {
 pub fn evaluate(pos: &Position) -> i32 {
     if crate::nnue::enabled() {
         if let Some(v) = crate::nnue::evaluate(pos) {
+            let g = crate::params::nnue_guard();
+            if g > 0 {
+                return material_guard(pos, v, g, crate::params::nnue_guard_span());
+            }
             return v;
         }
     }
     evaluate_hce(pos)
+}
+
+/// Side-to-move non-king material in centipawns (SEE values).
+#[inline]
+pub fn material_stm(pos: &Position) -> i32 {
+    let mut m = 0;
+    for ty in 0..5 {
+        let pt = PieceType::from_index(ty);
+        m += SEE_VALUE[ty]
+            * (pos.bb(pos.side, pt).count_ones() as i32
+                - pos.bb(pos.side.flip(), pt).count_ones() as i32);
+    }
+    m
+}
+
+/// Blend an NNUE score toward the HCE score when material is lopsided (EXP-MS1).
+/// `start` = imbalance (cp) where the blend begins; `span` = further cp until it is 100% HCE.
+#[inline]
+pub fn material_guard(pos: &Position, nnue: i32, start: i32, span: i32) -> i32 {
+    let a = material_stm(pos).abs();
+    if a <= start {
+        return nnue;
+    }
+    let hce = evaluate_hce(pos);
+    let w = ((a - start) * 256 / span.max(1)).min(256);
+    nnue + (hce - nnue) * w / 256
 }
 
 /// Hand-crafted eval (PeSTO + structure). Used when no NNUE net is loaded
@@ -783,6 +813,35 @@ mod tests {
             self.0 ^= self.0 << 17;
             self.0
         }
+    }
+
+    #[test]
+    fn material_guard_is_identity_below_threshold_and_hce_above_span() {
+        // White is up a full queen: imbalance 900.
+        let up = Position::from_fen("rnb1kbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1").unwrap();
+        assert_eq!(material_stm(&up), 900);
+        let hce = evaluate_hce(&up);
+        // below / at the start threshold: untouched, whatever the NNUE score is
+        assert_eq!(material_guard(&up, 123, 900, 400), 123);
+        assert_eq!(material_guard(&up, 123, 1200, 400), 123);
+        // past start+span: exactly HCE
+        assert_eq!(material_guard(&up, 123, 400, 400), hce);
+        assert_eq!(material_guard(&up, -777, 100, 100), hce);
+        // in between: strictly between the two inputs, and monotone in the threshold
+        let a = material_guard(&up, 100, 600, 600);
+        let b = material_guard(&up, 100, 400, 600);
+        assert!(100 < a && a < b && b < hce, "{} {} {}", a, b, hce);
+        // symmetric: same material edge for Black (side to move) blends identically
+        let down = Position::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNB1KBNR b KQkq - 0 1").unwrap();
+        assert_eq!(material_stm(&down), 900);
+    }
+
+    #[test]
+    fn guard_off_keeps_evaluate_equal_to_unguarded_value() {
+        // Default NnueGuard is 0: evaluate() must not take the guard branch.
+        assert_eq!(crate::params::nnue_guard(), 0);
+        let pos = Position::startpos();
+        assert_eq!(evaluate(&pos), evaluate(&pos));
     }
 
     #[test]

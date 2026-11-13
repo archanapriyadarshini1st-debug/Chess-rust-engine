@@ -74,6 +74,12 @@ tunables! {
     lmr_hist_div,       "LmrHistDiv",       6000,   2000, 16000,  600;
     // --- aspiration windows ---
     asp_window,         "AspWindow",          25,      8,    80,    3;
+    // --- NNUE material guard (EXP-MS1). 0 = off (bench-identical). When the side-to-move
+    // material imbalance exceeds NnueGuard cp, the NNUE score is blended toward the HCE score,
+    // reaching 100% HCE after a further NnueGuardSpan cp. Protects against nets that never saw
+    // lopsided-material positions in training and therefore cannot value a piece.
+    nnue_guard,         "NnueGuard",           0,      0,  1500,   50;
+    nnue_guard_span,    "NnueGuardSpan",     400,     50,  1500,   50;
 }
 
 /// Set a tunable by its UCI name. Returns `false` if the name is unknown.
