@@ -1,0 +1,3 @@
+{"src_run": "43035169390", "relabel_shards": "16", "depth": "12", "max_records": "20000000", "lam": "0.75",
+ "train_minutes": "230", "gate_games": "100", "sf_games": "100", "gate_tc": "10+0.1", "smoke": "false",
+ "note": "FULL EXP-TL1: SD1's 20M positions, SF19 d12 scores, lam 0.75, 230 min, 5x100 h2h vs SD1 + A/A + 2x100 each vs SF19 UCI_Elo 3000"}
