@@ -1,3 +1,3 @@
-{"iv_run": "43213454181", "tl_run": "43226480499", "relabel_shards": "1", "take_every": "1", "max_records": "120000", "depth": "10", "lam": "0.75",
- "train_minutes": "4", "gate_games": "4", "sf_games": "4", "gate_tc": "10+0.1", "smoke": "true",
- "note": "SMOKE v2 ONLY (plumbing; v1 failed only on the depth-equality guard, which is now real-run only): 120k IV records, depth 10, one TL part, 4-minute train, 4-game gates. No Elo claim can come from this run."}
+{"iv_run": "43213454181", "tl_run": "43226480499", "relabel_shards": "8", "take_every": "2", "max_records": "20000000", "depth": "12", "lam": "0.75",
+ "train_minutes": "230", "gate_games": "100", "sf_games": "100", "gate_tc": "10+0.1", "smoke": "false",
+ "note": "FULL EXP-CH1 (smoke v2 run 43357624340 passed end to end): IV gen-2 positions (every 2nd of 20M -> 10M) relabelled by SF19 d12, mixed with TL's 20M SF19-labelled, 230 min, 5x100 h2h vs TL + A/A + 2x100 each vs SF19 UCI_Elo 3000"}
