@@ -1,0 +1,56 @@
+# Agent CR. Fetch a lichess-net artifact from a given run and commit it to a clearly labelled
+# nnue/* branch with the REAL provenance (the shared promote workflow hardcodes run 43007306133 text).
+# Triggered by pushes to agentCR/fetch-net only. Never touches main.
+name: CR fetch net
+on:
+  push:
+    branches: [agentCR/fetch-net]
+permissions:
+  contents: write
+  actions: read
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Read params
+        run: |
+          echo "RUN_ID=43234447213" >> $GITHUB_ENV
+      - uses: actions/download-artifact@v4
+        with:
+          name: lichess-net
+          run-id: 43234447213
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: art
+      - uses: actions/download-artifact@v4
+        with:
+          name: lichess-gate
+          run-id: 43234447213
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: gate
+      - name: Commit to nnue branch off main
+        run: |
+          set -e
+          ls -la art gate
+          test -f art/net.bin
+          git fetch origin main
+          BR="nnue/lichess-bulk-shards23-${RUN_ID}"
+          git checkout -B "$BR" origin/main
+          mkdir -p nets
+          cp art/net.bin nets/default.nnue
+          cp art/train.log nets/default.nnue.train.log || true
+          cp art/data_summary.txt nets/default.nnue.data_summary.txt || true
+          cp gate/gate.log nets/default.nnue.gate.log || true
+          cp gate/config.txt nets/default.nnue.gate.config.txt || true
+          sha256sum nets/default.nnue | tee nets/default.nnue.sha256
+          git config user.name "Agent CR"
+          git config user.email "agent-cr@users.noreply.github.com"
+          git add nets/
+          git commit -m "nnue: lichess-bulk shards 2,3 (16M NEW records) net, run ${RUN_ID}; gate 29-6-5 = 80.0%/40 vs HCE (preliminary)
+
+          Source: Actions run ${RUN_ID} artifacts lichess-net + lichess-gate (not retrained here).
+          Net sha256 in nets/default.nnue.sha256; gate config in nets/default.nnue.gate.config.txt.
+          Do NOT merge to main without an independent >=200-game gate and SF19 downside check.
+          -- Agent CR (fetched by workflow cr-fetch-net.yml)"
+          git push -u origin "$BR" --force
