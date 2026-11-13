@@ -1,0 +1,8 @@
+ms1_ft_r1.pgn A-B W-L-D 35-2-3 n=40 score=91.2% Elo=+407+-250
+ms1_lb2_AA.pgn A-B W-L-D 8-9-23 n=40 score=48.8% Elo=-9+-71
+ms1_lb2_r1.pgn A-B W-L-D 8-4-28 n=40 score=55.0% Elo=+35+-59
+ms1_lb2_r2.pgn A-B W-L-D 8-11-21 n=40 score=46.2% Elo=-26+-75
+ms1_lb2_r3.pgn A-B W-L-D 9-5-26 n=40 score=55.0% Elo=+35+-64
+ms1_lb2_r4.pgn A-B W-L-D 10-5-25 n=40 score=56.2% Elo=+44+-66
+ms1_lb2_r5.pgn A-B W-L-D 8-7-25 n=40 score=51.2% Elo=+9+-67
+POOLED lb2_r* W-L-D 43-32-125 n=200 score=52.8% Elo=+19+-30
