@@ -16,6 +16,9 @@ name: G5 chain - gen-5 net (G4-net self-play -> SF19-labelled -> cumulative data
 #   report : pooled numbers posted to issue #1 (machine generated)
 
 on:
+  push:
+    branches: ["cp/g5-chain"]
+    paths: [".github/g5-params.json"]
   workflow_dispatch:
     inputs:
       ch_run: {description: "CH run: provides ch-net (last-known-good) and ch-lab-* (SF19-labelled gen-2 positions)", default: "43359339220"}
