@@ -51,3 +51,9 @@ Nothing is merged to `main` by this experiment. Promotion needs the repo's ship-
 
 ## Outcome
 (to be filled from the machine-generated report; negative results will be recorded as such)
+
+## Smoke run 43683887148 (plumbing only, NO strength claim)
+* Trainer ran at NN_H=256, 512 and 128 (control) on the real mixed data (12.5M records in smoke), exported nets of 401972 / 803892 / 201012 bytes; header hidden width read back as 256 / 512 / 128 by the gate job; all nets loaded (`eval_nnue` != none).
+* Harness defect found and fixed before the real run: the gate's `bench (G4)` display line used `$G4` that was only exported through `$GITHUB_ENV` (next-step scope), so it printed the HCE node count (553783). The Gate step itself was unaffected (A/A candidate bench = 443140 = G4's own run). Fixed by setting the variable in the same step.
+* Observation to be tested, not claimed: on the CI runner the H256 net benched ~1.53M nps vs ~2.0-2.8M for H128, i.e. width may cost more NPS there than the -15..-20% measured on random nets in the sandbox. The gate includes this cost by construction.
+* Smoke game scores (4-minute nets, 10 games) are noise and are not cited.

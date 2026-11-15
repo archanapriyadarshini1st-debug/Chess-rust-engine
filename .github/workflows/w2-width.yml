@@ -220,7 +220,8 @@ jobs:
           NET=${{ matrix.net }}
           if [ "$NET" = g4 ]; then CAND=$PWD/g4net/net.bin; else CAND=$PWD/w2/w2-net-$NET/net.bin; fi
           echo "CAND=$CAND" >> "$GITHUB_ENV"
-          echo "G4=$PWD/g4net/net.bin" >> "$GITHUB_ENV"
+          G4=$PWD/g4net/net.bin   # also needed in THIS step (GITHUB_ENV only reaches later steps)
+          echo "G4=$G4" >> "$GITHUB_ENV"
           test -s "$CAND" && test -s g4net/net.bin
           if [ "${{ matrix.kind }}" = h2h ] && cmp -s "$CAND" g4net/net.bin; then echo "candidate is byte-identical to G4: refusing a disguised A/A"; exit 1; fi
           for F in "$CAND" g4net/net.bin; do
