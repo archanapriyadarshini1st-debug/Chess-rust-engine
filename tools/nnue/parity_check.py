@@ -23,7 +23,7 @@ import argparse, os, random, struct, subprocess, sys, tempfile
 import numpy as np
 import chess
 
-H, FEATS, BUCKETS = 128, 768, 8
+H, FEATS, BUCKETS = int(os.environ.get("NN_H", "128")), 768, 8  # must match the trainer (EXP-W2)
 QA, QB, SCALE = 255, 64, 400
 
 
@@ -149,7 +149,7 @@ def trainer_decode_cps(net, boards):
             keep.append(node)
         elif isinstance(node, ast.Assign) and any(isinstance(t, ast.Tuple) for t in node.targets):
             keep.append(node)  # H, FEATS, BUCKETS = ... / QA, QB, SCALE = ...
-    ns = {"np": np}
+    ns = {"np": np, "os": os}
     exec(compile(ast.Module(body=keep, type_ignores=[]), "train.py", "exec"), ns)
     REC = ns["REC"]
     recs = np.zeros(len(boards), REC)

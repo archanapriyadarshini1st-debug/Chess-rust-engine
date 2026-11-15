@@ -7,7 +7,7 @@ import argparse, glob, math, os, struct, sys, time
 import numpy as np
 import torch
 
-H, FEATS, BUCKETS = 128, 768, 8
+H, FEATS, BUCKETS = int(os.environ.get("NN_H", "128")), 768, 8  # NN_H: hidden width (EXP-W2); default keeps the shipped H128 layout
 QA, QB, SCALE = 255, 64, 400
 REC = np.dtype([("occ", "<u8"), ("pcs", "u1", (16,)), ("stm", "u1"), ("score", "<i2"), ("wdl", "u1")])
 assert REC.itemsize == 28
