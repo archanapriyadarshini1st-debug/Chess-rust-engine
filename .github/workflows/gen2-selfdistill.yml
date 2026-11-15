@@ -1,0 +1,322 @@
+name: IV1 gen-2 self-distill (NNUE-generated data)
+
+# Agent IV. EXP-IV1 (experiments/EXP-IV1-gen2-selfplay.md). Pre-registered, no Elo claim until the gate says so.
+#
+# Question: SD1's gen-1 net (a598bf2f, +123 Elo vs HCE, 5x100 + A/A) was trained on HCE depth-7 self-play.
+#   If the SAME recipe is run on self-play played by the gen-1 net (stronger labels, more realistic positions),
+#   is the resulting gen-2 net stronger than gen-1?  Only the data generator changes; depth, lam, trainer, shard
+#   count, record cap and training minutes are identical to SD1.
+# Pipeline:   datagen-bin (this repo, gen-1 net active, W/D/L from played games)
+#          -> merge (identical-shard rejection, dedupe, GAME-disjoint holdout) -> train (tools/nnue/train.py, unchanged)
+#          -> gate: gen-2 vs gen-1 (LAST-KNOWN-GOOD), 5 independent replicates + A/A (gen-1 vs gen-1)
+#          -> target arm (informational): gen-2 and gen-1 each vs SF19 UCI_Elo 3000, same runner class
+#          -> report auto-posted to issue #1.
+# Stockfish is NOT used for labels here; it is only the opponent in the informational target arm.
+
+on:
+  push:
+    branches: ["agentIV/**"]
+    paths: [".github/iv1-params.json"]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Engine/tools ref"
+        default: "agentIV/gen2"
+      shards:
+        default: "5"
+      gen_minutes:
+        default: "70"
+      depth:
+        description: "search depth for labels (never < 7)"
+        default: "7"
+      seed:
+        default: "3"
+      max_records:
+        default: "20000000"
+      lam:
+        default: "0.75"
+      train_minutes:
+        default: "230"
+      gate_games:
+        default: "100"
+      gate_tc:
+        default: "10+0.1"
+      target_games:
+        default: "100"
+
+permissions:
+  contents: read
+  issues: write
+
+env:
+  FASTCHESS_URL: https://github.com/Disservin/fastchess/releases/download/v1.8.3-alpha/fastchess-linux-x86-64.tar
+  SF19_URL: https://github.com/official-stockfish/Stockfish/releases/download/sf_19/stockfish-linux-x86-64-universal.tar.gz
+  GEN1_NET: nets/candidates/sd1-gen1.nnue
+  GEN1_SHA: a598bf2f32472e34fe2ae43e9b629e1a612ddd5607b42d6e994bee99a0cf1f5d
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      shard_list: ${{ steps.p.outputs.shard_list }}
+      shards: ${{ steps.p.outputs.shards }}
+      gen_minutes: ${{ steps.p.outputs.gen_minutes }}
+      depth: ${{ steps.p.outputs.depth }}
+      seed: ${{ steps.p.outputs.seed }}
+      max_records: ${{ steps.p.outputs.max_records }}
+      lam: ${{ steps.p.outputs.lam }}
+      train_minutes: ${{ steps.p.outputs.train_minutes }}
+      gate_games: ${{ steps.p.outputs.gate_games }}
+      gate_tc: ${{ steps.p.outputs.gate_tc }}
+      target_games: ${{ steps.p.outputs.target_games }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+      - id: p
+        env:
+          EV: ${{ github.event_name }}
+          INPUTS: ${{ toJSON(inputs) }}
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os
+          p = json.loads(os.environ["INPUTS"]) if os.environ["EV"] == "workflow_dispatch" else json.load(open(".github/iv1-params.json"))
+          n, d = int(p["shards"]), int(p["depth"])
+          assert 1 <= n <= 20, n
+          assert d >= 7, "labels shallower than depth 7 teach the net noise"
+          assert 0.0 <= float(p["lam"]) <= 1.0
+          print("shard_list=" + json.dumps(list(range(1, n + 1))))
+          for k in ("shards", "gen_minutes", "depth", "seed", "max_records", "lam", "train_minutes", "gate_games", "gate_tc", "target_games"):
+              print(f"{k}={p[k]}")
+          PY
+
+  datagen:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON(needs.plan.outputs.shard_list) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build generator and verify the gen-1 net is the pinned one
+        run: |
+          test "$(sha256sum "$GEN1_NET" | cut -d' ' -f1)" = "$GEN1_SHA"
+          cargo build --release 2>&1 | tail -2
+          echo "bench (HCE): $(printf 'setoption name UseNNUE value false\nbench 10\nquit\n' | ./target/release/chess-rust-engine | grep ' nps' | tail -1)"
+          echo "bench (gen-1): $(printf 'bench 10\nquit\n' | CRE_NNUE_FILE=$PWD/$GEN1_NET ./target/release/chess-rust-engine | grep ' nps' | tail -1)"
+      - name: Generate with the gen-1 net (time-boxed, chunked, unique seed per chunk)
+        run: |
+          mkdir -p out
+          END=$(( $(date +%s) + ${{ needs.plan.outputs.gen_minutes }} * 60 ))
+          K=0
+          while [ "$(date +%s)" -lt "$END" ]; do
+            CRE_NNUE_FILE=$PWD/$GEN1_NET CRE_DATAGEN_SEED=$(( ${{ needs.plan.outputs.seed }} * 1000000 + ${{ matrix.shard }} * 1000 + K )) \
+              ./target/release/chess-rust-engine datagen-bin 400000 ${{ needs.plan.outputs.depth }} out/s${{ matrix.shard }}_$K.bin 4 2>&1 | tail -1
+            K=$(( K + 1 ))
+          done
+          python3 - <<'PY'
+          import glob, json
+          fs = sorted(glob.glob("out/*.meta.json"))
+          assert fs, "no shards produced"
+          bad = [f for f in fs if not json.load(open(f)).get("nnue_active")]
+          assert not bad, f"chunks generated WITHOUT the net (would silently be HCE data): {bad[:3]}"
+          print(len(fs), "chunks, all nnue_active=true")
+          PY
+          du -sh out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ivshard-${{ matrix.shard }}
+          path: out/
+          retention-days: 14
+          compression-level: 3
+
+  train:
+    needs: [plan, datagen]
+    runs-on: ubuntu-latest
+    timeout-minutes: 345
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ivshard-*
+          path: data
+          merge-multiple: true
+      - name: Install deps
+        run: |
+          pip install numpy chess
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+      - name: Merge (identical-shard rejection, dedupe, game-disjoint holdout)
+        run: |
+          free -g | head -2
+          python3 tools/sd/sd_merge.py --inp 'data/**/*.bin' --out merged.bin --holdout holdout.bin \
+            --max-records ${{ needs.plan.outputs.max_records }} | tee merge.txt
+      - name: Train
+        run: |
+          python3 tools/nnue/train.py --data merged.bin --out net.bin --lam ${{ needs.plan.outputs.lam }} \
+            --minutes ${{ needs.plan.outputs.train_minutes }} 2>&1 | tee train.log | grep -E "files|decoded|==|final|exported" | tail -60
+      - name: Game-disjoint holdout loss
+        run: |
+          python3 tools/sd/holdout_eval.py --net net.bin --holdout holdout.bin --lam ${{ needs.plan.outputs.lam }} --json holdout.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: iv-net
+          path: |
+            net.bin
+            net.bin.parity.txt
+            train.log
+            merge.txt
+            merged.bin.stats.json
+            holdout.json
+          retention-days: 30
+
+  gate:
+    needs: [plan, train]
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      matrix:
+        rep: [1, 2, 3, 4, 5, aa]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/download-artifact@v4
+        with:
+          name: iv-net
+          path: net
+      - name: Build engine + fastchess
+        run: |
+          cargo build --release
+          cp target/release/chess-rust-engine ./engine
+          mkdir -p /tmp/fc
+          curl -fsSL --retry 3 "$FASTCHESS_URL" -o /tmp/fc.tar && tar xf /tmp/fc.tar -C /tmp/fc
+          FC=$(find /tmp/fc -type f -name fastchess | head -1); chmod +x "$FC"; ln -sf "$FC" /tmp/fastchess
+      - name: Gate gen-2 vs gen-1 (replicate ${{ matrix.rep }})
+        run: |
+          mkdir -p gate_out
+          for w in gen2:net/net.bin gen1:$GEN1_NET; do
+            n=${w%%:*}; f=${w#*:}
+            printf '#!/usr/bin/env bash\nexport CRE_NNUE_FILE="%s"\nexec "%s" "$@"\n' "$PWD/$f" "$PWD/engine" > gate_out/$n.sh
+            chmod +x gate_out/$n.sh
+          done
+          if [ "${{ matrix.rep }}" = "aa" ]; then SEED=777; A="name=NET cmd=$PWD/gate_out/gen1.sh"; else SEED=$(( ${{ matrix.rep }} * 1013 )); A="name=NET cmd=$PWD/gate_out/gen2.sh"; fi
+          /tmp/fastchess -engine $A option.UseNNUE=true option.Hash=64 \
+            -engine name=LKG cmd="$PWD/gate_out/gen1.sh" option.UseNNUE=true option.Hash=64 \
+            -each tc="${{ needs.plan.outputs.gate_tc }}" \
+            -openings file=tools/openings_book.epd format=epd order=random -srand $SEED \
+            -rounds $(( ${{ needs.plan.outputs.gate_games }} / 2 )) -games 2 -repeat -concurrency 3 \
+            -pgnout file=gate_out/games.pgn -recover -ratinginterval 10 2>&1 | tee gate_out/gate.log | tail -n 12
+          echo "config: engine_sha=$(sha256sum engine | cut -c1-12) net2_sha=$(sha256sum net/net.bin | cut -c1-12) net1_sha=$(sha256sum $GEN1_NET | cut -c1-12) book_sha=$(sha256sum tools/openings_book.epd | cut -c1-12) tc=${{ needs.plan.outputs.gate_tc }} games=${{ needs.plan.outputs.gate_games }} srand=$SEED hash=64 threads=1 rep=${{ matrix.rep }}" | tee gate_out/config.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: iv-gate-${{ matrix.rep }}
+          path: gate_out/
+          retention-days: 30
+
+  target:
+    # Informational: the owner's metric. Both nets vs SF19 UCI_Elo 3000 on identical runner class + seeds.
+    needs: [plan, train]
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      matrix:
+        arm: [gen2, gen1]
+        rep: [1, 2]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/download-artifact@v4
+        with:
+          name: iv-net
+          path: net
+      - name: Build engine, fastchess, Stockfish 19
+        run: |
+          cargo build --release
+          cp target/release/chess-rust-engine ./engine
+          mkdir -p /tmp/fc /tmp/sf
+          curl -fsSL --retry 3 "$FASTCHESS_URL" -o /tmp/fc.tar && tar xf /tmp/fc.tar -C /tmp/fc
+          curl -fsSL --retry 3 "$SF19_URL" | tar xz -C /tmp/sf
+          FC=$(find /tmp/fc -type f -name fastchess | head -1); chmod +x "$FC"; ln -sf "$FC" /tmp/fastchess
+          SF=$(find /tmp/sf -type f -name 'stockfish-linux-x86-64-universal' | head -1); chmod +x "$SF"; ln -sf "$SF" /tmp/sf19
+          echo "sf19 sha256: $(sha256sum "$SF" | cut -c1-16)"
+      - name: ${{ matrix.arm }} vs SF19 UCI_Elo 3000 (replicate ${{ matrix.rep }})
+        run: |
+          mkdir -p gate_out
+          if [ "${{ matrix.arm }}" = "gen2" ]; then NETF="$PWD/net/net.bin"; else NETF="$PWD/$GEN1_NET"; fi
+          printf '#!/usr/bin/env bash\nexport CRE_NNUE_FILE="%s"\nexec "%s" "$@"\n' "$NETF" "$PWD/engine" > gate_out/net.sh; chmod +x gate_out/net.sh
+          SEED=$(( 4000 + ${{ matrix.rep }} * 17 ))
+          /tmp/fastchess -engine name=NET cmd="$PWD/gate_out/net.sh" option.UseNNUE=true option.Hash=64 \
+            -engine name=SF19 cmd=/tmp/sf19 option.UCI_LimitStrength=true option.UCI_Elo=3000 option.Hash=64 option.Threads=1 \
+            -each tc="${{ needs.plan.outputs.gate_tc }}" \
+            -openings file=tools/openings_book.epd format=epd order=random -srand $SEED \
+            -rounds $(( ${{ needs.plan.outputs.target_games }} / 2 )) -games 2 -repeat -concurrency 3 \
+            -pgnout file=gate_out/games.pgn -recover -ratinginterval 10 2>&1 | tee gate_out/gate.log | tail -n 12
+          echo "config: arm=${{ matrix.arm }} net_sha=$(sha256sum $NETF | cut -c1-12) engine_sha=$(sha256sum engine | cut -c1-12) srand=$SEED tc=${{ needs.plan.outputs.gate_tc }} games=${{ needs.plan.outputs.target_games }}" | tee gate_out/config.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: iv-target-${{ matrix.arm }}-${{ matrix.rep }}
+          path: gate_out/
+          retention-days: 30
+
+  report:
+    needs: [plan, train, gate, target]
+    if: ${{ always() && needs.train.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: iv-*
+          path: art
+      - name: Pool and post
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ls -R art | head -60
+          python3 tools/sd/pool_gate.py art/iv-gate-[1-5]/gate.log --aa art/iv-gate-aa/gate.log --json pooled.json | tee pooled.txt
+          { echo "--- target arm: gen-2 vs SF19 UCI_Elo 3000"; python3 tools/sd/pool_gate.py art/iv-target-gen2-*/gate.log || true
+            echo "--- target arm: gen-1 vs SF19 UCI_Elo 3000"; python3 tools/sd/pool_gate.py art/iv-target-gen1-*/gate.log || true; } | tee target.txt
+          {
+            echo "## Agent IV: EXP-IV1 gen-2 result (run ${{ github.run_id }}) - machine-generated, numbers copied verbatim"
+            echo
+            echo "Ref \`${{ inputs.ref || github.ref }}\` @ \`${{ github.sha }}\`; labels from gen-1 net \`$GEN1_SHA\` at depth ${{ needs.plan.outputs.depth }}; lam ${{ needs.plan.outputs.lam }}; gate gen-2 vs gen-1: ${{ needs.plan.outputs.gate_games }} games x 5 replicates + A/A (gen-1 vs gen-1) at ${{ needs.plan.outputs.gate_tc }}."
+            echo
+            echo '```'
+            cat pooled.txt
+            echo
+            cat target.txt
+            echo
+            [ -f art/iv-net/merged.bin.stats.json ] && python3 -c "import json;d=json.load(open('art/iv-net/merged.bin.stats.json'));d.pop('shards',None);print(json.dumps(d))"
+            [ -f art/iv-net/holdout.json ] && cat art/iv-net/holdout.json
+            grep -h "final val_loss" art/iv-net/train.log || true
+            cat art/iv-gate-1/config.txt art/iv-gate-aa/config.txt 2>/dev/null || true
+            echo '```'
+            echo
+            echo "Pre-registered rule (EXP-IV1): gen-2 replaces gen-1 as last-known-good ONLY IF pooled score vs gen-1 >= 52% with LOS >= 97.5%, >= 4/5 replicates > 50%, and the A/A control is within its CI of 50%. Otherwise gen-1 stays; the result is recorded either way. The SF19 target arm is informational (not a promotion criterion)."
+          } > comment.md
+          gh issue comment 1 --repo ${{ github.repository }} --body-file comment.md || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: iv-report
+          path: |
+            pooled.json
+            pooled.txt
+            target.txt
+            comment.md

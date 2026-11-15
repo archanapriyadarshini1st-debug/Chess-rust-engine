@@ -1,0 +1,315 @@
+name: W2 width pilot - does NNUE capacity (H=256/512) beat the G4 H=128 net on identical data?
+
+# Agent W2 (new session, owner's Composio connection). EXP-W2 (experiments/EXP-W2-width-pilot.md). Pre-registered.
+#
+# ONE variable: hidden width. Data, lambda, trainer, optimiser, seed, engine search and gate harness are identical
+# to EXP-G4 (run 43427896067). Stockfish is the TEACHER (labels already exist) and the benchmark opponent only.
+#
+#   train : 3 parallel jobs, same 30M SF19-d12-labelled records as the G4 net (TL 8 parts + CH 8 parts + G4 8 parts,
+#           all three game-disjoint holdout samples removed):  h256, h512 and h128c (CONTROL: H=128, same wall-clock
+#           as the wide nets, so "more training time" is separated from "more capacity").
+#   gate  : each candidate vs the G4 net (last-known-good), replicated, + A/A (G4 vs G4) + informational SF19 UCI_Elo 3000.
+#   report: pooled numbers posted to issue #1 (machine generated, numbers copied verbatim).
+#
+# The engine binary is the same for every net; only CRE_NNUE_FILE differs. NPS cost of width is therefore INCLUDED
+# in the result (the net must pay for itself at 10+0.1).
+
+on:
+  push:
+    branches: ["agentW2/**"]
+    paths: [".github/w2-params.json"]
+  workflow_dispatch:
+    inputs:
+      smoke: {description: "true = plumbing test only (no strength claim)", default: "true"}
+
+defaults:
+  run:
+    shell: bash
+
+permissions:
+  contents: read
+  issues: write
+  actions: read
+
+env:
+  FASTCHESS_URL: https://github.com/Disservin/fastchess/releases/download/v1.8.3-alpha/fastchess-linux-x86-64.tar
+  SF_URL: https://github.com/official-stockfish/Stockfish/releases/download/sf_19/stockfish-linux-x86-64-universal.tar.gz
+  SF_BIN_SHA256: 0f83d24cc46d2c66c60f16001af5444873bc112b7d028594513426894c12da19
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      smoke: ${{ steps.p.outputs.smoke }}
+      g4_run: ${{ steps.p.outputs.g4_run }}
+      ch_run: ${{ steps.p.outputs.ch_run }}
+      tl_run: ${{ steps.p.outputs.tl_run }}
+      lam: ${{ steps.p.outputs.lam }}
+      train_minutes: ${{ steps.p.outputs.train_minutes }}
+      gate_games: ${{ steps.p.outputs.gate_games }}
+      sf_games: ${{ steps.p.outputs.sf_games }}
+      gate_tc: ${{ steps.p.outputs.gate_tc }}
+      train_matrix: ${{ steps.p.outputs.train_matrix }}
+      gate_matrix: ${{ steps.p.outputs.gate_matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: p
+        env:
+          EV: ${{ github.event_name }}
+          INPUTS: ${{ toJSON(inputs) }}
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os
+          p = json.load(open(".github/w2-params.json"))
+          if os.environ["EV"] == "workflow_dispatch":
+              p["smoke"] = json.loads(os.environ["INPUTS"]).get("smoke", "true")
+          smoke = str(p["smoke"]).lower() == "true"
+          if not smoke:
+              assert int(p["train_minutes"]) >= 230 and int(p["gate_games"]) >= 100 and int(p["sf_games"]) >= 100, "real run floors"
+          else:
+              p.update(train_minutes="4", gate_games="10", sf_games="10")
+          seeds = [1013, 2026, 3039, 4052, 5065]
+          train = [{"id": "h256", "h": 256}, {"id": "h512", "h": 512}, {"id": "h128c", "h": 128}]
+          gate = []
+          for cand, reps in (("h256", 5), ("h512", 5), ("h128c", 3)):
+              for i in range(1, (1 if smoke else reps) + 1):
+                  gate.append({"id": f"{cand}-{i}", "kind": "h2h", "net": cand, "seed": seeds[i - 1]})
+          gate.append({"id": "aa", "kind": "aa", "net": "g4", "seed": 777})
+          for net in ("h256", "h512", "h128c", "g4"):
+              for j, s in enumerate((4242, 7777)):
+                  if net == "g4" and j == 1:
+                      continue
+                  if smoke and j == 1:
+                      continue
+                  gate.append({"id": f"sf-{net}-{j+1}", "kind": "sf", "net": net, "seed": s})
+          for k in ("g4_run", "ch_run", "tl_run", "lam", "train_minutes", "gate_games", "sf_games", "gate_tc"):
+              print(f"{k}={p[k]}")
+          print("smoke=" + str(smoke).lower())
+          print("train_matrix=" + json.dumps({"include": train}))
+          print("gate_matrix=" + json.dumps({"include": gate}))
+          PY
+
+  train:
+    needs: [plan]
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.train_matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: g4-lab-*
+          path: lab
+          merge-multiple: true
+          run-id: ${{ needs.plan.outputs.g4_run }}
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: tl-lab-*
+          path: tllab
+          merge-multiple: true
+          run-id: ${{ needs.plan.outputs.tl_run }}
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ch-lab-*
+          path: chlab
+          merge-multiple: true
+          run-id: ${{ needs.plan.outputs.ch_run }}
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+      - name: Install deps
+        run: |
+          pip install numpy chess
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+      - name: Stage the SF19-labelled sets (identical recipe to EXP-G4)
+        env:
+          SMOKE: ${{ needs.plan.outputs.smoke }}
+        run: |
+          set -e
+          mkdir -p old
+          NTL=8; NCH=8
+          if [ "$SMOKE" = "true" ]; then NTL=1; NCH=1; fi
+          for i in $(seq 1 $NTL); do N=$(printf '%03d' $i); cp tllab/part_$N.bin old/tl_part_$N.bin; done
+          for i in $(seq 1 $NCH); do N=$(printf '%03d' $i); cp chlab/part_$N.bin old/ch_part_$N.bin; done
+          if [ "$SMOKE" != "true" ]; then
+            test "$(ls tllab/part_*.bin | wc -l)" = "16" || { echo "expected TL's 16 labelled parts"; exit 1; }
+            test "$(ls chlab/part_*.bin | wc -l)" = "8" || { echo "expected CH's 8 labelled parts"; exit 1; }
+            test "$(ls lab/part_*.bin | wc -l)" = "8" || { echo "expected G4's 8 labelled parts"; exit 1; }
+          fi
+          ls old; ls lab | head -20
+      - name: Mix (evaluation-holdout positions removed) and audit
+        run: |
+          python3 tools/ch/mix_records.py --selftest
+          python3 tools/ch/mix_records.py --a 'old/*.bin' --b 'lab/part_*.bin' --hold tllab/hold_sub.bin chlab/hold_sub.bin lab/hold_sub.bin --out labelled.bin --report mix.json
+          python3 - <<'PY'
+          import numpy as np, json
+          R = np.dtype([("occ","<u8"),("pcs","u1",(16,)),("stm","u1"),("score","<i2"),("wdl","u1")])
+          a = np.fromfile("labelled.bin", dtype=R)
+          print(json.dumps({"records": int(len(a)), "wdl_train": np.bincount(a["wdl"], minlength=3).tolist(), "mix": json.load(open("mix.json"))}))
+          PY
+          free -g | head -2
+      - name: Train H=${{ matrix.h }} (tools/nnue/train.py, only NN_H differs between jobs)
+        env:
+          NN_H: ${{ matrix.h }}
+        run: |
+          python3 tools/nnue/train.py --data labelled.bin --out net.bin --lam ${{ needs.plan.outputs.lam }} \
+            --minutes ${{ needs.plan.outputs.train_minutes }} > train.log 2>&1 || { echo "TRAINER FAILED:"; tail -n 40 train.log; exit 1; }
+          grep -E "files|decoded|==|final|exported" train.log | tail -60
+          test -s net.bin || { echo "no net.bin produced"; tail -n 40 train.log; exit 1; }
+          echo "net bytes: $(stat -c %s net.bin)  sha256: $(sha256sum net.bin | cut -c1-16)"
+      - name: Teacher agreement on the three game-disjoint labelled holdout samples (candidate vs G4 net, same data)
+        env:
+          G4_RUN: ${{ needs.plan.outputs.g4_run }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run download "$G4_RUN" --repo ${{ github.repository }} --name g4-net --dir g4net
+          for HO in tllab/hold_sub.bin chlab/hold_sub.bin lab/hold_sub.bin; do
+            echo "== holdout=$HO candidate H=${{ matrix.h }} sha=$(sha256sum net.bin | cut -c1-12)"
+            NN_H=${{ matrix.h }} python3 tools/sd/holdout_eval.py --net net.bin --holdout $HO --lam ${{ needs.plan.outputs.lam }} --json /tmp/h.json
+            echo "== holdout=$HO G4 net H=128 sha=$(sha256sum g4net/net.bin | cut -c1-12)"
+            NN_H=128 python3 tools/sd/holdout_eval.py --net g4net/net.bin --holdout $HO --lam ${{ needs.plan.outputs.lam }} --json /tmp/h.json
+          done 2>&1 | tee holdout_teacher.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: w2-net-${{ matrix.id }}
+          path: |
+            net.bin
+            train.log
+            holdout_teacher.txt
+            mix.json
+          retention-days: 30
+
+  gate:
+    needs: [plan, train]
+    runs-on: ubuntu-latest
+    timeout-minutes: 170
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.gate_matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/download-artifact@v4
+        with:
+          name: g4-net
+          path: g4net
+          run-id: ${{ needs.plan.outputs.g4_run }}
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+      - uses: actions/download-artifact@v4
+        with: {pattern: "w2-net-*", path: w2}
+      - name: Build engine, fastchess, Stockfish 19
+        run: |
+          cargo build --release
+          cp target/release/chess-rust-engine ./engine
+          mkdir -p /tmp/fc && curl -fsSL --retry 3 "$FASTCHESS_URL" -o /tmp/fc.tar && tar xf /tmp/fc.tar -C /tmp/fc
+          FC=$(find /tmp/fc -type f -name fastchess | head -1); chmod +x "$FC"; ln -sf "$FC" /tmp/fastchess
+          mkdir -p /tmp/sfdl && curl -fsSL --retry 3 "$SF_URL" -o /tmp/sfdl/sf.tar.gz && tar xzf /tmp/sfdl/sf.tar.gz -C /tmp/sfdl
+          SF=$(find /tmp/sfdl -type f -name 'stockfish-*' ! -name '*.tar.gz' | head -1); test -n "$SF"; chmod +x "$SF"
+          echo "$SF_BIN_SHA256  $SF" | sha256sum -c -
+          echo "SF=$SF" >> "$GITHUB_ENV"
+      - name: Resolve nets and assert they really load with the width the header declares (engine silently falls back to HCE otherwise)
+        run: |
+          NET=${{ matrix.net }}
+          if [ "$NET" = g4 ]; then CAND=$PWD/g4net/net.bin; else CAND=$PWD/w2/w2-net-$NET/net.bin; fi
+          echo "CAND=$CAND" >> "$GITHUB_ENV"
+          G4=$PWD/g4net/net.bin   # also needed in THIS step (GITHUB_ENV only reaches later steps)
+          echo "G4=$G4" >> "$GITHUB_ENV"
+          test -s "$CAND" && test -s g4net/net.bin
+          if [ "${{ matrix.kind }}" = h2h ] && cmp -s "$CAND" g4net/net.bin; then echo "candidate is byte-identical to G4: refusing a disguised A/A"; exit 1; fi
+          for F in "$CAND" g4net/net.bin; do
+            OUT=$(printf 'position startpos moves e2e4 e7e5\neval\nquit\n' | CRE_NNUE_FILE=$F ./engine 2>&1)
+            echo "$F ($(stat -c %s $F) bytes, header hidden=$(od -An -tu4 -j8 -N4 $F | tr -d ' ')): $(echo "$OUT" | grep -E 'eval_nnue|NNUE file' | tr '\n' ' ')"
+            echo "$OUT" | grep -q 'eval_nnue none' && { echo "net did not load"; exit 1; } || true
+            echo "$OUT" | grep -q 'NNUE file' && { echo "net failed to parse"; exit 1; } || true
+          done
+          echo "bench (candidate): $(printf 'setoption name UseNNUE value true\nbench 10\nquit\n' | CRE_NNUE_FILE=$CAND ./engine | grep ' nps' | tail -1)"
+          echo "bench (G4):        $(printf 'setoption name UseNNUE value true\nbench 10\nquit\n' | CRE_NNUE_FILE=$G4 ./engine | grep ' nps' | tail -1)"
+      - name: Gate (${{ matrix.id }}, ${{ matrix.kind }})
+        run: |
+          mkdir -p gate_out
+          for W in cand g4; do
+            F=$( [ $W = cand ] && echo "$CAND" || echo "$G4" )
+            cat > gate_out/$W.sh <<WRAP
+          #!/usr/bin/env bash
+          export CRE_NNUE_FILE="$F"
+          exec "$PWD/engine" "\$@"
+          WRAP
+            chmod +x gate_out/$W.sh
+          done
+          SEED=${{ matrix.seed }}; TC="${{ needs.plan.outputs.gate_tc }}"
+          COMMON="-openings file=tools/openings_book.epd format=epd order=random -srand $SEED -games 2 -repeat -concurrency 3 -pgnout file=gate_out/games.pgn -recover -ratinginterval 10"
+          case "${{ matrix.kind }}" in
+            h2h) G=${{ needs.plan.outputs.gate_games }}
+                 /tmp/fastchess -engine name=CAND-${{ matrix.net }} cmd=$PWD/gate_out/cand.sh option.UseNNUE=true option.Hash=64 \
+                   -engine name=G4 cmd=$PWD/gate_out/g4.sh option.UseNNUE=true option.Hash=64 \
+                   -each tc="$TC" $COMMON -rounds $(( G / 2 )) 2>&1 | tee gate_out/gate.log | tail -n 12 ;;
+            aa)  G=${{ needs.plan.outputs.gate_games }}
+                 /tmp/fastchess -engine name=G4 cmd=$PWD/gate_out/g4.sh option.UseNNUE=true option.Hash=64 \
+                   -engine name=G4B cmd=$PWD/gate_out/g4.sh option.UseNNUE=true option.Hash=64 \
+                   -each tc="$TC" $COMMON -rounds $(( G / 2 )) 2>&1 | tee gate_out/gate.log | tail -n 12 ;;
+            sf)  G=${{ needs.plan.outputs.sf_games }}
+                 /tmp/fastchess -engine name=NET-${{ matrix.net }} cmd=$PWD/gate_out/cand.sh option.UseNNUE=true option.Hash=64 \
+                   -engine name=SF19 cmd="$SF" option.UCI_LimitStrength=true option.UCI_Elo=3000 option.Hash=64 option.Threads=1 \
+                   -each tc="$TC" $COMMON -rounds $(( G / 2 )) 2>&1 | tee gate_out/gate.log | tail -n 12 ;;
+          esac
+          echo "config: kind=${{ matrix.kind }} id=${{ matrix.id }} tc=$TC seed=$SEED engine_sha=$(sha256sum engine | cut -c1-12) cand_net_sha=$(sha256sum $CAND | cut -c1-12) g4_net_sha=$(sha256sum $G4 | cut -c1-12) sf_bin_sha=${SF_BIN_SHA256:0:12} book_sha=$(sha256sum tools/openings_book.epd | cut -c1-12) runner=$(nproc)cpu" | tee gate_out/config.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: w2-gate-${{ matrix.id }}
+          path: gate_out/
+          retention-days: 30
+
+  report:
+    needs: [plan, train, gate]
+    if: ${{ always() && needs.train.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: {pattern: "w2-*", path: art}
+      - name: Pool and post
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SMOKE: ${{ needs.plan.outputs.smoke }}
+        run: |
+          set +e
+          ls art | head -60
+          : > pooled.txt
+          for C in h256 h512 h128c; do
+            echo "=== $C vs G4 (last-known-good) ===" | tee -a pooled.txt
+            python3 tools/sd/pool_gate.py art/w2-gate-$C-[0-9]/gate.log --aa art/w2-gate-aa/gate.log 2>&1 | tee -a pooled.txt
+          done
+          : > sf.txt
+          for N in g4 h256 h512 h128c; do
+            echo "=== $N vs SF19 UCI_Elo 3000 (informational; limiter scale, not CCRL) ===" | tee -a sf.txt
+            python3 tools/sd/pool_gate.py art/w2-gate-sf-$N-[0-9]/gate.log 2>&1 | tee -a sf.txt
+          done
+          {
+            echo "## Agent W2: EXP-W2 width pilot result (run ${{ github.run_id }}, smoke=$SMOKE) - machine-generated, numbers copied verbatim"
+            echo
+            echo "Ref \`${{ github.ref_name }}\` @ \`${{ github.sha }}\`. Same data/trainer/seed as EXP-G4 (run ${{ needs.plan.outputs.g4_run }}); only the hidden width differs. h128c = H128 control at the SAME wall-clock as the wide nets."
+            echo
+            echo '**Each candidate vs the G4 net (last-known-good), 10+0.1:**'; echo '```'; cat pooled.txt; echo '```'
+            echo '**Informational vs SF19 UCI_Elo 3000:**'; echo '```'; cat sf.txt; echo '```'
+            echo '**Training / game-disjoint teacher agreement:**'; echo '```'
+            for C in h256 h512 h128c; do echo "-- $C"; grep -h "final val_loss" art/w2-net-$C/train.log; grep -E "==|mse|explained" art/w2-net-$C/holdout_teacher.txt | head -24; done
+            echo '```'
+            echo "Pre-registered rule: experiments/EXP-W2-width-pilot.md. Smoke numbers are plumbing only and must not be cited."
+          } > comment.md
+          gh issue comment 1 --repo ${{ github.repository }} --body-file comment.md
+          cp comment.md "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: w2-report
+          path: |
+            pooled.txt
+            sf.txt
+            comment.md

@@ -18,6 +18,16 @@ fn main() {
                 .unwrap_or_else(|| "datasets/selfplay.jsonl".into());
             chess_rust_engine::datagen::run(n, depth, &out);
         }
+        Some("datagen-bin") => {
+            let n: usize = args.next().and_then(|s| s.parse().ok()).unwrap_or(100_000);
+            let depth: i32 = args.next().and_then(|s| s.parse().ok()).unwrap_or(7);
+            let out = args.next().unwrap_or_else(|| "datasets/selfplay.bin".into());
+            let threads: usize = args
+                .next()
+                .and_then(|s| s.parse().ok())
+                .unwrap_or_else(|| std::thread::available_parallelism().map(|n| n.get()).unwrap_or(1));
+            chess_rust_engine::datagen_bin::run(n, depth, &out, threads);
+        }
         Some("hce-dump") => {
             chess_rust_engine::datagen::dump_hce();
         }

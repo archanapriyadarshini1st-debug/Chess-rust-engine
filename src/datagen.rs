@@ -27,7 +27,7 @@ impl Rng {
     }
 }
 
-fn load_openings() -> Vec<String> {
+pub(crate) fn load_openings() -> Vec<String> {
     // Real book lines, not the match-harness EPD (that file is random legal
     // junk used to diversify SF ladder games — it put kings on f6 at move 3
     // and the first net lost 0–10–10 to HCE).
