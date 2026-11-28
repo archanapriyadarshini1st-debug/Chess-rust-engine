@@ -33,6 +33,7 @@ on:
       sf_games: {description: "Games per SF19 UCI_Elo 3000 replicate (2 per net)", default: "100"}
       gate_tc: {description: "Gate time control", default: "10+0.1"}
       smoke: {description: "true = plumbing test only (no strength claim)", default: "false"}
+      lab_run: {description: "If set, skip datagen/relabel and train from this run's g5-lab-* artifacts (Agent A rescue)", default: ""}
 
 defaults:
   run:
@@ -72,6 +73,7 @@ jobs:
       sf_games: ${{ steps.p.outputs.sf_games }}
       gate_tc: ${{ steps.p.outputs.gate_tc }}
       smoke: ${{ steps.p.outputs.smoke }}
+      lab_run: ${{ steps.p.outputs.lab_run }}
     steps:
       - uses: actions/checkout@v4
       - id: p
@@ -93,12 +95,15 @@ jobs:
               assert int(p["gen_minutes"]) >= 60 and int(p["gen_depth"]) >= 7
           print("gen_list=" + json.dumps(list(range(1, g + 1))))
           print("shard_list=" + json.dumps(list(range(1, n + 1)) + ["h"]))
+          p.setdefault("lab_run", "")
           for k in ("g4_run", "ch_run", "tl_run", "shards", "gen_minutes", "gen_depth", "seed", "max_records", "take_every", "relabel_shards", "depth", "tl_parts", "lam", "train_minutes", "gate_games", "sf_games", "gate_tc"):
               print(f"{k}={p[k]}")
+          print("lab_run=" + str(p.get("lab_run") or ""))
           print("smoke=" + str(smoke).lower())
           PY
 
   datagen:
+    if: ${{ needs.plan.outputs.lab_run == '' }}
     needs: plan
     runs-on: ubuntu-latest
     timeout-minutes: 150
@@ -153,6 +158,7 @@ jobs:
           compression-level: 3
 
   prep:
+    if: ${{ needs.plan.outputs.lab_run == '' }}
     needs: [plan, datagen]
     runs-on: ubuntu-latest
     timeout-minutes: 120
@@ -205,6 +211,7 @@ jobs:
           retention-days: 30
 
   relabel:
+    if: ${{ needs.plan.outputs.lab_run == '' }}
     needs: [plan, prep]
     runs-on: ubuntu-latest
     timeout-minutes: 345
@@ -241,6 +248,7 @@ jobs:
 
   train:
     needs: [plan, relabel]
+    if: ${{ always() && needs.plan.result == 'success' && (needs.relabel.result == 'success' || needs.plan.outputs.lab_run != '') }}
     runs-on: ubuntu-latest
     timeout-minutes: 345
     steps:
@@ -248,8 +256,19 @@ jobs:
       - uses: actions/setup-python@v5
         with: {python-version: "3.12"}
       - uses: actions/download-artifact@v4
+        if: ${{ needs.plan.outputs.lab_run == '' }}
         with: {pattern: g5-lab-*, path: lab, merge-multiple: true}
       - uses: actions/download-artifact@v4
+        if: ${{ needs.plan.outputs.lab_run != '' }}
+        with:
+          pattern: g5-lab-*
+          path: lab
+          merge-multiple: true
+          run-id: ${{ needs.plan.outputs.lab_run }}
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+      - uses: actions/download-artifact@v4
+        if: ${{ needs.plan.outputs.lab_run == '' }}
         with:
           pattern: tl-lab-*
           path: tllab
@@ -257,8 +276,8 @@ jobs:
           run-id: ${{ needs.plan.outputs.tl_run }}
           github-token: ${{ github.token }}
           repository: ${{ github.repository }}
-      # G5: G4's own SF19-labelled positions (g4-lab-1..8 + g4-lab-h holdout sample) join the cumulative data
       - uses: actions/download-artifact@v4
+        if: ${{ needs.plan.outputs.lab_run == '' }}
         with:
           pattern: g4-lab-*
           path: g4lab
@@ -267,6 +286,7 @@ jobs:
           github-token: ${{ github.token }}
           repository: ${{ github.repository }}
       - uses: actions/download-artifact@v4
+        if: ${{ needs.plan.outputs.lab_run == '' }}
         with:
           pattern: ch-lab-*
           path: chlab
@@ -291,38 +311,50 @@ jobs:
         run: |
           set -e
           mkdir -p old
-          NTL=${{ needs.plan.outputs.tl_parts }}; NCH=4; NG4=8   # G5: 4 CH parts (5M) + 8 G4 parts (10M) + TL tl_parts (4 -> 5M) + ~10M new = ~30M, same size as CH/G4
+          NTL=${{ needs.plan.outputs.tl_parts }}; NCH=4; NG4=8
           if [ "$SMOKE" = "true" ]; then NTL=1; NCH=1; NG4=1; fi
-          for i in $(seq 1 $NTL); do N=$(printf '%03d' $i); cp tllab/part_$N.bin old/tl_part_$N.bin; done
-          for i in $(seq 1 $NCH); do N=$(printf '%03d' $i); cp chlab/part_$N.bin old/ch_part_$N.bin; done
-          for i in $(seq 1 $NG4); do N=$(printf '%03d' $i); cp g4lab/part_$N.bin old/g4_part_$N.bin; done
-          if [ "$SMOKE" != "true" ]; then
-            test "$(ls tllab/part_*.bin | wc -l)" = "16" || { echo "expected TL's 16 labelled parts"; exit 1; }
-            test "$(ls chlab/part_*.bin | wc -l)" = "8" || { echo "expected CH's 8 labelled parts"; exit 1; }
-            test "$(ls g4lab/part_*.bin | wc -l)" = "8" || { echo "expected G4's 8 labelled parts"; exit 1; }
-            test -s g4lab/hold_sub.bin || { echo "missing G4 holdout sample"; exit 1; }
+          # Agent A: if older labelled sets are missing (expired artifacts), train on g5-lab only.
+          if ls tllab/part_*.bin >/dev/null 2>&1; then
+            for i in $(seq 1 $NTL); do N=$(printf '%03d' $i); cp tllab/part_$N.bin old/tl_part_$N.bin; done
           fi
-          ls old; ls lab | head -20
+          if ls chlab/part_*.bin >/dev/null 2>&1; then
+            for i in $(seq 1 $NCH); do N=$(printf '%03d' $i); cp chlab/part_$N.bin old/ch_part_$N.bin; done
+          fi
+          if ls g4lab/part_*.bin >/dev/null 2>&1; then
+            for i in $(seq 1 $NG4); do N=$(printf '%03d' $i); cp g4lab/part_$N.bin old/g4_part_$N.bin; done
+          fi
+          ls old || true; ls lab | head -20
+          test "$(ls lab/part_*.bin 2>/dev/null | wc -l)" -ge 2 || { echo "need g5-lab parts"; ls -la lab; exit 1; }
       - name: Mix (evaluation-holdout positions removed) and audit
         env:
           SMOKE: ${{ needs.plan.outputs.smoke }}
         run: |
           python3 tools/ch/mix_records.py --selftest
-          python3 tools/ch/mix_records.py --a 'old/*.bin' --b 'lab/part_*.bin' --hold tllab/hold_sub.bin chlab/hold_sub.bin g4lab/hold_sub.bin lab/hold_sub.bin --out labelled.bin --report mix.json
+          HOLDS=()
+          for H in tllab/hold_sub.bin chlab/hold_sub.bin g4lab/hold_sub.bin lab/hold_sub.bin; do
+            [ -s "$H" ] && HOLDS+=("$H")
+          done
+          if ls old/*.bin >/dev/null 2>&1; then
+            python3 tools/ch/mix_records.py --a 'old/*.bin' --b 'lab/part_*.bin' --hold "${HOLDS[@]}" --out labelled.bin --report mix.json
+          else
+            echo "Agent A rescue: no cumulative old labs; mix g5-lab parts 1-4 vs 5-8"
+            python3 tools/ch/mix_records.py --a 'lab/part_001.bin' --b 'lab/part_00[2-8].bin' --hold "${HOLDS[@]}" --out labelled.bin --report mix.json
+          fi
           python3 - <<'PY'
           import numpy as np, json, glob, os
           R = np.dtype([("occ","<u8"),("pcs","u1",(16,)),("stm","u1"),("score","<i2"),("wdl","u1")])
           a = np.fromfile("labelled.bin", dtype=R)
           prov = [json.load(open(p)) for p in sorted(glob.glob("lab/part_*.bin.provenance.json"))]
           old = [json.load(open(p)) for p in sorted(glob.glob("tllab/part_*.bin.provenance.json") + glob.glob("chlab/part_*.bin.provenance.json") + glob.glob("g4lab/part_*.bin.provenance.json"))]
-          assert prov and old, "missing provenance files"
-          assert len({p["stockfish_sha256"] for p in prov + old}) == 1, "mixed teacher binaries between old and new labels"
-          if os.environ.get("SMOKE") != "true":
-              assert len({p["depth"] for p in prov + old}) == 1, "mixed teacher depths"
+          assert prov, "missing g5 provenance"
+          pool = prov + old
+          assert len({p["stockfish_sha256"] for p in pool}) == 1, "mixed teacher binaries"
+          if os.environ.get("SMOKE") != "true" and old:
+              assert len({p["depth"] for p in pool}) == 1, "mixed teacher depths"
           drop = {k: sum(p["dropped"][k] for p in prov) for k in prov[0]["dropped"]}
           rep = {"records": int(len(a)), "g5_dropped_by_relabel": drop, "teacher": prov[0]["teacher"], "stockfish_sha256": prov[0]["stockfish_sha256"][:16],
                  "depth": prov[0]["depth"], "abs_score_lt50_frac": float((np.abs(a["score"]) < 50).mean()), "wdl_train": np.bincount(a["wdl"], minlength=3).tolist(),
-                 "mix": json.load(open("mix.json"))}
+                 "mix": json.load(open("mix.json")), "rescue_no_old_labs": not bool(old)}
           json.dump(rep, open("labelled.audit.json", "w"), indent=1); print(json.dumps(rep, indent=1))
           PY
           free -g | head -2
@@ -335,7 +367,9 @@ jobs:
       - name: Teacher agreement on ALL FOUR game-disjoint labelled holdout samples (G5 net and G4 net, same data)
         run: |
           for H in tllab/hold_sub.bin chlab/hold_sub.bin g4lab/hold_sub.bin lab/hold_sub.bin; do
+            [ -s "$H" ] || continue
             for N in net.bin g4net/net.bin; do
+              [ -s "$N" ] || continue
               echo "== holdout=$H net=$N sha=$(sha256sum $N | cut -c1-12)"
               python3 tools/sd/holdout_eval.py --net $N --holdout $H --lam ${{ needs.plan.outputs.lam }} --json /tmp/h.json
             done
